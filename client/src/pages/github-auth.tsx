@@ -20,13 +20,9 @@ function getGithubAuthUrl() {
     throw new Error("GitHub Client ID is not configured");
   }
 
-  // Get the base URL for the application
-  const baseUrl = window.location.origin;
-  console.log("Using base URL:", baseUrl);
-
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: `${baseUrl}/auth/github`,
+    redirect_uri: `${window.location.origin}/auth/github`,
     scope: 'repo,read:user',
     state: crypto.randomUUID(),
   });
@@ -43,6 +39,10 @@ export default function GithubAuth() {
     mutationFn: async (code: string) => {
       console.log("Sending authentication request with code:", code.substring(0, 8) + "...");
       const res = await apiRequest("POST", "/api/fetch-repos", { code });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(`${res.status}: ${JSON.stringify(errorData)}`);
+      }
       const data = await res.json();
       console.log("Authentication response:", data);
 
