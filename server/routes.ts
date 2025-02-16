@@ -99,6 +99,21 @@ export async function registerRoutes(app: Express) {
       console.log('Selection request:', { id: repoId, selected }); // Debug log
       console.log('Current repos state:', selectedRepos.map(r => ({ id: r.id, selected: r.selected }))); // Debug log
 
+      // If selectedRepos is empty and we have an access token, refetch repositories
+      if (selectedRepos.length === 0 && currentAccessToken) {
+        console.log('Fetching repositories as selectedRepos is empty');
+        const repos = await getRepositories(currentAccessToken);
+        selectedRepos = repos.map(repo => ({
+          id: repo.id,
+          name: repo.name,
+          description: repo.description,
+          url: repo.url,
+          summary: null,
+          selected: false,
+          metadata: repo.metadata
+        }));
+      }
+
       const repoIndex = selectedRepos.findIndex(r => r.id === repoId);
       console.log('Repository index:', repoIndex, 'Repos length:', selectedRepos.length); // Debug log
 
@@ -144,10 +159,10 @@ export async function registerRoutes(app: Express) {
       console.log('Analyze request:', { id: repoId, username }); // Debug log
       console.log('Current repos:', selectedRepos.map(r => ({ id: r.id, name: r.name }))); // Debug log
 
-      // If selectedRepos is empty, try to fetch repositories
-      if (selectedRepos.length === 0 && currentAccessToken) {
+      // If selectedRepos is empty and we have an access token, refetch repositories
+      if (selectedRepos.length === 0) {
         console.log('Fetching repositories as selectedRepos is empty');
-        const repos = await getRepositories(currentAccessToken);
+        const repos = await getRepositories(accessToken);
         selectedRepos = repos.map(repo => ({
           id: repo.id,
           name: repo.name,
