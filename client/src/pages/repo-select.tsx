@@ -28,25 +28,29 @@ export default function RepoSelect() {
     queryKey: ["/api/repositories"],
   });
 
-  const { mutate: toggleRepo } = useMutation({
+  const { mutate: toggleRepo, isPending: isToggling } = useMutation({
     mutationFn: async ({ id, selected }: { id: number; selected: boolean }) => {
       if (!id) {
         throw new Error('Repository ID is required');
       }
 
-      // Optimistically update the UI
-      setPendingToggles(prev => ({ ...prev, [id]: selected }));
-
       try {
         const res = await apiRequest("POST", `/api/repositories/${id}/select`, {
           selected,
         });
+        if (!res.ok) {
+          throw new Error('Failed to update repository selection');
+        }
         return res.json();
       } catch (error) {
         // Revert the optimistic update on error
         setPendingToggles(prev => ({ ...prev, [id]: !selected }));
         throw error;
       }
+    },
+    onMutate: ({ id, selected }) => {
+      // Optimistically update the UI
+      setPendingToggles(prev => ({ ...prev, [id]: selected }));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/repositories"] });
@@ -105,14 +109,11 @@ export default function RepoSelect() {
   const selectedRepos = repositories.filter((repo) => repo.selected);
 
   const handleSelectAll = (checked: boolean) => {
-    const updatedToggles: Record<number, boolean> = {};
     paginatedRepos.forEach((repo) => {
-      if (repo.selected !== checked && repo.id) {
-        updatedToggles[repo.id] = checked;
+      if (repo.id && repo.selected !== checked) {
         toggleRepo({ id: repo.id, selected: checked });
       }
     });
-    setPendingToggles(prev => ({ ...prev, ...updatedToggles }));
   };
 
   const handleAnalyzeRepos = async (openaiKey: string) => {
@@ -160,10 +161,10 @@ export default function RepoSelect() {
             </div>
             <div className="flex items-center gap-2">
               <Checkbox
+                id="select-all"
                 checked={allSelected}
                 onCheckedChange={handleSelectAll}
-                disabled={isAnalyzing || paginatedRepos.length === 0}
-                id="select-all"
+                disabled={isAnalyzing || isToggling || paginatedRepos.length === 0}
               />
               <label htmlFor="select-all" className="text-sm font-medium whitespace-nowrap">
                 Select All
@@ -181,16 +182,22 @@ export default function RepoSelect() {
               <Card key={repo.id} className="transition-shadow hover:shadow-md">
                 <CardHeader className="flex flex-row items-start gap-4 p-4 md:p-6">
                   <Checkbox
+                    id={`repo-${repo.id}`}
                     checked={effectiveSelected}
                     onCheckedChange={(checked) => {
                       if (repo.id) {
-                        toggleRepo({ id: repo.id, selected: checked as boolean });
+                        toggleRepo({ id: repo.id, selected: !!checked });
                       }
                     }}
-                    disabled={isAnalyzing}
+                    disabled={isAnalyzing || isToggling}
                   />
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold">{repo.name}</h3>
+                    <label
+                      htmlFor={`repo-${repo.id}`}
+                      className="text-lg font-semibold cursor-pointer"
+                    >
+                      {repo.name}
+                    </label>
                     {repo.description && (
                       <p className="text-sm text-muted-foreground mt-1">
                         {repo.description}
@@ -238,7 +245,7 @@ export default function RepoSelect() {
           <div className="mt-6 flex justify-end">
             <Button
               onClick={() => setShowApiKeyDialog(true)}
-              disabled={isAnalyzing}
+              disabled={isAnalyzing || isToggling}
               className="w-full md:w-auto"
             >
               {isAnalyzing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
