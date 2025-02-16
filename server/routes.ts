@@ -19,6 +19,21 @@ export async function registerRoutes(app: Express) {
 
       console.log("Exchanging code for access token...");
 
+      // Get the base URL based on environment
+      const baseUrl = process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}`
+        : process.env.NODE_ENV === 'production'
+          ? 'https://foliolab.vercel.app'
+          : 'http://localhost:5000';
+
+      console.log("OAuth Configuration:", {
+        baseUrl,
+        clientIdExists: !!process.env.GITHUB_CLIENT_ID,
+        clientSecretExists: !!process.env.GITHUB_CLIENT_SECRET,
+        code: code.substring(0, 8) + "...", // Log first 8 chars for debugging
+        redirectUri: `${baseUrl}/auth/github`
+      });
+
       // Exchange code for access token with additional logging
       const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
         method: "POST",
@@ -30,8 +45,7 @@ export async function registerRoutes(app: Express) {
           client_id: process.env.GITHUB_CLIENT_ID,
           client_secret: process.env.GITHUB_CLIENT_SECRET,
           code,
-          // Add the redirect_uri to match what was sent in the initial request
-          redirect_uri: `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5000'}/auth/github`,
+          redirect_uri: `${baseUrl}/auth/github`,
         }),
       });
 
@@ -39,7 +53,10 @@ export async function registerRoutes(app: Express) {
       console.log("Token response received:", JSON.stringify({ 
         has_token: !!tokenData.access_token,
         error: tokenData.error,
-        error_description: tokenData.error_description 
+        error_description: tokenData.error_description,
+        redirect_uri: `${baseUrl}/auth/github`,
+        client_id_present: !!process.env.GITHUB_CLIENT_ID,
+        client_secret_present: !!process.env.GITHUB_CLIENT_SECRET
       }));
 
       if (!tokenData.access_token) {
@@ -49,7 +66,6 @@ export async function registerRoutes(app: Express) {
 
       // Get user info
       const githubUser = await getGithubUser(tokenData.access_token);
-
       // Fetch repositories using the access token
       const repos = await getRepositories(tokenData.access_token);
       selectedRepos = repos.map((repo, index) => ({
