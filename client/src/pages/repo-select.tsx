@@ -65,6 +65,36 @@ export default function RepoSelect() {
     }
   });
 
+  const { mutate: analyzeRepo, isPending: isAnalyzing } = useMutation({
+    mutationFn: async ({ id, openaiKey }: { id: number; openaiKey: string }) => {
+      if (!id) {
+        throw new Error('Repository ID is required');
+      }
+
+      const res = await apiRequest("POST", `/api/repositories/${id}/analyze`, {
+        accessToken: localStorage.getItem("github_token"),
+        username: localStorage.getItem("github_username"),
+        openaiKey,
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to analyze repository');
+      }
+
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/repositories"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to analyze repository. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
   const filteredRepos = useMemo(() => {
     if (!data?.repositories) return [];
     console.log('Filtered repositories:', data.repositories); // Debug log
@@ -78,6 +108,8 @@ export default function RepoSelect() {
     const startIndex = (currentPage - 1) * REPOS_PER_PAGE;
     return filteredRepos.slice(startIndex, startIndex + REPOS_PER_PAGE);
   }, [filteredRepos, currentPage]);
+
+  const totalPages = Math.ceil((filteredRepos?.length || 0) / REPOS_PER_PAGE);
 
   if (isLoading) {
     return (
@@ -100,6 +132,29 @@ export default function RepoSelect() {
         toggleRepo({ id: repo.id, selected: checked });
       }
     });
+  };
+
+  const handleAnalyzeRepos = async (openaiKey: string) => {
+    try {
+      // Analyze repositories sequentially to avoid rate limits
+      for (const repo of selectedRepos) {
+        if (repo.id) {
+          await analyzeRepo({ id: repo.id, openaiKey });
+        }
+      }
+
+      setLocation("/preview");
+      toast({
+        title: "Success",
+        description: "Repository analysis complete!",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to analyze repositories. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const allSelected = paginatedRepos.length > 0 && paginatedRepos.every((repo) => repo.selected);
