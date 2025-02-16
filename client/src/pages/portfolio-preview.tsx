@@ -19,6 +19,13 @@ export default function PortfolioPreview() {
   useEffect(() => {
     if (data?.repositories && !isLoading) {
       const selectedRepos = data.repositories.filter((repo) => repo.selected);
+      console.log('Selected repositories:', selectedRepos.map(r => ({
+        id: r.id,
+        name: r.name,
+        selected: r.selected,
+        hasSummary: r.summary ? 'Yes' : 'No'
+      })));
+
       const allHaveSummaries = selectedRepos.every((repo) => repo.summary);
 
       if (allHaveSummaries) {
@@ -62,6 +69,12 @@ export default function PortfolioPreview() {
   }
 
   const selectedRepos = data?.repositories.filter((repo) => repo.selected) || [];
+  console.log('Filtered selected repositories:', selectedRepos.map(r => ({
+    id: r.id,
+    name: r.name,
+    selected: r.selected,
+    hasSummary: r.summary ? 'Yes' : 'No'
+  })));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">

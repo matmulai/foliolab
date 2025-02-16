@@ -11,6 +11,18 @@ let currentAccessToken: string | null = null;
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
+  app.get("/api/repositories", (_req, res) => {
+    console.log('GET /api/repositories - Current repositories state:', 
+      selectedRepos.map(r => ({ 
+        id: r.id, 
+        name: r.name, 
+        selected: r.selected,
+        summary: r.summary ? 'Yes' : 'No'
+      }))
+    ); // Debug log
+    res.json({ repositories: selectedRepos });
+  });
+
   app.post("/api/fetch-repos", async (req, res) => {
     const { code } = req.body;
     try {
@@ -85,10 +97,6 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  app.get("/api/repositories", (_req, res) => {
-    console.log('Current repositories state:', selectedRepos); // Debug log
-    res.json({ repositories: selectedRepos });
-  });
 
   app.post("/api/repositories/:id/select", async (req, res) => {
     const { id } = req.params;
@@ -157,7 +165,14 @@ export async function registerRoutes(app: Express) {
 
     try {
       console.log('Analyze request:', { id: repoId, username }); // Debug log
-      console.log('Current repos:', selectedRepos.map(r => ({ id: r.id, name: r.name }))); // Debug log
+      console.log('Current repos before analysis:', 
+        selectedRepos.map(r => ({ 
+          id: r.id, 
+          name: r.name,
+          selected: r.selected,
+          summary: r.summary ? 'Yes' : 'No' 
+        }))
+      ); // Debug log
 
       // If selectedRepos is empty and we have an access token, refetch repositories
       if (selectedRepos.length === 0) {
@@ -182,7 +197,12 @@ export async function registerRoutes(app: Express) {
         });
       }
 
-      console.log('Found repository to analyze:', repo); // Debug log
+      console.log('Found repository to analyze:', {
+        id: repo.id,
+        name: repo.name,
+        selected: repo.selected,
+        hasSummary: repo.summary ? 'Yes' : 'No'
+      }); // Debug log
 
       const readme = await getReadmeContent(
         accessToken,
@@ -190,7 +210,7 @@ export async function registerRoutes(app: Express) {
         repo.name
       ) || '';
 
-      console.log('Fetched README content:', readme ? 'Yes' : 'No'); // Debug log
+      console.log('Fetched README content length:', readme.length); // Debug log
 
       const summary = await generateRepoSummary(
         repo.name,
@@ -207,7 +227,21 @@ export async function registerRoutes(app: Express) {
       );
 
       const updatedRepo = selectedRepos.find(r => r.id === repoId);
-      console.log('Updated repository with summary:', updatedRepo); // Debug log
+      console.log('Updated repository with summary:', {
+        id: updatedRepo?.id,
+        name: updatedRepo?.name,
+        selected: updatedRepo?.selected,
+        hasSummary: updatedRepo?.summary ? 'Yes' : 'No'
+      }); // Debug log
+
+      console.log('All repositories after update:', 
+        selectedRepos.map(r => ({ 
+          id: r.id, 
+          name: r.name,
+          selected: r.selected,
+          summary: r.summary ? 'Yes' : 'No' 
+        }))
+      ); // Debug log
 
       res.json({ repository: updatedRepo });
     } catch (error) {
