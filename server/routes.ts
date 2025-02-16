@@ -35,33 +35,44 @@ export async function registerRoutes(app: Express) {
         baseUrl = 'http://localhost:5000';
       }
 
+      // Log current configuration and request details
       console.log("OAuth Configuration:", {
         baseUrl,
         host: req.headers.host,
         clientIdExists: !!process.env.GITHUB_CLIENT_ID,
         clientSecretExists: !!process.env.GITHUB_CLIENT_SECRET,
-        code: code.substring(0, 8) + "...", // Log first 8 chars for debugging
+        code: code.substring(0, 8) + "...",
         redirectUri: `${baseUrl}/auth/github`
       });
 
       // Create form-urlencoded body using URLSearchParams
-      const params = new URLSearchParams({
-        client_id: process.env.GITHUB_CLIENT_ID!,
-        client_secret: process.env.GITHUB_CLIENT_SECRET!,
-        code,
-        redirect_uri: `${baseUrl}/auth/github`,
+      const params = new URLSearchParams();
+      params.append('client_id', process.env.GITHUB_CLIENT_ID!);
+      params.append('client_secret', process.env.GITHUB_CLIENT_SECRET!);
+      params.append('code', code);
+      params.append('redirect_uri', `${baseUrl}/auth/github`);
+
+      console.log("Request parameters:", {
+        url: "https://github.com/login/oauth/access_token",
+        paramsKeys: Array.from(params.keys()),
+        redirect_uri: `${baseUrl}/auth/github`
       });
 
-      // Exchange code for access token with form-urlencoded data
+      // Exchange code for access token with form-urlencoded data and proper headers
       const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
         method: "POST",
         headers: {
           "Accept": "application/json",
           "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "FolioLab/1.0.0"
+          "User-Agent": "FolioLab/1.0.0",
+          "X-GitHub-Api-Version": "2022-11-28"
         },
         body: params.toString()
       });
+
+      // Log the complete response details
+      console.log("GitHub API Response Status:", tokenResponse.status);
+      console.log("GitHub API Response Headers:", Object.fromEntries(tokenResponse.headers.entries()));
 
       // Log the full response for debugging
       const responseText = await tokenResponse.text();
@@ -84,7 +95,7 @@ export async function registerRoutes(app: Express) {
         client_secret_present: !!process.env.GITHUB_CLIENT_SECRET,
         status: tokenResponse.status,
         statusText: tokenResponse.statusText
-      }));
+      }, null, 2));
 
       if (!tokenData.access_token) {
         console.error("GitHub token response:", tokenData);

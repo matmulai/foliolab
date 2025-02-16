@@ -10,7 +10,8 @@ function getGithubAuthUrl() {
   console.log("Environment variables:", {
     VITE_GITHUB_CLIENT_ID: import.meta.env.VITE_GITHUB_CLIENT_ID,
     MODE: import.meta.env.MODE,
-    DEV: import.meta.env.DEV
+    DEV: import.meta.env.DEV,
+    BASE_URL: window.location.origin
   });
 
   const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
@@ -21,6 +22,7 @@ function getGithubAuthUrl() {
 
   // Get the base URL for the application
   const baseUrl = window.location.origin;
+  console.log("Using base URL:", baseUrl);
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -39,8 +41,10 @@ export default function GithubAuth() {
 
   const { mutate: authenticate, isPending } = useMutation({
     mutationFn: async (code: string) => {
+      console.log("Sending authentication request with code:", code.substring(0, 8) + "...");
       const res = await apiRequest("POST", "/api/fetch-repos", { code });
       const data = await res.json();
+      console.log("Authentication response:", data);
 
       // Store GitHub token and username for later use
       if (data.accessToken) {
@@ -53,6 +57,9 @@ export default function GithubAuth() {
     onSuccess: () => {
       setLocation("/repos");
     },
+    onError: (error) => {
+      console.error("Authentication error:", error);
+    }
   });
 
   useEffect(() => {
@@ -61,6 +68,12 @@ export default function GithubAuth() {
       const code = urlParams.get("code");
       const error = urlParams.get("error");
       const errorDescription = urlParams.get("error_description");
+
+      console.log("URL parameters:", {
+        hasCode: !!code,
+        error,
+        errorDescription
+      });
 
       if (error) {
         console.error("GitHub OAuth Error:", error, errorDescription);
@@ -84,7 +97,7 @@ export default function GithubAuth() {
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center gap-3">
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Loader2 className="h-5 w-4 animate-spin" />
             <p>Authenticating with GitHub...</p>
           </div>
         </CardContent>
