@@ -45,9 +45,11 @@ export async function registerRoutes(app: Express) {
 
       const githubUser = await getGithubUser(tokenData.access_token);
       const repos = await getRepositories(tokenData.access_token);
-      selectedRepos = repos.map((repo, index) => ({
+
+      // Use the GitHub repository ID instead of an index-based ID
+      selectedRepos = repos.map(repo => ({
         ...repo,
-        id: index + 1,
+        id: repo.metadata.id, // Use GitHub's repository ID
         selected: false,
         summary: null
       }));
@@ -64,6 +66,10 @@ export async function registerRoutes(app: Express) {
         details: error instanceof Error ? error.message : String(error)
       });
     }
+  });
+
+  app.get("/api/repositories", (_req, res) => {
+    res.json({ repositories: selectedRepos });
   });
 
   app.post("/api/repositories/:id/select", async (req, res) => {
@@ -85,6 +91,7 @@ export async function registerRoutes(app: Express) {
   app.post("/api/repositories/:id/analyze", async (req, res) => {
     const { id } = req.params;
     const { accessToken, username, openaiKey } = req.body;
+    const repoId = parseInt(id);
 
     if (!accessToken || !username) {
       return res.status(400).json({ error: "Access token and username are required" });
@@ -95,12 +102,14 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
-      const repoIndex = selectedRepos.findIndex(r => r.id === parseInt(id));
-      if (repoIndex === -1) {
-        return res.status(404).json({ error: "Repository not found" });
+      const repo = selectedRepos.find(r => r.id === repoId);
+      if (!repo) {
+        return res.status(404).json({ 
+          error: "Repository not found",
+          details: `No repository found with ID ${repoId}`
+        });
       }
 
-      const repo = selectedRepos[repoIndex];
       const readme = await getReadmeContent(
         accessToken,
         username,
@@ -114,6 +123,8 @@ export async function registerRoutes(app: Express) {
         openaiKey
       );
 
+      // Update the repository in the array
+      const repoIndex = selectedRepos.findIndex(r => r.id === repoId);
       selectedRepos[repoIndex] = {
         ...repo,
         summary: summary.summary
@@ -127,10 +138,6 @@ export async function registerRoutes(app: Express) {
         details: error instanceof Error ? error.message : String(error)
       });
     }
-  });
-
-  app.get("/api/repositories", (_req, res) => {
-    res.json({ repositories: selectedRepos });
   });
 
   app.post("/api/deploy/github", async (req, res) => {
