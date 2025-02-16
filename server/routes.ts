@@ -48,18 +48,23 @@ export async function registerRoutes(app: Express) {
 
       console.log('Raw GitHub repositories:', repos); // Debug log
 
-      // Map repositories to match the Repository type, now including IDs
+      // Create a map of existing selections
+      const existingSelections = new Map(
+        selectedRepos.map(repo => [repo.id, repo.selected])
+      );
+
+      // Map repositories to match the Repository type, preserving existing selections
       selectedRepos = repos.map(repo => ({
         id: repo.id,
         name: repo.name,
         description: repo.description,
         url: repo.url,
         summary: null,
-        selected: false,
+        selected: existingSelections.get(repo.id) || false,
         metadata: repo.metadata
       }));
 
-      console.log('Mapped repositories:', selectedRepos); // Debug log
+      console.log('Mapped repositories with preserved selections:', selectedRepos); // Debug log
 
       res.json({
         repositories: selectedRepos,
@@ -89,6 +94,8 @@ export async function registerRoutes(app: Express) {
       console.log('Selection request:', { id: repoId, selected }); // Debug log
 
       const repoIndex = selectedRepos.findIndex(r => r.id === repoId);
+      console.log('Repository index:', repoIndex, 'Repos length:', selectedRepos.length); // Debug log
+
       if (repoIndex === -1) {
         return res.status(404).json({ 
           error: "Repository not found",
@@ -96,14 +103,15 @@ export async function registerRoutes(app: Express) {
         });
       }
 
-      selectedRepos[repoIndex] = {
-        ...selectedRepos[repoIndex],
-        selected
-      };
+      // Create a new array with the updated repository
+      selectedRepos = selectedRepos.map(repo => 
+        repo.id === repoId ? { ...repo, selected } : repo
+      );
 
-      console.log('Updated repository:', selectedRepos[repoIndex]); // Debug log
+      const updatedRepo = selectedRepos[repoIndex];
+      console.log('Updated repository:', updatedRepo); // Debug log
 
-      res.json({ repository: selectedRepos[repoIndex] });
+      res.json({ repository: updatedRepo });
     } catch (error) {
       console.error('Failed to update repository:', error);
       res.status(500).json({ 
