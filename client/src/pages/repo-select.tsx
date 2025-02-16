@@ -30,6 +30,10 @@ export default function RepoSelect() {
 
   const { mutate: toggleRepo } = useMutation({
     mutationFn: async ({ id, selected }: { id: number; selected: boolean }) => {
+      if (typeof id === 'undefined') {
+        throw new Error('Repository ID is undefined');
+      }
+
       // Optimistically update the UI
       setPendingToggles(prev => ({ ...prev, [id]: selected }));
 
@@ -47,10 +51,10 @@ export default function RepoSelect() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/repositories"] });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to update repository selection. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to update repository selection. Please try again.",
         variant: "destructive",
       });
     }
@@ -103,7 +107,7 @@ export default function RepoSelect() {
   const handleSelectAll = (checked: boolean) => {
     const updatedToggles: Record<number, boolean> = {};
     paginatedRepos.forEach((repo) => {
-      if (repo.selected !== checked) {
+      if (repo.selected !== checked && typeof repo.id !== 'undefined') {
         updatedToggles[repo.id] = checked;
         toggleRepo({ id: repo.id, selected: checked });
       }
@@ -115,7 +119,9 @@ export default function RepoSelect() {
     try {
       // Analyze repositories sequentially to avoid rate limits
       for (const repo of selectedRepos) {
-        await analyzeRepo({ id: repo.id, openaiKey });
+        if (typeof repo.id !== 'undefined') {
+          await analyzeRepo({ id: repo.id, openaiKey });
+        }
       }
 
       setLocation("/preview");
@@ -168,7 +174,7 @@ export default function RepoSelect() {
 
         <div className="grid gap-4">
           {paginatedRepos.map((repo) => {
-            const isTogglePending = repo.id in pendingToggles;
+            const isTogglePending = typeof repo.id !== 'undefined' && repo.id in pendingToggles;
             const effectiveSelected = isTogglePending ? pendingToggles[repo.id] : repo.selected;
 
             return (
@@ -176,9 +182,11 @@ export default function RepoSelect() {
                 <CardHeader className="flex flex-row items-start gap-4 p-4 md:p-6">
                   <Checkbox
                     checked={effectiveSelected}
-                    onCheckedChange={(checked) =>
-                      toggleRepo({ id: repo.id, selected: checked as boolean })
-                    }
+                    onCheckedChange={(checked) => {
+                      if (typeof repo.id !== 'undefined') {
+                        toggleRepo({ id: repo.id, selected: checked as boolean });
+                      }
+                    }}
                     disabled={isAnalyzing}
                   />
                   <div className="flex-1">
