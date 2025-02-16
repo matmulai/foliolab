@@ -2,7 +2,7 @@
 
 ![FolioLab](images/FolioLab.png)
 
-FolioLab is an app that allows you to create a portfolio for your projects. 
+FolioLab is an app that allows you to create a portfolio from your git repositories.
 
 Create your portfolio using this link: https://foliolab.vercel.app/
 
@@ -53,7 +53,7 @@ npm run dev
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/foliolab.git
+git clone https://github.com/gojiplus/foliolab.git
 cd foliolab
 ```
 
