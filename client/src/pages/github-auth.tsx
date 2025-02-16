@@ -19,9 +19,12 @@ function getGithubAuthUrl() {
     throw new Error("GitHub Client ID is not configured");
   }
 
+  // Get the base URL for the application
+  const baseUrl = window.location.origin;
+
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: `${window.location.origin}/auth/github`,
+    redirect_uri: `${baseUrl}/auth/github`,
     scope: 'repo,read:user',
     state: crypto.randomUUID(),
   });

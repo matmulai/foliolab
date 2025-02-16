@@ -17,7 +17,9 @@ export async function registerRoutes(app: Express) {
         return res.status(400).json({ error: "Authorization code is required" });
       }
 
-      // Exchange code for access token
+      console.log("Exchanging code for access token...");
+
+      // Exchange code for access token with additional logging
       const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
         method: "POST",
         headers: {
@@ -28,10 +30,18 @@ export async function registerRoutes(app: Express) {
           client_id: process.env.GITHUB_CLIENT_ID,
           client_secret: process.env.GITHUB_CLIENT_SECRET,
           code,
+          // Add the redirect_uri to match what was sent in the initial request
+          redirect_uri: `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5000'}/auth/github`,
         }),
       });
 
       const tokenData = await tokenResponse.json();
+      console.log("Token response received:", JSON.stringify({ 
+        has_token: !!tokenData.access_token,
+        error: tokenData.error,
+        error_description: tokenData.error_description 
+      }));
+
       if (!tokenData.access_token) {
         console.error("GitHub token response:", tokenData);
         throw new Error(tokenData.error_description || "Failed to get access token");
