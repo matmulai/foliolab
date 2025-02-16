@@ -6,10 +6,10 @@
       "use": "@vercel/node"
     },
     {
-      "src": "client/package.json",
+      "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "dist"
+        "distDir": "dist/client"
       }
     }
   ],
@@ -19,20 +19,18 @@
       "dest": "server/index.ts"
     },
     {
-      "src": "/auth/(.*)",
-      "dest": "server/index.ts"
-    },
-    {
       "src": "^/assets/(.*)",
-      "dest": "client/dist/assets/$1"
+      "dest": "/assets/$1"
     },
     {
-      "src": "/(.*\\.[a-z0-9]+$)",
-      "dest": "client/dist/$1"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "client/dist/index.html"
+      "dest": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
