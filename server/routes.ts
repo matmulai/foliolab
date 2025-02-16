@@ -44,29 +44,46 @@ export async function registerRoutes(app: Express) {
         redirectUri: `${baseUrl}/auth/github`
       });
 
-      // Exchange code for access token with additional logging
+      // Create form-urlencoded body using URLSearchParams
+      const params = new URLSearchParams({
+        client_id: process.env.GITHUB_CLIENT_ID!,
+        client_secret: process.env.GITHUB_CLIENT_SECRET!,
+        code,
+        redirect_uri: `${baseUrl}/auth/github`,
+      });
+
+      // Exchange code for access token with form-urlencoded data
       const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
+          "Accept": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "FolioLab/1.0.0"
         },
-        body: JSON.stringify({
-          client_id: process.env.GITHUB_CLIENT_ID,
-          client_secret: process.env.GITHUB_CLIENT_SECRET,
-          code,
-          redirect_uri: `${baseUrl}/auth/github`,
-        }),
+        body: params.toString()
       });
 
-      const tokenData = await tokenResponse.json();
+      // Log the full response for debugging
+      const responseText = await tokenResponse.text();
+      console.log("Raw GitHub response:", responseText);
+
+      let tokenData;
+      try {
+        tokenData = JSON.parse(responseText);
+      } catch (e) {
+        console.error("Failed to parse GitHub response:", e);
+        throw new Error(`Invalid response from GitHub: ${responseText}`);
+      }
+
       console.log("Token response received:", JSON.stringify({ 
         has_token: !!tokenData.access_token,
         error: tokenData.error,
         error_description: tokenData.error_description,
         redirect_uri: `${baseUrl}/auth/github`,
         client_id_present: !!process.env.GITHUB_CLIENT_ID,
-        client_secret_present: !!process.env.GITHUB_CLIENT_SECRET
+        client_secret_present: !!process.env.GITHUB_CLIENT_SECRET,
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText
       }));
 
       if (!tokenData.access_token) {
@@ -74,9 +91,7 @@ export async function registerRoutes(app: Express) {
         throw new Error(tokenData.error_description || "Failed to get access token");
       }
 
-      // Get user info
       const githubUser = await getGithubUser(tokenData.access_token);
-      // Fetch repositories using the access token
       const repos = await getRepositories(tokenData.access_token);
       selectedRepos = repos.map((repo, index) => ({
         ...repo,
@@ -174,13 +189,8 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
-      // Get the username from GitHub first
       const user = await getGithubUser(accessToken);
-
-      // Get the selected repositories with their summaries
       const displayRepos = selectedRepos.filter(repo => repo.selected);
-
-      // Generate portfolio site HTML
       const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -218,15 +228,11 @@ export async function registerRoutes(app: Express) {
 </body>
 </html>`;
 
-      // If downloadOnly is true, return the HTML content
       if (downloadOnly) {
         return res.json({ html });
       }
 
-      // Otherwise, create/update the repository and commit the files
       const { repoUrl, wasCreated } = await createPortfolioRepository(accessToken, user.username);
-
-      // Commit the files to the repository
       await commitPortfolioFiles(accessToken, user.username, [
         {
           path: "index.html",
@@ -259,13 +265,8 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
-      // Get the username from GitHub first
       const user = await getGithubUser(accessToken);
-
-      // Get the selected repositories with their summaries
       const displayRepos = selectedRepos.filter(repo => repo.selected);
-
-      // Generate portfolio site HTML
       const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
