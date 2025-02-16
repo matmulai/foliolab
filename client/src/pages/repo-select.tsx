@@ -35,6 +35,7 @@ export default function RepoSelect() {
       }
 
       try {
+        console.log('Toggling repository:', { id, selected }); // Debug log
         const res = await apiRequest("POST", `/api/repositories/${id}/select`, {
           selected,
         });
@@ -64,22 +65,9 @@ export default function RepoSelect() {
     }
   });
 
-  const { mutate: analyzeRepo, isPending: isAnalyzing } = useMutation({
-    mutationFn: async ({ id, openaiKey }: { id: number; openaiKey: string }) => {
-      const res = await apiRequest("POST", `/api/repositories/${id}/analyze`, {
-        accessToken: localStorage.getItem("github_token"),
-        username: localStorage.getItem("github_username"),
-        openaiKey,
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/repositories"] });
-    },
-  });
-
   const filteredRepos = useMemo(() => {
     if (!data?.repositories) return [];
+    console.log('Filtered repositories:', data.repositories); // Debug log
     return data.repositories.filter((repo) =>
       repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (repo.description?.toLowerCase() || "").includes(searchQuery.toLowerCase())
@@ -90,8 +78,6 @@ export default function RepoSelect() {
     const startIndex = (currentPage - 1) * REPOS_PER_PAGE;
     return filteredRepos.slice(startIndex, startIndex + REPOS_PER_PAGE);
   }, [filteredRepos, currentPage]);
-
-  const totalPages = Math.ceil((filteredRepos?.length || 0) / REPOS_PER_PAGE);
 
   if (isLoading) {
     return (
@@ -116,34 +102,12 @@ export default function RepoSelect() {
     });
   };
 
-  const handleAnalyzeRepos = async (openaiKey: string) => {
-    try {
-      // Analyze repositories sequentially to avoid rate limits
-      for (const repo of selectedRepos) {
-        if (repo.id) {
-          await analyzeRepo({ id: repo.id, openaiKey });
-        }
-      }
-
-      setLocation("/preview");
-      toast({
-        title: "Success",
-        description: "Repository analysis complete!",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to analyze repositories. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const allSelected = paginatedRepos.length > 0 && paginatedRepos.every((repo) => repo.selected);
 
   return (
     <div className="container mx-auto p-4 md:p-6">
       <div className="flex flex-col gap-6">
+        {/* Header and search section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h1 className="text-2xl md:text-3xl font-bold">Select Repositories</h1>
           <div className="w-full md:w-auto flex items-center gap-4">
@@ -173,10 +137,18 @@ export default function RepoSelect() {
           </div>
         </div>
 
+        {/* Repository list */}
         <div className="grid gap-4">
           {paginatedRepos.map((repo) => {
             const isTogglePending = repo.id in pendingToggles;
             const effectiveSelected = isTogglePending ? pendingToggles[repo.id] : repo.selected;
+
+            console.log('Repository row:', { 
+              id: repo.id, 
+              name: repo.name, 
+              selected: repo.selected,
+              effectiveSelected 
+            }); // Debug log
 
             return (
               <Card key={repo.id} className="transition-shadow hover:shadow-md">
@@ -185,6 +157,11 @@ export default function RepoSelect() {
                     id={`repo-${repo.id}`}
                     checked={effectiveSelected}
                     onCheckedChange={(checked) => {
+                      console.log('Checkbox change:', { 
+                        id: repo.id, 
+                        checked, 
+                        current: effectiveSelected 
+                      }); // Debug log
                       if (repo.id) {
                         toggleRepo({ id: repo.id, selected: !!checked });
                       }
@@ -217,6 +194,7 @@ export default function RepoSelect() {
           })}
         </div>
 
+        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-center gap-2 mt-4">
             <Button
@@ -241,6 +219,7 @@ export default function RepoSelect() {
           </div>
         )}
 
+        {/* Generate Portfolio button */}
         {selectedRepos.length > 0 && (
           <div className="mt-6 flex justify-end">
             <Button

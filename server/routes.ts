@@ -46,12 +46,22 @@ export async function registerRoutes(app: Express) {
       const githubUser = await getGithubUser(tokenData.access_token);
       const repos = await getRepositories(tokenData.access_token);
 
-      // Map repositories to include the GitHub repository ID
+      // Properly map repositories to match the Repository type
       selectedRepos = repos.map(repo => ({
-        ...repo,
-        id: repo.metadata.id,  // Use the GitHub repository ID from metadata
+        id: repo.metadata.id,  // GitHub repository ID
+        name: repo.name,
+        description: repo.description,
+        url: repo.url,
+        summary: null,
         selected: false,
-        summary: null
+        metadata: {
+          id: repo.metadata.id,
+          stars: repo.metadata.stars,
+          language: repo.metadata.language,
+          topics: repo.metadata.topics,
+          updatedAt: repo.metadata.updatedAt,
+          url: repo.metadata.url
+        }
       }));
 
       res.json({
@@ -86,7 +96,11 @@ export async function registerRoutes(app: Express) {
         });
       }
 
-      selectedRepos[repoIndex].selected = selected;
+      selectedRepos[repoIndex] = {
+        ...selectedRepos[repoIndex],
+        selected
+      };
+
       res.json({ repository: selectedRepos[repoIndex] });
     } catch (error) {
       console.error('Failed to update repository:', error);
