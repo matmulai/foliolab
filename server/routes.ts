@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer } from "http";
-import { getRepositories, getReadmeContent, getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages } from "./lib/github";
-import { generateRepoSummary } from "./lib/openai";
-import { Repository } from "@shared/schema";
+import { getRepositories, getReadmeContent, getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages } from "./lib/github.js";
+import { generateRepoSummary } from "./lib/openai.js";
+import { Repository } from "@shared/schema.js";
 
 // In-memory storage for the current session
 let selectedRepos: Repository[] = [];

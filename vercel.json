@@ -5,7 +5,12 @@
       "src": "server/index.ts",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["server/**/*", "shared/**/*"]
+        "includeFiles": [
+          "server/**/*",
+          "shared/**/*"
+        ],
+        "buildCommand": "npm run build",
+        "outputDirectory": "dist"
       }
     },
     {
@@ -19,18 +24,18 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "server/index.ts"
+      "dest": "/dist/index.js"
     },
     {
       "src": "^/assets/(.*)",
-      "dest": "/assets/$1"
+      "dest": "/dist/public/assets/$1"
     },
     {
       "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/dist/public/index.html"
     }
   ],
   "env": {
