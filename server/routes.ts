@@ -19,15 +19,25 @@ export async function registerRoutes(app: Express) {
 
       console.log("Exchanging code for access token...");
 
-      // Get the base URL based on environment
-      const baseUrl = process.env.VERCEL_URL 
-        ? `https://${process.env.VERCEL_URL}`
-        : process.env.NODE_ENV === 'production'
-          ? 'https://foliolab.vercel.app'
-          : 'http://localhost:5000';
+      // Get the base URL based on environment and hostname
+      let baseUrl: string;
+      if (process.env.NODE_ENV === 'production') {
+        // Use the production URL if we're on the main domain
+        if (req.headers.host?.includes('foliolab.vercel.app')) {
+          baseUrl = 'https://foliolab.vercel.app';
+        } else if (process.env.VERCEL_URL) {
+          // Fall back to preview URL for preview deployments
+          baseUrl = `https://${process.env.VERCEL_URL}`;
+        } else {
+          baseUrl = 'https://foliolab.vercel.app';
+        }
+      } else {
+        baseUrl = 'http://localhost:5000';
+      }
 
       console.log("OAuth Configuration:", {
         baseUrl,
+        host: req.headers.host,
         clientIdExists: !!process.env.GITHUB_CLIENT_ID,
         clientSecretExists: !!process.env.GITHUB_CLIENT_SECRET,
         code: code.substring(0, 8) + "...", // Log first 8 chars for debugging

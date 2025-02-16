@@ -8,9 +8,19 @@ app.use(express.urlencoded({ extended: false }));
 // Add CORS headers
 app.use((req, res, next) => {
   // Allow specific origins in production, or all in development
-  const origin = process.env.NODE_ENV === 'production'
-    ? 'https://foliolab.vercel.app'
-    : '*';
+  let origin = '*';
+  if (process.env.NODE_ENV === 'production') {
+    // Allow both production and preview URLs
+    const allowedOrigins = [
+      'https://foliolab.vercel.app',
+      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null
+    ].filter(Boolean);
+
+    const requestOrigin = req.headers.origin;
+    if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+      origin = requestOrigin;
+    }
+  }
 
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
