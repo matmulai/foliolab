@@ -60,8 +60,8 @@ cd foliolab
 2. Create a `.env` file with your environment variables:
 ```env
 GITHUB_CLIENT_ID=your_github_client_id
+VITE_GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
-OPENAI_API_KEY=your_openai_api_key
 ```
 
 3. Build and run with Docker Compose:

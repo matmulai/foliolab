@@ -114,13 +114,11 @@ export async function registerRoutes(app: Express) {
         repo.name
       ) || '';
 
-      // Set OpenAI key for this request
-      process.env.OPENAI_API_KEY = openaiKey;
-
       const summary = await generateRepoSummary(
         repo.name,
         repo.description || '',
-        readme
+        readme,
+        openaiKey
       );
 
       selectedRepos[repoIndex] = {

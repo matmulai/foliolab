@@ -67,7 +67,7 @@ export async function getRepositories(accessToken: string): Promise<Repository[]
       stars: repo.stargazers_count,
       language: repo.language,
       topics: repo.topics || [],
-      updatedAt: repo.updated_at,
+      updatedAt: repo.updated_at, // GitHub API always returns this as an ISO date string
     }
   }));
 }

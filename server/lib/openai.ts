@@ -1,15 +1,16 @@
 import OpenAI from "openai";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 interface RepoSummary {
   summary: string;
   keyFeatures: string[];
 }
 
-export async function generateRepoSummary(name: string, description: string, readme: string): Promise<RepoSummary> {
+export async function generateRepoSummary(name: string, description: string, readme: string, apiKey: string): Promise<RepoSummary> {
   try {
+    // Create a new OpenAI instance with the user-provided API key
+    const openai = new OpenAI({ apiKey });
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
