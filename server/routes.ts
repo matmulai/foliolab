@@ -17,94 +17,46 @@ export async function registerRoutes(app: Express) {
         return res.status(400).json({ error: "Authorization code is required" });
       }
 
-      console.log("Exchanging code for access token...");
-
-      // Get the base URL based on environment and hostname
-      let baseUrl = req.protocol + '://' + req.get('host');
-      console.log("Full request details:", {
-        protocol: req.protocol,
-        host: req.get('host'),
-        originalUrl: req.originalUrl,
-        baseUrl: baseUrl
-      });
-
-      // Log current configuration and request details
-      console.log("OAuth Configuration:", {
-        baseUrl,
-        host: req.headers.host,
-        clientIdExists: !!process.env.GITHUB_CLIENT_ID,
-        clientSecretExists: !!process.env.GITHUB_CLIENT_SECRET,
-        code: code.substring(0, 8) + "..."
-      });
-
-      // Create form-urlencoded body using URLSearchParams
       const params = new URLSearchParams();
       params.append('client_id', process.env.GITHUB_CLIENT_ID!);
       params.append('client_secret', process.env.GITHUB_CLIENT_SECRET!);
       params.append('code', code);
 
-      console.log("Request parameters:", {
-        url: "https://github.com/login/oauth/access_token",
-        params: Object.fromEntries(params.entries())
+      const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "FolioLab/1.0.0",
+          "X-GitHub-Api-Version": "2022-11-28"
+        },
+        body: params.toString()
       });
 
-      try {
-        const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
-          method: "POST",
-          headers: {
-            "Accept": "application/json",
-            "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": "FolioLab/1.0.0",
-            "X-GitHub-Api-Version": "2022-11-28"
-          },
-          body: params.toString()
-        });
+      const tokenData = await tokenResponse.json();
 
-        // Log response status and headers
-        console.log("GitHub API Response:", {
-          status: tokenResponse.status,
-          statusText: tokenResponse.statusText,
-          headers: Object.fromEntries(tokenResponse.headers.entries())
-        });
-
-        const responseText = await tokenResponse.text();
-        console.log("Raw GitHub response:", responseText);
-
-        let tokenData;
-        try {
-          tokenData = JSON.parse(responseText);
-        } catch (e) {
-          console.error("Failed to parse GitHub response:", e);
-          throw new Error(`Invalid response from GitHub: ${responseText}`);
-        }
-
-        if (tokenData.error) {
-          throw new Error(`GitHub OAuth error: ${tokenData.error_description || tokenData.error}`);
-        }
-
-        if (!tokenData.access_token) {
-          throw new Error("No access token in GitHub response");
-        }
-
-        // Get user info and repositories
-        const githubUser = await getGithubUser(tokenData.access_token);
-        const repos = await getRepositories(tokenData.access_token);
-        selectedRepos = repos.map((repo, index) => ({
-          ...repo,
-          id: index + 1,
-          selected: false,
-          summary: null
-        }));
-
-        res.json({
-          repositories: selectedRepos,
-          accessToken: tokenData.access_token,
-          username: githubUser.username
-        });
-      } catch (error) {
-        console.error("Token exchange error:", error);
-        throw new Error(`Token exchange failed: ${error instanceof Error ? error.message : String(error)}`);
+      if (tokenData.error) {
+        throw new Error(`GitHub OAuth error: ${tokenData.error_description || tokenData.error}`);
       }
+
+      if (!tokenData.access_token) {
+        throw new Error("No access token in GitHub response");
+      }
+
+      const githubUser = await getGithubUser(tokenData.access_token);
+      const repos = await getRepositories(tokenData.access_token);
+      selectedRepos = repos.map((repo, index) => ({
+        ...repo,
+        id: index + 1,
+        selected: false,
+        summary: null
+      }));
+
+      res.json({
+        repositories: selectedRepos,
+        accessToken: tokenData.access_token,
+        username: githubUser.username
+      });
     } catch (error) {
       console.error('Failed to fetch repositories:', error);
       res.status(500).json({

@@ -6,17 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
 function getGithubAuthUrl() {
-  // Add verbose environment debugging
-  console.log("Environment variables:", {
-    VITE_GITHUB_CLIENT_ID: import.meta.env.VITE_GITHUB_CLIENT_ID,
-    MODE: import.meta.env.MODE,
-    DEV: import.meta.env.DEV,
-    BASE_URL: window.location.origin
-  });
-
   const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
   if (!clientId) {
-    console.error("GitHub Client ID is not defined in environment variables");
     throw new Error("GitHub Client ID is not configured");
   }
 
@@ -27,9 +18,7 @@ function getGithubAuthUrl() {
     state: crypto.randomUUID(),
   });
 
-  const authUrl = `https://github.com/login/oauth/authorize?${params}`;
-  console.log("Generated GitHub Auth URL:", authUrl);
-  return authUrl;
+  return `https://github.com/login/oauth/authorize?${params}`;
 }
 
 export default function GithubAuth() {
@@ -37,14 +26,12 @@ export default function GithubAuth() {
 
   const { mutate: authenticate, isPending } = useMutation({
     mutationFn: async (code: string) => {
-      console.log("Sending authentication request with code:", code.substring(0, 8) + "...");
       const res = await apiRequest("POST", "/api/fetch-repos", { code });
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(`${res.status}: ${JSON.stringify(errorData)}`);
       }
       const data = await res.json();
-      console.log("Authentication response:", data);
 
       // Store GitHub token and username for later use
       if (data.accessToken) {
@@ -63,32 +50,20 @@ export default function GithubAuth() {
   });
 
   useEffect(() => {
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get("code");
-      const error = urlParams.get("error");
-      const errorDescription = urlParams.get("error_description");
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+    const error = urlParams.get("error");
+    const errorDescription = urlParams.get("error_description");
 
-      console.log("URL parameters:", {
-        hasCode: !!code,
-        error,
-        errorDescription
-      });
+    if (error) {
+      console.error("GitHub OAuth Error:", error, errorDescription);
+      return;
+    }
 
-      if (error) {
-        console.error("GitHub OAuth Error:", error, errorDescription);
-        return;
-      }
-
-      if (code) {
-        console.log("Received GitHub code, authenticating...");
-        authenticate(code);
-      } else {
-        console.log("No code present, redirecting to GitHub...");
-        window.location.href = getGithubAuthUrl();
-      }
-    } catch (error) {
-      console.error("Error during GitHub authentication:", error);
+    if (code) {
+      authenticate(code);
+    } else {
+      window.location.href = getGithubAuthUrl();
     }
   }, []);
 
