@@ -135,6 +135,9 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
+      console.log('Analyze request:', { id: repoId, username }); // Debug log
+      console.log('Current repos:', selectedRepos.map(r => ({ id: r.id, name: r.name }))); // Debug log
+
       const repo = selectedRepos.find(r => r.id === repoId);
       if (!repo) {
         return res.status(404).json({ 
@@ -143,11 +146,15 @@ export async function registerRoutes(app: Express) {
         });
       }
 
+      console.log('Found repository to analyze:', repo); // Debug log
+
       const readme = await getReadmeContent(
         accessToken,
         username,
         repo.name
       ) || '';
+
+      console.log('Fetched README content:', readme ? 'Yes' : 'No'); // Debug log
 
       const summary = await generateRepoSummary(
         repo.name,
@@ -156,14 +163,17 @@ export async function registerRoutes(app: Express) {
         openaiKey
       );
 
-      // Update the repository in the array
-      const repoIndex = selectedRepos.findIndex(r => r.id === repoId);
-      selectedRepos[repoIndex] = {
-        ...repo,
-        summary: summary.summary
-      };
+      console.log('Generated summary:', summary); // Debug log
 
-      res.json({ repository: selectedRepos[repoIndex] });
+      // Update the repository in the array while maintaining other repositories
+      selectedRepos = selectedRepos.map(r => 
+        r.id === repoId ? { ...r, summary: summary.summary } : r
+      );
+
+      const updatedRepo = selectedRepos.find(r => r.id === repoId);
+      console.log('Updated repository with summary:', updatedRepo); // Debug log
+
+      res.json({ repository: updatedRepo });
     } catch (error) {
       console.error('Failed to analyze repository:', error);
       res.status(500).json({
