@@ -21,7 +21,7 @@ export interface Repository {
     stars: number;
     language: string | null;
     topics: string[];
-    updatedAt: string;
+    updatedAt: string | null;
     url?: string | null;
   };
 }
@@ -37,7 +37,7 @@ export const repositorySchema = z.object({
     stars: z.number(),
     language: z.string().nullable(),
     topics: z.array(z.string()),
-    updatedAt: z.string(),
+    updatedAt: z.string().nullable(),
     url: z.string().nullable().optional()
   })
 });

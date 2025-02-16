@@ -14,7 +14,7 @@ interface Repository {
     stars: number;
     language: string | null;
     topics: string[];
-    updatedAt: string;
+    updatedAt: string | null;
   };
 }
 
