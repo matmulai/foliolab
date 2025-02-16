@@ -46,10 +46,10 @@ export async function registerRoutes(app: Express) {
       const githubUser = await getGithubUser(tokenData.access_token);
       const repos = await getRepositories(tokenData.access_token);
 
-      // Use the GitHub repository ID instead of an index-based ID
+      // Map repositories to include the GitHub repository ID
       selectedRepos = repos.map(repo => ({
         ...repo,
-        id: repo.metadata.id, // Use GitHub's repository ID
+        id: repo.metadata.id,  // Use the GitHub repository ID from metadata
         selected: false,
         summary: null
       }));
@@ -75,16 +75,25 @@ export async function registerRoutes(app: Express) {
   app.post("/api/repositories/:id/select", async (req, res) => {
     const { id } = req.params;
     const { selected } = req.body;
+    const repoId = parseInt(id);
+
     try {
-      const repoIndex = selectedRepos.findIndex(r => r.id === parseInt(id));
+      const repoIndex = selectedRepos.findIndex(r => r.id === repoId);
       if (repoIndex === -1) {
-        return res.status(404).json({ error: "Repository not found" });
+        return res.status(404).json({ 
+          error: "Repository not found",
+          details: `No repository found with ID ${repoId}`
+        });
       }
+
       selectedRepos[repoIndex].selected = selected;
       res.json({ repository: selectedRepos[repoIndex] });
     } catch (error) {
       console.error('Failed to update repository:', error);
-      res.status(500).json({ error: "Failed to update repository" });
+      res.status(500).json({ 
+        error: "Failed to update repository",
+        details: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 

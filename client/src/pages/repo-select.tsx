@@ -30,8 +30,8 @@ export default function RepoSelect() {
 
   const { mutate: toggleRepo } = useMutation({
     mutationFn: async ({ id, selected }: { id: number; selected: boolean }) => {
-      if (typeof id === 'undefined') {
-        throw new Error('Repository ID is undefined');
+      if (!id) {
+        throw new Error('Repository ID is required');
       }
 
       // Optimistically update the UI
@@ -107,7 +107,7 @@ export default function RepoSelect() {
   const handleSelectAll = (checked: boolean) => {
     const updatedToggles: Record<number, boolean> = {};
     paginatedRepos.forEach((repo) => {
-      if (repo.selected !== checked && typeof repo.id !== 'undefined') {
+      if (repo.selected !== checked && repo.id) {
         updatedToggles[repo.id] = checked;
         toggleRepo({ id: repo.id, selected: checked });
       }
@@ -119,7 +119,7 @@ export default function RepoSelect() {
     try {
       // Analyze repositories sequentially to avoid rate limits
       for (const repo of selectedRepos) {
-        if (typeof repo.id !== 'undefined') {
+        if (repo.id) {
           await analyzeRepo({ id: repo.id, openaiKey });
         }
       }
@@ -174,7 +174,7 @@ export default function RepoSelect() {
 
         <div className="grid gap-4">
           {paginatedRepos.map((repo) => {
-            const isTogglePending = typeof repo.id !== 'undefined' && repo.id in pendingToggles;
+            const isTogglePending = repo.id in pendingToggles;
             const effectiveSelected = isTogglePending ? pendingToggles[repo.id] : repo.selected;
 
             return (
@@ -183,7 +183,7 @@ export default function RepoSelect() {
                   <Checkbox
                     checked={effectiveSelected}
                     onCheckedChange={(checked) => {
-                      if (typeof repo.id !== 'undefined') {
+                      if (repo.id) {
                         toggleRepo({ id: repo.id, selected: checked as boolean });
                       }
                     }}
