@@ -21,20 +21,39 @@ export default function RepoSelect() {
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
 
+  // Track pending repository toggles locally
+  const [pendingToggles, setPendingToggles] = useState<Record<number, boolean>>({});
+
   const { data, isLoading } = useQuery<{ repositories: Repository[] }>({
     queryKey: ["/api/repositories"],
   });
 
-  const { mutate: toggleRepo, isPending: isToggling } = useMutation({
+  const { mutate: toggleRepo } = useMutation({
     mutationFn: async ({ id, selected }: { id: number; selected: boolean }) => {
-      const res = await apiRequest("POST", `/api/repositories/${id}/select`, {
-        selected,
-      });
-      return res.json();
+      // Optimistically update the UI
+      setPendingToggles(prev => ({ ...prev, [id]: selected }));
+
+      try {
+        const res = await apiRequest("POST", `/api/repositories/${id}/select`, {
+          selected,
+        });
+        return res.json();
+      } catch (error) {
+        // Revert the optimistic update on error
+        setPendingToggles(prev => ({ ...prev, [id]: !selected }));
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/repositories"] });
     },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update repository selection. Please try again.",
+        variant: "destructive",
+      });
+    }
   });
 
   const { mutate: analyzeRepo, isPending: isAnalyzing } = useMutation({
@@ -82,31 +101,35 @@ export default function RepoSelect() {
   const selectedRepos = repositories.filter((repo) => repo.selected);
 
   const handleSelectAll = (checked: boolean) => {
+    const updatedToggles: Record<number, boolean> = {};
     paginatedRepos.forEach((repo) => {
       if (repo.selected !== checked) {
+        updatedToggles[repo.id] = checked;
         toggleRepo({ id: repo.id, selected: checked });
       }
     });
+    setPendingToggles(prev => ({ ...prev, ...updatedToggles }));
   };
 
-  const handleAnalyzeRepos = (openaiKey: string) => {
-    Promise.all(
-      selectedRepos.map((repo) => analyzeRepo({ id: repo.id, openaiKey }))
-    )
-      .then(() => {
-        setLocation("/preview");
-        toast({
-          title: "Success",
-          description: "Repository analysis complete!",
-        });
-      })
-      .catch((error) => {
-        toast({
-          title: "Error",
-          description: "Failed to analyze repositories. Please try again.",
-          variant: "destructive",
-        });
+  const handleAnalyzeRepos = async (openaiKey: string) => {
+    try {
+      // Analyze repositories sequentially to avoid rate limits
+      for (const repo of selectedRepos) {
+        await analyzeRepo({ id: repo.id, openaiKey });
+      }
+
+      setLocation("/preview");
+      toast({
+        title: "Success",
+        description: "Repository analysis complete!",
       });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to analyze repositories. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const allSelected = paginatedRepos.length > 0 && paginatedRepos.every((repo) => repo.selected);
@@ -133,7 +156,7 @@ export default function RepoSelect() {
               <Checkbox
                 checked={allSelected}
                 onCheckedChange={handleSelectAll}
-                disabled={isToggling || paginatedRepos.length === 0}
+                disabled={isAnalyzing || paginatedRepos.length === 0}
                 id="select-all"
               />
               <label htmlFor="select-all" className="text-sm font-medium whitespace-nowrap">
@@ -144,34 +167,39 @@ export default function RepoSelect() {
         </div>
 
         <div className="grid gap-4">
-          {paginatedRepos.map((repo) => (
-            <Card key={repo.id} className="transition-shadow hover:shadow-md">
-              <CardHeader className="flex flex-row items-start gap-4 p-4 md:p-6">
-                <Checkbox
-                  checked={repo.selected}
-                  onCheckedChange={(checked) =>
-                    toggleRepo({ id: repo.id, selected: checked as boolean })
-                  }
-                  disabled={isToggling}
-                />
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold">{repo.name}</h3>
-                  {repo.description && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {repo.description}
-                    </p>
-                  )}
-                  {repo.metadata.language && (
-                    <div className="mt-2">
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
-                        {repo.metadata.language}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
+          {paginatedRepos.map((repo) => {
+            const isTogglePending = repo.id in pendingToggles;
+            const effectiveSelected = isTogglePending ? pendingToggles[repo.id] : repo.selected;
+
+            return (
+              <Card key={repo.id} className="transition-shadow hover:shadow-md">
+                <CardHeader className="flex flex-row items-start gap-4 p-4 md:p-6">
+                  <Checkbox
+                    checked={effectiveSelected}
+                    onCheckedChange={(checked) =>
+                      toggleRepo({ id: repo.id, selected: checked as boolean })
+                    }
+                    disabled={isAnalyzing}
+                  />
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold">{repo.name}</h3>
+                    {repo.description && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {repo.description}
+                      </p>
+                    )}
+                    {repo.metadata.language && (
+                      <div className="mt-2">
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                          {repo.metadata.language}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </CardHeader>
+              </Card>
+            );
+          })}
         </div>
 
         {totalPages > 1 && (
