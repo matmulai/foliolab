@@ -48,22 +48,15 @@ export async function registerRoutes(app: Express) {
 
       console.log('Raw GitHub repositories:', repos); // Debug log
 
-      // Map repositories to match the Repository type
+      // Map repositories to match the Repository type, now including IDs
       selectedRepos = repos.map(repo => ({
-        id: repo.id, // Use the repository's ID directly
+        id: repo.id,
         name: repo.name,
         description: repo.description,
         url: repo.url,
         summary: null,
         selected: false,
-        metadata: {
-          id: repo.id,
-          stars: repo.stars,
-          language: repo.language,
-          topics: repo.topics || [],
-          updatedAt: repo.updatedAt,
-          url: repo.homepage || null
-        }
+        metadata: repo.metadata
       }));
 
       console.log('Mapped repositories:', selectedRepos); // Debug log

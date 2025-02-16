@@ -7,14 +7,17 @@ interface GithubUser {
 }
 
 interface Repository {
+  id: number;  // Added ID field to match GitHub API response
   name: string;
   description: string | null;
   url: string;
   metadata: {
+    id: number;  // Added ID field in metadata
     stars: number;
     language: string | null;
     topics: string[];
-    updatedAt: string | null;
+    updatedAt: string;
+    url?: string | null;
   };
 }
 
@@ -60,14 +63,17 @@ export async function getRepositories(accessToken: string): Promise<Repository[]
   const filteredRepos = data.filter(repo => repo.name !== 'portfolio-showcase');
 
   return filteredRepos.map(repo => ({
+    id: repo.id,  // Include the GitHub repository ID
     name: repo.name,
     description: repo.description || null,
     url: repo.html_url,
     metadata: {
+      id: repo.id,  // Include the ID in metadata as well
       stars: repo.stargazers_count,
       language: repo.language,
       topics: repo.topics || [],
-      updatedAt: repo.updated_at, // GitHub API always returns this as an ISO date string
+      updatedAt: repo.updated_at,
+      url: repo.homepage || null
     }
   }));
 }
@@ -119,7 +125,6 @@ export async function getReadmeContent(accessToken: string, owner: string, repo:
     return null;
   }
 }
-
 
 export async function commitPortfolioFiles(
   accessToken: string,
