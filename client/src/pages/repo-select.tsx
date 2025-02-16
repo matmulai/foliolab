@@ -59,7 +59,7 @@ export default function RepoSelect() {
     onError: (error) => {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update repository selection. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to update repository selection",
         variant: "destructive",
       });
     }

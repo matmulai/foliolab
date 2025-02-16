@@ -46,23 +46,27 @@ export async function registerRoutes(app: Express) {
       const githubUser = await getGithubUser(tokenData.access_token);
       const repos = await getRepositories(tokenData.access_token);
 
-      // Properly map repositories to match the Repository type
+      console.log('Raw GitHub repositories:', repos); // Debug log
+
+      // Map repositories to match the Repository type
       selectedRepos = repos.map(repo => ({
-        id: repo.metadata.id,  // GitHub repository ID
+        id: repo.id, // Use the repository's ID directly
         name: repo.name,
         description: repo.description,
         url: repo.url,
         summary: null,
         selected: false,
         metadata: {
-          id: repo.metadata.id,
-          stars: repo.metadata.stars,
-          language: repo.metadata.language,
-          topics: repo.metadata.topics,
-          updatedAt: repo.metadata.updatedAt,
-          url: repo.metadata.url
+          id: repo.id,
+          stars: repo.stars,
+          language: repo.language,
+          topics: repo.topics || [],
+          updatedAt: repo.updatedAt,
+          url: repo.homepage || null
         }
       }));
+
+      console.log('Mapped repositories:', selectedRepos); // Debug log
 
       res.json({
         repositories: selectedRepos,
@@ -79,6 +83,7 @@ export async function registerRoutes(app: Express) {
   });
 
   app.get("/api/repositories", (_req, res) => {
+    console.log('Current repositories state:', selectedRepos); // Debug log
     res.json({ repositories: selectedRepos });
   });
 
@@ -88,6 +93,8 @@ export async function registerRoutes(app: Express) {
     const repoId = parseInt(id);
 
     try {
+      console.log('Selection request:', { id: repoId, selected }); // Debug log
+
       const repoIndex = selectedRepos.findIndex(r => r.id === repoId);
       if (repoIndex === -1) {
         return res.status(404).json({ 
@@ -100,6 +107,8 @@ export async function registerRoutes(app: Express) {
         ...selectedRepos[repoIndex],
         selected
       };
+
+      console.log('Updated repository:', selectedRepos[repoIndex]); // Debug log
 
       res.json({ repository: selectedRepos[repoIndex] });
     } catch (error) {
