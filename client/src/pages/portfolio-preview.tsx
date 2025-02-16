@@ -3,13 +3,15 @@ import { Repository } from "@shared/schema";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Github, ExternalLink } from "lucide-react";
+import { Github, ExternalLink, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 import { DeploymentActions } from "@/components/deployment-actions";
+import { useLocation } from "wouter";
 
 export default function PortfolioPreview() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const { data, isLoading } = useQuery<{ repositories: Repository[] }>({
     queryKey: ["/api/repositories"],
   });
@@ -65,11 +67,17 @@ export default function PortfolioPreview() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
       <div className="container mx-auto px-4 py-20">
         <div className="max-w-4xl mx-auto">
-          <header className="text-center mb-16">
-            <h1 className="text-4xl font-bold mb-4">My Portfolio</h1>
-            <p className="text-lg text-muted-foreground">
-              A showcase of my best work
-            </p>
+          <header className="flex items-center justify-between mb-16">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setLocation("/repos")}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Repositories
+            </Button>
+            <h1 className="text-4xl font-bold">My Portfolio</h1>
           </header>
 
           <div className="grid gap-8">
