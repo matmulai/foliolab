@@ -6,6 +6,7 @@ import { Repository } from "@shared/schema.js";
 
 // In-memory storage for the current session
 let selectedRepos: Repository[] = [];
+let currentAccessToken: string | null = null;
 
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
@@ -43,28 +44,32 @@ export async function registerRoutes(app: Express) {
         throw new Error("No access token in GitHub response");
       }
 
+      currentAccessToken = tokenData.access_token;
       const githubUser = await getGithubUser(tokenData.access_token);
       const repos = await getRepositories(tokenData.access_token);
 
       console.log('Raw GitHub repositories:', repos); // Debug log
 
-      // Create a map of existing selections
-      const existingSelections = new Map(
-        selectedRepos.map(repo => [repo.id, repo.selected])
+      // Create a map of existing selections and summaries
+      const existingData = new Map(
+        selectedRepos.map(repo => [repo.id, { 
+          selected: repo.selected,
+          summary: repo.summary 
+        }])
       );
 
-      // Map repositories to match the Repository type, preserving existing selections
+      // Map repositories to match the Repository type, preserving existing data
       selectedRepos = repos.map(repo => ({
         id: repo.id,
         name: repo.name,
         description: repo.description,
         url: repo.url,
-        summary: null,
-        selected: existingSelections.get(repo.id) || false,
+        summary: existingData.get(repo.id)?.summary || null,
+        selected: existingData.get(repo.id)?.selected || false,
         metadata: repo.metadata
       }));
 
-      console.log('Mapped repositories with preserved selections:', selectedRepos); // Debug log
+      console.log('Mapped repositories with preserved data:', selectedRepos); // Debug log
 
       res.json({
         repositories: selectedRepos,
@@ -92,6 +97,7 @@ export async function registerRoutes(app: Express) {
 
     try {
       console.log('Selection request:', { id: repoId, selected }); // Debug log
+      console.log('Current repos state:', selectedRepos.map(r => ({ id: r.id, selected: r.selected }))); // Debug log
 
       const repoIndex = selectedRepos.findIndex(r => r.id === repoId);
       console.log('Repository index:', repoIndex, 'Repos length:', selectedRepos.length); // Debug log
@@ -137,6 +143,21 @@ export async function registerRoutes(app: Express) {
     try {
       console.log('Analyze request:', { id: repoId, username }); // Debug log
       console.log('Current repos:', selectedRepos.map(r => ({ id: r.id, name: r.name }))); // Debug log
+
+      // If selectedRepos is empty, try to fetch repositories
+      if (selectedRepos.length === 0 && currentAccessToken) {
+        console.log('Fetching repositories as selectedRepos is empty');
+        const repos = await getRepositories(currentAccessToken);
+        selectedRepos = repos.map(repo => ({
+          id: repo.id,
+          name: repo.name,
+          description: repo.description,
+          url: repo.url,
+          summary: null,
+          selected: false,
+          metadata: repo.metadata
+        }));
+      }
 
       const repo = selectedRepos.find(r => r.id === repoId);
       if (!repo) {
