@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, inspectQueryCache, forceRefreshRepositories } from "@/lib/queryClient";
 import { Repository } from "@shared/schema";
 import { Loader2, Search } from "lucide-react";
 import { ApiKeyDialog } from "@/components/api-key-dialog";
@@ -36,6 +36,8 @@ export default function RepoSelect() {
 
       try {
         console.log('Toggling repository:', { id, selected }); // Debug log
+        inspectQueryCache(); // Log cache state before mutation
+
         const res = await apiRequest("POST", `/api/repositories/${id}/select`, {
           selected,
         });
@@ -52,9 +54,13 @@ export default function RepoSelect() {
     onMutate: ({ id, selected }) => {
       // Optimistically update the UI
       setPendingToggles(prev => ({ ...prev, [id]: selected }));
+      console.log('Cache state before optimistic update:');
+      inspectQueryCache();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/repositories"] });
+      console.log('Cache state after successful update:');
+      inspectQueryCache();
     },
     onError: (error) => {
       toast({
@@ -62,6 +68,8 @@ export default function RepoSelect() {
         description: error instanceof Error ? error.message : "Failed to update repository selection",
         variant: "destructive",
       });
+      console.log('Cache state after error:');
+      inspectQueryCache();
     }
   });
 
@@ -70,6 +78,9 @@ export default function RepoSelect() {
       if (!id) {
         throw new Error('Repository ID is required');
       }
+
+      console.log('Starting repository analysis:', { id });
+      inspectQueryCache(); // Log cache state before analysis
 
       const res = await apiRequest("POST", `/api/repositories/${id}/analyze`, {
         accessToken: localStorage.getItem("github_token"),
@@ -85,6 +96,8 @@ export default function RepoSelect() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/repositories"] });
+      console.log('Cache state after successful analysis:');
+      inspectQueryCache();
     },
     onError: (error) => {
       toast({
@@ -92,6 +105,8 @@ export default function RepoSelect() {
         description: error instanceof Error ? error.message : "Failed to analyze repository. Please try again.",
         variant: "destructive",
       });
+      console.log('Cache state after error:');
+      inspectQueryCache();
     }
   });
 
@@ -110,6 +125,12 @@ export default function RepoSelect() {
   }, [filteredRepos, currentPage]);
 
   const totalPages = Math.ceil((filteredRepos?.length || 0) / REPOS_PER_PAGE);
+
+  // Force refresh repositories when component mounts
+  useEffect(() => {
+    console.log('RepoSelect mounted, forcing repository refresh');
+    forceRefreshRepositories();
+  }, []); // Empty dependency array means this runs once on mount
 
   if (isLoading) {
     return (
@@ -198,11 +219,11 @@ export default function RepoSelect() {
             const isTogglePending = repo.id in pendingToggles;
             const effectiveSelected = isTogglePending ? pendingToggles[repo.id] : repo.selected;
 
-            console.log('Repository row:', { 
-              id: repo.id, 
-              name: repo.name, 
+            console.log('Repository row:', {
+              id: repo.id,
+              name: repo.name,
               selected: repo.selected,
-              effectiveSelected 
+              effectiveSelected
             }); // Debug log
 
             return (
@@ -212,10 +233,10 @@ export default function RepoSelect() {
                     id={`repo-${repo.id}`}
                     checked={effectiveSelected}
                     onCheckedChange={(checked) => {
-                      console.log('Checkbox change:', { 
-                        id: repo.id, 
-                        checked, 
-                        current: effectiveSelected 
+                      console.log('Checkbox change:', {
+                        id: repo.id,
+                        checked,
+                        current: effectiveSelected
                       }); // Debug log
                       if (repo.id) {
                         toggleRepo({ id: repo.id, selected: !!checked });
