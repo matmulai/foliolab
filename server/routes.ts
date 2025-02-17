@@ -4,100 +4,19 @@ import { getRepositories, getReadmeContent, getGithubUser, createPortfolioReposi
 import { generateRepoSummary } from "./lib/openai.js";
 import { Repository } from "@shared/schema.js";
 
-// In-memory storage for the current session
-let selectedRepos: Repository[] = [];
-let currentAccessToken: string | null = null;
-
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
-  app.get("/api/repositories", (_req, res) => {
-    console.log('GET /api/repositories - Current repositories state:', 
-      selectedRepos.map(r => ({ 
-        id: r.id, 
-        name: r.name, 
-        selected: r.selected,
-        summary: r.summary ? 'Yes' : 'No'
-      }))
-    );
-    res.json({ repositories: selectedRepos });
-  });
+  app.get("/api/repositories", async (req, res) => {
+    const accessToken = req.headers.authorization?.replace('Bearer ', '');
+    if (!accessToken) {
+      return res.status(401).json({ error: "No access token provided" });
+    }
 
-  app.post("/api/fetch-repos", async (req, res) => {
-    const { code } = req.body;
     try {
-      if (!code) {
-        return res.status(400).json({ error: "Authorization code is required" });
-      }
-
-      const params = new URLSearchParams();
-      params.append('client_id', process.env.GITHUB_CLIENT_ID!);
-      params.append('client_secret', process.env.GITHUB_CLIENT_SECRET!);
-      params.append('code', code);
-
-      const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
-        method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "FolioLab/1.0.0",
-          "X-GitHub-Api-Version": "2022-11-28"
-        },
-        body: params.toString()
-      });
-
-      const tokenData = await tokenResponse.json();
-
-      if (tokenData.error) {
-        throw new Error(`GitHub OAuth error: ${tokenData.error_description || tokenData.error}`);
-      }
-
-      if (!tokenData.access_token) {
-        throw new Error("No access token in GitHub response");
-      }
-
-      currentAccessToken = tokenData.access_token;
-      const githubUser = await getGithubUser(tokenData.access_token);
-      const repos = await getRepositories(tokenData.access_token);
-
-      console.log('Raw GitHub repositories:', repos);
-
-      // Create a map of existing selections and summaries
-      const existingData = new Map(
-        selectedRepos.map(repo => [repo.id, { 
-          selected: repo.selected,
-          summary: repo.summary 
-        }])
-      );
-
-      // Map repositories to match the Repository type, preserving existing data
-      selectedRepos = repos.map(repo => ({
-        id: repo.id,
-        name: repo.name,
-        description: repo.description,
-        url: repo.url,
-        summary: existingData.get(repo.id)?.summary || null,
-        selected: existingData.get(repo.id)?.selected || false,
-        metadata: {
-          ...repo.metadata,
-          updatedAt: repo.metadata.updatedAt || new Date().toISOString() // Ensure updatedAt is never null
-        }
-      }));
-
-      console.log('Mapped repositories with preserved data:', 
-        selectedRepos.map(r => ({
-          id: r.id,
-          name: r.name,
-          selected: r.selected,
-          summary: r.summary ? 'Yes' : 'No'
-        }))
-      );
-
-      res.json({
-        repositories: selectedRepos,
-        accessToken: tokenData.access_token,
-        username: githubUser.username
-      });
+      // Get fresh repository data from GitHub
+      const repos = await getRepositories(accessToken);
+      res.json({ repositories: repos });
     } catch (error) {
       console.error('Failed to fetch repositories:', error);
       res.status(500).json({
@@ -107,43 +26,9 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  app.post("/api/repositories/:id/select", async (req, res) => {
-    const { id } = req.params;
-    const { selected } = req.body;
-    const repoId = parseInt(id);
-
-    try {
-      console.log('Selection request:', { id: repoId, selected });
-      console.log('Current repos state before update:', 
-        selectedRepos.map(r => ({ id: r.id, selected: r.selected }))
-      );
-
-      const repoIndex = selectedRepos.findIndex(r => r.id === repoId);
-      if (repoIndex === -1) {
-        return res.status(404).json({ 
-          error: "Repository not found",
-          details: `No repository found with ID ${repoId}`
-        });
-      }
-
-      // Update the repository in the array
-      selectedRepos = selectedRepos.map(repo => 
-        repo.id === repoId ? { ...repo, selected } : repo
-      );
-
-      console.log('Updated repositories state:', 
-        selectedRepos.map(r => ({ id: r.id, selected: r.selected }))
-      );
-
-      const updatedRepo = selectedRepos[repoIndex];
-      res.json({ repository: updatedRepo });
-    } catch (error) {
-      console.error('Failed to update repository:', error);
-      res.status(500).json({ 
-        error: "Failed to update repository",
-        details: error instanceof Error ? error.message : String(error)
-      });
-    }
+  app.post("/api/repositories/:id/select", (_req, res) => {
+    // Selection state is maintained client-side only
+    res.json({ success: true });
   });
 
   app.post("/api/repositories/:id/analyze", async (req, res) => {
@@ -160,32 +45,10 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
-      console.log('Analyze request:', { id: repoId, username });
-      console.log('Current repos before analysis:', 
-        selectedRepos.map(r => ({ 
-          id: r.id, 
-          name: r.name,
-          selected: r.selected,
-          summary: r.summary ? 'Yes' : 'No' 
-        }))
-      );
+      // Get fresh repository data from GitHub
+      const repos = await getRepositories(accessToken);
+      const repo = repos.find(r => r.id === repoId);
 
-      // If selectedRepos is empty and we have an access token, refetch repositories
-      if (selectedRepos.length === 0) {
-        console.log('Fetching repositories as selectedRepos is empty');
-        const repos = await getRepositories(accessToken);
-        selectedRepos = repos.map(repo => ({
-          id: repo.id,
-          name: repo.name,
-          description: repo.description,
-          url: repo.url,
-          summary: null,
-          selected: false,
-          metadata: repo.metadata
-        }));
-      }
-
-      const repo = selectedRepos.find(r => r.id === repoId);
       if (!repo) {
         return res.status(404).json({ 
           error: "Repository not found",
@@ -193,20 +56,11 @@ export async function registerRoutes(app: Express) {
         });
       }
 
-      console.log('Found repository to analyze:', {
-        id: repo.id,
-        name: repo.name,
-        selected: repo.selected,
-        hasSummary: repo.summary ? 'Yes' : 'No'
-      });
-
       const readme = await getReadmeContent(
         accessToken,
         username,
         repo.name
       ) || '';
-
-      console.log('Fetched README content length:', readme.length);
 
       const summary = await generateRepoSummary(
         repo.name,
@@ -215,31 +69,13 @@ export async function registerRoutes(app: Express) {
         openaiKey
       );
 
-      console.log('Generated summary:', summary);
-
-      // Update the repository in the array while maintaining other repositories
-      selectedRepos = selectedRepos.map(r => 
-        r.id === repoId ? { ...r, summary: summary.summary } : r
-      );
-
-      const updatedRepo = selectedRepos.find(r => r.id === repoId);
-      console.log('Updated repository with summary:', {
-        id: updatedRepo?.id,
-        name: updatedRepo?.name,
-        selected: updatedRepo?.selected,
-        hasSummary: updatedRepo?.summary ? 'Yes' : 'No'
+      // Return the repository with the new summary
+      res.json({
+        repository: {
+          ...repo,
+          summary: summary.summary
+        }
       });
-
-      console.log('All repositories after update:', 
-        selectedRepos.map(r => ({ 
-          id: r.id, 
-          name: r.name,
-          selected: r.selected,
-          summary: r.summary ? 'Yes' : 'No' 
-        }))
-      );
-
-      res.json({ repository: updatedRepo });
     } catch (error) {
       console.error('Failed to analyze repository:', error);
       res.status(500).json({
@@ -250,7 +86,7 @@ export async function registerRoutes(app: Express) {
   });
 
   app.post("/api/deploy/github", async (req, res) => {
-    const { accessToken, downloadOnly } = req.body;
+    const { accessToken, downloadOnly, repositories } = req.body;
 
     if (!accessToken) {
       return res.status(400).json({ error: "GitHub access token is required" });
@@ -258,7 +94,6 @@ export async function registerRoutes(app: Express) {
 
     try {
       const user = await getGithubUser(accessToken);
-      const displayRepos = selectedRepos.filter(repo => repo.selected);
       const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -274,7 +109,7 @@ export async function registerRoutes(app: Express) {
             <p class="text-gray-600">A showcase of my work</p>
         </header>
         <div class="grid gap-8 max-w-4xl mx-auto">
-            ${displayRepos.map(repo => `
+            ${repositories.map(repo => `
                 <article class="bg-white rounded-lg shadow-md p-6">
                     <h2 class="text-2xl font-semibold mb-2">${repo.name}</h2>
                     <p class="text-gray-600 mb-4">${repo.summary || repo.description || ''}</p>
@@ -326,7 +161,7 @@ export async function registerRoutes(app: Express) {
   });
 
   app.post("/api/deploy/github-pages", async (req, res) => {
-    const { accessToken } = req.body;
+    const { accessToken, repositories } = req.body;
 
     if (!accessToken) {
       return res.status(400).json({ error: "GitHub access token is required" });
@@ -334,7 +169,6 @@ export async function registerRoutes(app: Express) {
 
     try {
       const user = await getGithubUser(accessToken);
-      const displayRepos = selectedRepos.filter(repo => repo.selected);
       const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -350,7 +184,7 @@ export async function registerRoutes(app: Express) {
             <p class="text-gray-600">A showcase of my work</p>
         </header>
         <div class="grid gap-8 max-w-4xl mx-auto">
-            ${displayRepos.map(repo => `
+            ${repositories.map(repo => `
                 <article class="bg-white rounded-lg shadow-md p-6">
                     <h2 class="text-2xl font-semibold mb-2">${repo.name}</h2>
                     <p class="text-gray-600 mb-4">${repo.summary || repo.description || ''}</p>

@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Github, ExternalLink, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { DeploymentActions } from "@/components/deployment-actions";
 import { useLocation } from "wouter";
 
@@ -14,6 +14,7 @@ export default function PortfolioPreview() {
   const [, setLocation] = useLocation();
   const [selectedRepos, setSelectedRepos] = useState<Repository[]>([]);
 
+  // Get repository data from client-side cache
   const { data, isLoading, error } = useQuery<{ repositories: Repository[] }>({
     queryKey: ["/api/repositories"],
     staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
@@ -64,7 +65,7 @@ export default function PortfolioPreview() {
         });
       }
     }
-  }, [data, isLoading]);
+  }, [data, isLoading, toast]);
 
   if (error) {
     return (
@@ -205,8 +206,8 @@ export default function PortfolioPreview() {
             ))}
           </div>
 
-          {/* Add deployment actions */}
-          <DeploymentActions />
+          {/* Add deployment actions with selected repositories */}
+          <DeploymentActions repositories={selectedRepos} />
         </div>
       </div>
     </div>
