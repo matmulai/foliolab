@@ -5,28 +5,57 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Github, ExternalLink, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { DeploymentActions } from "@/components/deployment-actions";
 import { useLocation } from "wouter";
 
 export default function PortfolioPreview() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const { data, isLoading } = useQuery<{ repositories: Repository[] }>({
+  const [selectedRepos, setSelectedRepos] = useState<Repository[]>([]);
+
+  const { data, isLoading, error } = useQuery<{ repositories: Repository[] }>({
     queryKey: ["/api/repositories"],
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+    retry: 2,
+    onError: (err) => {
+      console.error('Error fetching repositories:', err);
+      toast({
+        title: "Error",
+        description: "Failed to load repositories. Please try again.",
+        variant: "destructive",
+      });
+    }
   });
 
+  // Update selected repositories when data changes
   useEffect(() => {
     if (data?.repositories && !isLoading) {
-      const selectedRepos = data.repositories.filter((repo) => repo.selected);
-      console.log('Selected repositories:', selectedRepos.map(r => ({
-        id: r.id,
-        name: r.name,
-        selected: r.selected,
-        hasSummary: r.summary ? 'Yes' : 'No'
-      })));
+      const filtered = data.repositories.filter((repo) => repo.selected);
+      console.log('Repository data loaded:', {
+        total: data.repositories.length,
+        selected: filtered.length,
+        selectedIds: filtered.map(r => r.id)
+      });
 
-      const allHaveSummaries = selectedRepos.every((repo) => repo.summary);
+      setSelectedRepos(filtered);
+
+      if (filtered.length === 0) {
+        console.warn('No selected repositories found');
+        toast({
+          title: "No Repositories Selected",
+          description: "Please go back and select repositories to include in your portfolio.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const allHaveSummaries = filtered.every((repo) => repo.summary);
+      console.log('Summaries status:', {
+        total: filtered.length,
+        withSummaries: filtered.filter(r => r.summary).length,
+        allComplete: allHaveSummaries
+      });
 
       if (allHaveSummaries) {
         toast({
@@ -36,6 +65,22 @@ export default function PortfolioPreview() {
       }
     }
   }, [data, isLoading]);
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
+        <div className="container mx-auto px-4 py-20">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-2xl font-bold text-red-600 mb-4">Error Loading Portfolio</h1>
+            <p className="text-gray-600 mb-6">Failed to load repository data. Please try again.</p>
+            <Button onClick={() => setLocation("/repos")}>
+              Return to Repository Selection
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -68,13 +113,21 @@ export default function PortfolioPreview() {
     );
   }
 
-  const selectedRepos = data?.repositories.filter((repo) => repo.selected) || [];
-  console.log('Filtered selected repositories:', selectedRepos.map(r => ({
-    id: r.id,
-    name: r.name,
-    selected: r.selected,
-    hasSummary: r.summary ? 'Yes' : 'No'
-  })));
+  if (selectedRepos.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
+        <div className="container mx-auto px-4 py-20">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-2xl font-bold mb-4">No Repositories Selected</h1>
+            <p className="text-gray-600 mb-6">Please select repositories to include in your portfolio.</p>
+            <Button onClick={() => setLocation("/repos")}>
+              Select Repositories
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
