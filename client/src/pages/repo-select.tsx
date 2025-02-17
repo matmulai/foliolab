@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { apiRequest, queryClient, inspectQueryCache, forceRefreshRepositories } from "@/lib/queryClient";
+import { apiRequest, queryClient, inspectQueryCache } from "@/lib/queryClient";
 import { Repository } from "@shared/schema";
 import { Loader2, Search } from "lucide-react";
 import { ApiKeyDialog } from "@/components/api-key-dialog";
@@ -26,6 +26,7 @@ export default function RepoSelect() {
 
   const { data, isLoading } = useQuery<{ repositories: Repository[] }>({
     queryKey: ["/api/repositories"],
+    staleTime: 1000 * 60 * 5, // Keep data fresh for 5 minutes
   });
 
   const { mutate: toggleRepo, isPending: isToggling } = useMutation({
@@ -35,7 +36,7 @@ export default function RepoSelect() {
       }
 
       try {
-        console.log('Toggling repository:', { id, selected }); // Debug log
+        console.log('Toggling repository:', { id, selected });
         inspectQueryCache(); // Log cache state before mutation
 
         const res = await apiRequest("POST", `/api/repositories/${id}/select`, {
@@ -52,17 +53,33 @@ export default function RepoSelect() {
       }
     },
     onMutate: ({ id, selected }) => {
-      // Optimistically update the UI
+      // Optimistically update the UI and cache
       setPendingToggles(prev => ({ ...prev, [id]: selected }));
-      console.log('Cache state before optimistic update:');
+
+      // Get current query data
+      const previousData = queryClient.getQueryData<{ repositories: Repository[] }>(["/api/repositories"]);
+
+      // Optimistically update the cache
+      if (previousData) {
+        queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
+          repositories: previousData.repositories.map(repo =>
+            repo.id === id ? { ...repo, selected } : repo
+          )
+        });
+      }
+
+      console.log('Cache state after optimistic update:');
       inspectQueryCache();
+
+      // Return previous data for rollback
+      return { previousData };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/repositories"] });
-      console.log('Cache state after successful update:');
-      inspectQueryCache();
-    },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Revert cache on error
+      if (context?.previousData) {
+        queryClient.setQueryData(["/api/repositories"], context.previousData);
+      }
+
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update repository selection",
@@ -80,7 +97,7 @@ export default function RepoSelect() {
       }
 
       console.log('Starting repository analysis:', { id });
-      inspectQueryCache(); // Log cache state before analysis
+      inspectQueryCache();
 
       const res = await apiRequest("POST", `/api/repositories/${id}/analyze`, {
         accessToken: localStorage.getItem("github_token"),
@@ -94,8 +111,16 @@ export default function RepoSelect() {
 
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/repositories"] });
+    onSuccess: (data) => {
+      // Update the cache with the new summary
+      const currentData = queryClient.getQueryData<{ repositories: Repository[] }>(["/api/repositories"]);
+      if (currentData) {
+        queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
+          repositories: currentData.repositories.map(repo =>
+            repo.id === data.repository.id ? { ...repo, summary: data.repository.summary } : repo
+          )
+        });
+      }
       console.log('Cache state after successful analysis:');
       inspectQueryCache();
     },
@@ -112,7 +137,6 @@ export default function RepoSelect() {
 
   const filteredRepos = useMemo(() => {
     if (!data?.repositories) return [];
-    console.log('Filtered repositories:', data.repositories); // Debug log
     return data.repositories.filter((repo) =>
       repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (repo.description?.toLowerCase() || "").includes(searchQuery.toLowerCase())
@@ -125,12 +149,6 @@ export default function RepoSelect() {
   }, [filteredRepos, currentPage]);
 
   const totalPages = Math.ceil((filteredRepos?.length || 0) / REPOS_PER_PAGE);
-
-  // Force refresh repositories when component mounts
-  useEffect(() => {
-    console.log('RepoSelect mounted, forcing repository refresh');
-    forceRefreshRepositories();
-  }, []); // Empty dependency array means this runs once on mount
 
   if (isLoading) {
     return (
@@ -219,13 +237,6 @@ export default function RepoSelect() {
             const isTogglePending = repo.id in pendingToggles;
             const effectiveSelected = isTogglePending ? pendingToggles[repo.id] : repo.selected;
 
-            console.log('Repository row:', {
-              id: repo.id,
-              name: repo.name,
-              selected: repo.selected,
-              effectiveSelected
-            }); // Debug log
-
             return (
               <Card key={repo.id} className="transition-shadow hover:shadow-md">
                 <CardHeader className="flex flex-row items-start gap-4 p-4 md:p-6">
@@ -233,11 +244,6 @@ export default function RepoSelect() {
                     id={`repo-${repo.id}`}
                     checked={effectiveSelected}
                     onCheckedChange={(checked) => {
-                      console.log('Checkbox change:', {
-                        id: repo.id,
-                        checked,
-                        current: effectiveSelected
-                      }); // Debug log
                       if (repo.id) {
                         toggleRepo({ id: repo.id, selected: !!checked });
                       }

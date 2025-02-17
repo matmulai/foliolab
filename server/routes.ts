@@ -19,7 +19,7 @@ export async function registerRoutes(app: Express) {
         selected: r.selected,
         summary: r.summary ? 'Yes' : 'No'
       }))
-    ); // Debug log
+    );
     res.json({ repositories: selectedRepos });
   });
 
@@ -60,7 +60,7 @@ export async function registerRoutes(app: Express) {
       const githubUser = await getGithubUser(tokenData.access_token);
       const repos = await getRepositories(tokenData.access_token);
 
-      console.log('Raw GitHub repositories:', repos); // Debug log
+      console.log('Raw GitHub repositories:', repos);
 
       // Create a map of existing selections and summaries
       const existingData = new Map(
@@ -78,10 +78,20 @@ export async function registerRoutes(app: Express) {
         url: repo.url,
         summary: existingData.get(repo.id)?.summary || null,
         selected: existingData.get(repo.id)?.selected || false,
-        metadata: repo.metadata
+        metadata: {
+          ...repo.metadata,
+          updatedAt: repo.metadata.updatedAt || new Date().toISOString() // Ensure updatedAt is never null
+        }
       }));
 
-      console.log('Mapped repositories with preserved data:', selectedRepos); // Debug log
+      console.log('Mapped repositories with preserved data:', 
+        selectedRepos.map(r => ({
+          id: r.id,
+          name: r.name,
+          selected: r.selected,
+          summary: r.summary ? 'Yes' : 'No'
+        }))
+      );
 
       res.json({
         repositories: selectedRepos,
@@ -97,34 +107,18 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-
   app.post("/api/repositories/:id/select", async (req, res) => {
     const { id } = req.params;
     const { selected } = req.body;
     const repoId = parseInt(id);
 
     try {
-      console.log('Selection request:', { id: repoId, selected }); // Debug log
-      console.log('Current repos state:', selectedRepos.map(r => ({ id: r.id, selected: r.selected }))); // Debug log
-
-      // If selectedRepos is empty and we have an access token, refetch repositories
-      if (selectedRepos.length === 0 && currentAccessToken) {
-        console.log('Fetching repositories as selectedRepos is empty');
-        const repos = await getRepositories(currentAccessToken);
-        selectedRepos = repos.map(repo => ({
-          id: repo.id,
-          name: repo.name,
-          description: repo.description,
-          url: repo.url,
-          summary: null,
-          selected: false,
-          metadata: repo.metadata
-        }));
-      }
+      console.log('Selection request:', { id: repoId, selected });
+      console.log('Current repos state before update:', 
+        selectedRepos.map(r => ({ id: r.id, selected: r.selected }))
+      );
 
       const repoIndex = selectedRepos.findIndex(r => r.id === repoId);
-      console.log('Repository index:', repoIndex, 'Repos length:', selectedRepos.length); // Debug log
-
       if (repoIndex === -1) {
         return res.status(404).json({ 
           error: "Repository not found",
@@ -132,14 +126,16 @@ export async function registerRoutes(app: Express) {
         });
       }
 
-      // Create a new array with the updated repository
+      // Update the repository in the array
       selectedRepos = selectedRepos.map(repo => 
         repo.id === repoId ? { ...repo, selected } : repo
       );
 
-      const updatedRepo = selectedRepos[repoIndex];
-      console.log('Updated repository:', updatedRepo); // Debug log
+      console.log('Updated repositories state:', 
+        selectedRepos.map(r => ({ id: r.id, selected: r.selected }))
+      );
 
+      const updatedRepo = selectedRepos[repoIndex];
       res.json({ repository: updatedRepo });
     } catch (error) {
       console.error('Failed to update repository:', error);
@@ -164,7 +160,7 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
-      console.log('Analyze request:', { id: repoId, username }); // Debug log
+      console.log('Analyze request:', { id: repoId, username });
       console.log('Current repos before analysis:', 
         selectedRepos.map(r => ({ 
           id: r.id, 
@@ -172,7 +168,7 @@ export async function registerRoutes(app: Express) {
           selected: r.selected,
           summary: r.summary ? 'Yes' : 'No' 
         }))
-      ); // Debug log
+      );
 
       // If selectedRepos is empty and we have an access token, refetch repositories
       if (selectedRepos.length === 0) {
@@ -202,7 +198,7 @@ export async function registerRoutes(app: Express) {
         name: repo.name,
         selected: repo.selected,
         hasSummary: repo.summary ? 'Yes' : 'No'
-      }); // Debug log
+      });
 
       const readme = await getReadmeContent(
         accessToken,
@@ -210,7 +206,7 @@ export async function registerRoutes(app: Express) {
         repo.name
       ) || '';
 
-      console.log('Fetched README content length:', readme.length); // Debug log
+      console.log('Fetched README content length:', readme.length);
 
       const summary = await generateRepoSummary(
         repo.name,
@@ -219,7 +215,7 @@ export async function registerRoutes(app: Express) {
         openaiKey
       );
 
-      console.log('Generated summary:', summary); // Debug log
+      console.log('Generated summary:', summary);
 
       // Update the repository in the array while maintaining other repositories
       selectedRepos = selectedRepos.map(r => 
@@ -232,7 +228,7 @@ export async function registerRoutes(app: Express) {
         name: updatedRepo?.name,
         selected: updatedRepo?.selected,
         hasSummary: updatedRepo?.summary ? 'Yes' : 'No'
-      }); // Debug log
+      });
 
       console.log('All repositories after update:', 
         selectedRepos.map(r => ({ 
@@ -241,7 +237,7 @@ export async function registerRoutes(app: Express) {
           selected: r.selected,
           summary: r.summary ? 'Yes' : 'No' 
         }))
-      ); // Debug log
+      );
 
       res.json({ repository: updatedRepo });
     } catch (error) {

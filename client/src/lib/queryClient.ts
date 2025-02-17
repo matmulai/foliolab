@@ -31,7 +31,7 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    console.log('Fetching data for queryKey:', queryKey); // Debug log
+    console.log('Fetching data for queryKey:', queryKey);
 
     const res = await fetch(queryKey[0] as string, {
       credentials: "include",
@@ -43,7 +43,7 @@ export const getQueryFn: <T>(options: {
 
     await throwIfResNotOk(res);
     const data = await res.json();
-    console.log('Received data for queryKey:', queryKey, data); // Debug log
+    console.log('Received data for queryKey:', queryKey, data);
     return data;
   };
 
@@ -53,29 +53,12 @@ export const queryClient = new QueryClient({
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
-      // Enable refetch on window focus to get fresh data when user returns
+      // Only refetch on window focus if data is stale
       refetchOnWindowFocus: true,
-      // Set a short stale time to ensure frequent refreshes
-      staleTime: 1000 * 30, // 30 seconds
+      // Keep repository data fresh for 5 minutes
+      staleTime: 1000 * 60 * 5,
       gcTime: 1000 * 60 * 60, // Keep unused data for 1 hour
       retry: false,
-      // Add debug logging for cache operations
-      onSuccess: (data, variables, context) => {
-        console.log('Query Cache Update:', {
-          data,
-          variables,
-          context,
-          timestamp: new Date().toISOString()
-        });
-      },
-      onError: (error, variables, context) => {
-        console.error('Query Cache Error:', {
-          error,
-          variables,
-          context,
-          timestamp: new Date().toISOString()
-        });
-      }
     },
     mutations: {
       retry: false,
@@ -106,26 +89,27 @@ export const queryClient = new QueryClient({
   },
 });
 
-// Set up visibility change handler to invalidate cache when user returns
-if (typeof window !== 'undefined') {
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      console.log('App visibility changed to visible, invalidating queries');
-      // Invalidate all queries when user returns to the app
-      queryClient.invalidateQueries();
-    }
-  });
-}
-
-// Set up cache persistence
+// Set up cache persistence with localStorage
 const localStoragePersister = createSyncStoragePersister({
   storage: window.localStorage,
+  key: 'PORTFOLIO_QUERY_CACHE', // Specific key for our app
+  throttleTime: 1000, // Save to storage at most once per second
+  serialize: (data) => JSON.stringify(data),
+  deserialize: (data) => JSON.parse(data),
 });
 
+// Configure cache persistence
 persistQueryClient({
   queryClient,
   persister: localStoragePersister,
-  maxAge: 1000 * 60 * 60, // 1 hour
+  maxAge: 1000 * 60 * 60 * 24, // Cache persists for 24 hours
+  buster: 'v1', // Cache version, increment when structure changes
+  dehydrateOptions: {
+    shouldDehydrateQuery: ({ queryKey }) => {
+      // Only persist repository data
+      return queryKey[0] === '/api/repositories';
+    },
+  },
 });
 
 // Helper function to inspect cache contents
@@ -145,7 +129,7 @@ export function clearQueryCache() {
   console.log('Query cache cleared');
 }
 
-// Force refresh repositories
+// Force refresh repositories only when explicitly needed
 export function forceRefreshRepositories() {
   console.log('Forcing repository data refresh');
   return queryClient.invalidateQueries({ queryKey: ['/api/repositories'] });
