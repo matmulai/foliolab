@@ -17,7 +17,7 @@ export default function PortfolioPreview() {
   // Get repository data from client-side cache
   const { data, isLoading, error } = useQuery<{ repositories: Repository[] }>({
     queryKey: ["/api/repositories"],
-    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+    // Data remains fresh until explicitly cleared
     retry: 2,
     onError: (err) => {
       console.error('Error fetching repositories:', err);

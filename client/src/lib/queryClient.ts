@@ -69,11 +69,10 @@ export const queryClient = new QueryClient({
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
-      // Only refetch on window focus if data is stale
+      // Only refetch on window focus for live updates
       refetchOnWindowFocus: true,
-      // Keep repository data fresh for 5 minutes
-      staleTime: 1000 * 60 * 5,
-      gcTime: 1000 * 60 * 60, // Keep unused data for 1 hour
+      // No stale time - data is valid until cleared
+      staleTime: Infinity,
       retry: false,
     },
     mutations: {
@@ -95,7 +94,8 @@ const localStoragePersister = createSyncStoragePersister({
 persistQueryClient({
   queryClient,
   persister: localStoragePersister,
-  maxAge: 1000 * 60 * 60 * 24, // Cache persists for 24 hours
+  // Cache persists until explicitly cleared
+  maxAge: Infinity,
   buster: 'v1', // Cache version, increment when structure changes
   dehydrateOptions: {
     shouldDehydrateQuery: ({ queryKey }) => {

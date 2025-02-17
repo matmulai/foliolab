@@ -26,7 +26,6 @@ export default function RepoSelect() {
 
   const { data, isLoading } = useQuery<{ repositories: Repository[] }>({
     queryKey: ["/api/repositories"],
-    staleTime: 1000 * 60 * 5, // Keep data fresh for 5 minutes
   });
 
   const { mutate: toggleRepo, isPending: isToggling } = useMutation({
