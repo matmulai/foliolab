@@ -2,8 +2,14 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Github, Shield } from "lucide-react";
+import { clearAllData } from "@/lib/queryClient";
 
 export default function Home() {
+  // Add clearAllData to the GitHub auth button click
+  const handleStartClick = () => {
+    clearAllData(); // Clear all data before starting new auth
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
       <div className="container mx-auto px-4 py-20">
@@ -18,7 +24,12 @@ export default function Home() {
           <Card className="mb-8">
             <CardContent className="p-6">
               <div className="grid gap-6">
-                <Button asChild size="lg" className="w-full">
+                <Button
+                  asChild
+                  size="lg"
+                  className="w-full"
+                  onClick={handleStartClick}
+                >
                   <Link href="/auth/github" className="flex items-center justify-center gap-2">
                     <Github className="w-5 h-5" />
                     Build My Portfolio with GitHub

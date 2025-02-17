@@ -14,9 +14,20 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const headers: Record<string, string> = {};
+  if (data) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  // Add GitHub token if available
+  const githubToken = localStorage.getItem("github_token");
+  if (githubToken) {
+    headers["Authorization"] = `Bearer ${githubToken}`;
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -31,9 +42,16 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    console.log('Fetching data for queryKey:', queryKey);
+    const headers: Record<string, string> = {};
+
+    // Add GitHub token if available
+    const githubToken = localStorage.getItem("github_token");
+    if (githubToken) {
+      headers["Authorization"] = `Bearer ${githubToken}`;
+    }
 
     const res = await fetch(queryKey[0] as string, {
+      headers,
       credentials: "include",
     });
 
@@ -43,11 +61,9 @@ export const getQueryFn: <T>(options: {
 
     await throwIfResNotOk(res);
     const data = await res.json();
-    console.log('Received data for queryKey:', queryKey, data);
     return data;
   };
 
-// Create and export the queryClient with debug logging and persistence
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -62,29 +78,6 @@ export const queryClient = new QueryClient({
     },
     mutations: {
       retry: false,
-      // Add debug logging for mutation operations
-      onMutate: (variables) => {
-        console.log('Starting mutation:', {
-          variables,
-          timestamp: new Date().toISOString()
-        });
-      },
-      onSuccess: (data, variables, context) => {
-        console.log('Mutation success:', {
-          data,
-          variables,
-          context,
-          timestamp: new Date().toISOString()
-        });
-      },
-      onError: (error, variables, context) => {
-        console.error('Mutation error:', {
-          error,
-          variables,
-          context,
-          timestamp: new Date().toISOString()
-        });
-      }
     },
   },
 });
@@ -112,17 +105,6 @@ persistQueryClient({
   },
 });
 
-// Helper function to inspect cache contents
-export function inspectQueryCache() {
-  const queries = queryClient.getQueryCache().findAll();
-  console.log('Current Query Cache State:', queries.map(query => ({
-    queryKey: query.queryKey,
-    state: query.state,
-    isStale: query.isStale(),
-    lastUpdated: query.state.dataUpdatedAt
-  })));
-}
-
 // Helper to clear cache (useful for debugging)
 export function clearQueryCache() {
   queryClient.clear();
@@ -133,4 +115,11 @@ export function clearQueryCache() {
 export function forceRefreshRepositories() {
   console.log('Forcing repository data refresh');
   return queryClient.invalidateQueries({ queryKey: ['/api/repositories'] });
+}
+
+// Clear all data when returning to home
+export function clearAllData() {
+  localStorage.removeItem("github_token");
+  localStorage.removeItem("github_username");
+  queryClient.clear();
 }

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
@@ -27,16 +27,21 @@ export default function GithubAuth() {
   const { mutate: authenticate, isPending } = useMutation({
     mutationFn: async (code: string) => {
       const res = await apiRequest("POST", "/api/fetch-repos", { code });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(`${res.status}: ${JSON.stringify(errorData)}`);
-      }
       const data = await res.json();
 
       // Store GitHub token and username for later use
       if (data.accessToken) {
         localStorage.setItem("github_token", data.accessToken);
         localStorage.setItem("github_username", data.username);
+
+        // Initialize repositories in query cache
+        queryClient.setQueryData(["/api/repositories"], {
+          repositories: data.repositories.map((repo: any) => ({
+            ...repo,
+            selected: false, // Initialize all repos as unselected
+            summary: null // Initialize all repos without summaries
+          }))
+        });
       }
 
       return data;
@@ -61,6 +66,10 @@ export default function GithubAuth() {
     }
 
     if (code) {
+      // Clear any existing data before starting new auth
+      queryClient.clear();
+      localStorage.removeItem("github_token");
+      localStorage.removeItem("github_username");
       authenticate(code);
     } else {
       window.location.href = getGithubAuthUrl();

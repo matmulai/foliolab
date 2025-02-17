@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { apiRequest, queryClient, inspectQueryCache } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Repository } from "@shared/schema";
 import { Loader2, Search } from "lucide-react";
 import { ApiKeyDialog } from "@/components/api-key-dialog";
@@ -36,9 +36,6 @@ export default function RepoSelect() {
       }
 
       try {
-        console.log('Toggling repository:', { id, selected });
-        inspectQueryCache(); // Log cache state before mutation
-
         const res = await apiRequest("POST", `/api/repositories/${id}/select`, {
           selected,
         });
@@ -68,9 +65,6 @@ export default function RepoSelect() {
         });
       }
 
-      console.log('Cache state after optimistic update:');
-      inspectQueryCache();
-
       // Return previous data for rollback
       return { previousData };
     },
@@ -85,8 +79,6 @@ export default function RepoSelect() {
         description: error instanceof Error ? error.message : "Failed to update repository selection",
         variant: "destructive",
       });
-      console.log('Cache state after error:');
-      inspectQueryCache();
     }
   });
 
@@ -95,9 +87,6 @@ export default function RepoSelect() {
       if (!id) {
         throw new Error('Repository ID is required');
       }
-
-      console.log('Starting repository analysis:', { id });
-      inspectQueryCache();
 
       const res = await apiRequest("POST", `/api/repositories/${id}/analyze`, {
         accessToken: localStorage.getItem("github_token"),
@@ -121,8 +110,6 @@ export default function RepoSelect() {
           )
         });
       }
-      console.log('Cache state after successful analysis:');
-      inspectQueryCache();
     },
     onError: (error) => {
       toast({
@@ -130,8 +117,6 @@ export default function RepoSelect() {
         description: error instanceof Error ? error.message : "Failed to analyze repository. Please try again.",
         variant: "destructive",
       });
-      console.log('Cache state after error:');
-      inspectQueryCache();
     }
   });
 
