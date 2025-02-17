@@ -26,6 +26,57 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  app.post("/api/fetch-repos", async (req, res) => {
+    const { code } = req.body;
+    try {
+      if (!code) {
+        return res.status(400).json({ error: "Authorization code is required" });
+      }
+
+      const params = new URLSearchParams();
+      params.append('client_id', process.env.GITHUB_CLIENT_ID!);
+      params.append('client_secret', process.env.GITHUB_CLIENT_SECRET!);
+      params.append('code', code);
+
+      const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "FolioLab/1.0.0",
+          "X-GitHub-Api-Version": "2022-11-28"
+        },
+        body: params.toString()
+      });
+
+      const tokenData = await tokenResponse.json();
+
+      if (tokenData.error) {
+        throw new Error(`GitHub OAuth error: ${tokenData.error_description || tokenData.error}`);
+      }
+
+      if (!tokenData.access_token) {
+        throw new Error("No access token in GitHub response");
+      }
+
+      const githubUser = await getGithubUser(tokenData.access_token);
+      const repos = await getRepositories(tokenData.access_token);
+
+      // Return fresh data without any server-side state
+      res.json({
+        repositories: repos,
+        accessToken: tokenData.access_token,
+        username: githubUser.username
+      });
+    } catch (error) {
+      console.error('Failed to fetch repositories:', error);
+      res.status(500).json({
+        error: "Failed to fetch repositories",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   app.post("/api/repositories/:id/select", (_req, res) => {
     // Selection state is maintained client-side only
     res.json({ success: true });
