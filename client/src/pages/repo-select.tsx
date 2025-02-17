@@ -21,34 +21,103 @@ export default function RepoSelect() {
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
 
+  // Track pending repository toggles locally
+  const [pendingToggles, setPendingToggles] = useState<Record<number, boolean>>({});
+
   const { data, isLoading } = useQuery<{ repositories: Repository[] }>({
     queryKey: ["/api/repositories"],
+    staleTime: 1000 * 60 * 5, // Keep data fresh for 5 minutes
   });
 
   const { mutate: toggleRepo, isPending: isToggling } = useMutation({
     mutationFn: async ({ id, selected }: { id: number; selected: boolean }) => {
-      const res = await apiRequest("POST", `/api/repositories/${id}/select`, {
-        selected,
+      if (!id) {
+        throw new Error('Repository ID is required');
+      }
+
+      try {
+        const res = await apiRequest("POST", `/api/repositories/${id}/select`, {
+          selected,
+        });
+        if (!res.ok) {
+          throw new Error('Failed to update repository selection');
+        }
+        return res.json();
+      } catch (error) {
+        // Revert the optimistic update on error
+        setPendingToggles(prev => ({ ...prev, [id]: !selected }));
+        throw error;
+      }
+    },
+    onMutate: ({ id, selected }) => {
+      // Optimistically update the UI and cache
+      setPendingToggles(prev => ({ ...prev, [id]: selected }));
+
+      // Get current query data
+      const previousData = queryClient.getQueryData<{ repositories: Repository[] }>(["/api/repositories"]);
+
+      // Optimistically update the cache
+      if (previousData) {
+        queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
+          repositories: previousData.repositories.map(repo =>
+            repo.id === id ? { ...repo, selected } : repo
+          )
+        });
+      }
+
+      // Return previous data for rollback
+      return { previousData };
+    },
+    onError: (error, variables, context) => {
+      // Revert cache on error
+      if (context?.previousData) {
+        queryClient.setQueryData(["/api/repositories"], context.previousData);
+      }
+
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update repository selection",
+        variant: "destructive",
       });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/repositories"] });
-    },
+    }
   });
 
   const { mutate: analyzeRepo, isPending: isAnalyzing } = useMutation({
     mutationFn: async ({ id, openaiKey }: { id: number; openaiKey: string }) => {
+      if (!id) {
+        throw new Error('Repository ID is required');
+      }
+
       const res = await apiRequest("POST", `/api/repositories/${id}/analyze`, {
         accessToken: localStorage.getItem("github_token"),
         username: localStorage.getItem("github_username"),
         openaiKey,
       });
+
+      if (!res.ok) {
+        throw new Error('Failed to analyze repository');
+      }
+
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/repositories"] });
+    onSuccess: (data) => {
+      // Update the cache with the new summary
+      const currentData = queryClient.getQueryData<{ repositories: Repository[] }>(["/api/repositories"]);
+      if (currentData) {
+        queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
+          repositories: currentData.repositories.map(repo =>
+            repo.id === data.repository.id ? { ...repo, summary: data.repository.summary } : repo
+          )
+        });
+      }
     },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to analyze repository. Please try again.",
+        variant: "destructive",
+      });
+    }
   });
 
   const filteredRepos = useMemo(() => {
@@ -83,30 +152,33 @@ export default function RepoSelect() {
 
   const handleSelectAll = (checked: boolean) => {
     paginatedRepos.forEach((repo) => {
-      if (repo.selected !== checked) {
+      if (repo.id && repo.selected !== checked) {
         toggleRepo({ id: repo.id, selected: checked });
       }
     });
   };
 
-  const handleAnalyzeRepos = (openaiKey: string) => {
-    Promise.all(
-      selectedRepos.map((repo) => analyzeRepo({ id: repo.id, openaiKey }))
-    )
-      .then(() => {
-        setLocation("/preview");
-        toast({
-          title: "Success",
-          description: "Repository analysis complete!",
-        });
-      })
-      .catch((error) => {
-        toast({
-          title: "Error",
-          description: "Failed to analyze repositories. Please try again.",
-          variant: "destructive",
-        });
+  const handleAnalyzeRepos = async (openaiKey: string) => {
+    try {
+      // Analyze repositories sequentially to avoid rate limits
+      for (const repo of selectedRepos) {
+        if (repo.id) {
+          await analyzeRepo({ id: repo.id, openaiKey });
+        }
+      }
+
+      setLocation("/preview");
+      toast({
+        title: "Success",
+        description: "Repository analysis complete!",
       });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to analyze repositories. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const allSelected = paginatedRepos.length > 0 && paginatedRepos.every((repo) => repo.selected);
@@ -114,6 +186,7 @@ export default function RepoSelect() {
   return (
     <div className="container mx-auto p-4 md:p-6">
       <div className="flex flex-col gap-6">
+        {/* Header and search section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h1 className="text-2xl md:text-3xl font-bold">Select Repositories</h1>
           <div className="w-full md:w-auto flex items-center gap-4">
@@ -131,10 +204,10 @@ export default function RepoSelect() {
             </div>
             <div className="flex items-center gap-2">
               <Checkbox
+                id="select-all"
                 checked={allSelected}
                 onCheckedChange={handleSelectAll}
-                disabled={isToggling || paginatedRepos.length === 0}
-                id="select-all"
+                disabled={isAnalyzing || isToggling || paginatedRepos.length === 0}
               />
               <label htmlFor="select-all" className="text-sm font-medium whitespace-nowrap">
                 Select All
@@ -143,37 +216,52 @@ export default function RepoSelect() {
           </div>
         </div>
 
+        {/* Repository list */}
         <div className="grid gap-4">
-          {paginatedRepos.map((repo) => (
-            <Card key={repo.id} className="transition-shadow hover:shadow-md">
-              <CardHeader className="flex flex-row items-start gap-4 p-4 md:p-6">
-                <Checkbox
-                  checked={repo.selected}
-                  onCheckedChange={(checked) =>
-                    toggleRepo({ id: repo.id, selected: checked as boolean })
-                  }
-                  disabled={isToggling}
-                />
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold">{repo.name}</h3>
-                  {repo.description && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {repo.description}
-                    </p>
-                  )}
-                  {repo.metadata.language && (
-                    <div className="mt-2">
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
-                        {repo.metadata.language}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
+          {paginatedRepos.map((repo) => {
+            const isTogglePending = repo.id in pendingToggles;
+            const effectiveSelected = isTogglePending ? pendingToggles[repo.id] : repo.selected;
+
+            return (
+              <Card key={repo.id} className="transition-shadow hover:shadow-md">
+                <CardHeader className="flex flex-row items-start gap-4 p-4 md:p-6">
+                  <Checkbox
+                    id={`repo-${repo.id}`}
+                    checked={effectiveSelected}
+                    onCheckedChange={(checked) => {
+                      if (repo.id) {
+                        toggleRepo({ id: repo.id, selected: !!checked });
+                      }
+                    }}
+                    disabled={isAnalyzing || isToggling}
+                  />
+                  <div className="flex-1">
+                    <label
+                      htmlFor={`repo-${repo.id}`}
+                      className="text-lg font-semibold cursor-pointer"
+                    >
+                      {repo.name}
+                    </label>
+                    {repo.description && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {repo.description}
+                      </p>
+                    )}
+                    {repo.metadata.language && (
+                      <div className="mt-2">
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                          {repo.metadata.language}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </CardHeader>
+              </Card>
+            );
+          })}
         </div>
 
+        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-center gap-2 mt-4">
             <Button
@@ -198,11 +286,12 @@ export default function RepoSelect() {
           </div>
         )}
 
+        {/* Generate Portfolio button */}
         {selectedRepos.length > 0 && (
           <div className="mt-6 flex justify-end">
             <Button
               onClick={() => setShowApiKeyDialog(true)}
-              disabled={isAnalyzing}
+              disabled={isAnalyzing || isToggling}
               className="w-full md:w-auto"
             >
               {isAnalyzing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

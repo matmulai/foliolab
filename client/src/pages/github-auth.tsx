@@ -1,21 +1,13 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
 function getGithubAuthUrl() {
-  // Add verbose environment debugging
-  console.log("Environment variables:", {
-    VITE_GITHUB_CLIENT_ID: import.meta.env.VITE_GITHUB_CLIENT_ID,
-    MODE: import.meta.env.MODE,
-    DEV: import.meta.env.DEV
-  });
-
   const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
   if (!clientId) {
-    console.error("GitHub Client ID is not defined in environment variables");
     throw new Error("GitHub Client ID is not configured");
   }
 
@@ -26,9 +18,7 @@ function getGithubAuthUrl() {
     state: crypto.randomUUID(),
   });
 
-  const authUrl = `https://github.com/login/oauth/authorize?${params}`;
-  console.log("Generated GitHub Auth URL:", authUrl);
-  return authUrl;
+  return `https://github.com/login/oauth/authorize?${params}`;
 }
 
 export default function GithubAuth() {
@@ -43,6 +33,15 @@ export default function GithubAuth() {
       if (data.accessToken) {
         localStorage.setItem("github_token", data.accessToken);
         localStorage.setItem("github_username", data.username);
+
+        // Initialize repositories in query cache
+        queryClient.setQueryData(["/api/repositories"], {
+          repositories: data.repositories.map((repo: any) => ({
+            ...repo,
+            selected: false, // Initialize all repos as unselected
+            summary: null // Initialize all repos without summaries
+          }))
+        });
       }
 
       return data;
@@ -50,29 +49,30 @@ export default function GithubAuth() {
     onSuccess: () => {
       setLocation("/repos");
     },
+    onError: (error) => {
+      console.error("Authentication error:", error);
+    }
   });
 
   useEffect(() => {
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get("code");
-      const error = urlParams.get("error");
-      const errorDescription = urlParams.get("error_description");
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+    const error = urlParams.get("error");
+    const errorDescription = urlParams.get("error_description");
 
-      if (error) {
-        console.error("GitHub OAuth Error:", error, errorDescription);
-        return;
-      }
+    if (error) {
+      console.error("GitHub OAuth Error:", error, errorDescription);
+      return;
+    }
 
-      if (code) {
-        console.log("Received GitHub code, authenticating...");
-        authenticate(code);
-      } else {
-        console.log("No code present, redirecting to GitHub...");
-        window.location.href = getGithubAuthUrl();
-      }
-    } catch (error) {
-      console.error("Error during GitHub authentication:", error);
+    if (code) {
+      // Clear any existing data before starting new auth
+      queryClient.clear();
+      localStorage.removeItem("github_token");
+      localStorage.removeItem("github_username");
+      authenticate(code);
+    } else {
+      window.location.href = getGithubAuthUrl();
     }
   }, []);
 
@@ -81,7 +81,7 @@ export default function GithubAuth() {
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center gap-3">
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Loader2 className="h-5 w-4 animate-spin" />
             <p>Authenticating with GitHub...</p>
           </div>
         </CardContent>

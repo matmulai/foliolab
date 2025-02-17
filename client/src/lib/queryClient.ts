@@ -1,4 +1,6 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import { persistQueryClient } from '@tanstack/react-query-persist-client';
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -12,9 +14,20 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const headers: Record<string, string> = {};
+  if (data) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  // Add GitHub token if available
+  const githubToken = localStorage.getItem("github_token");
+  if (githubToken) {
+    headers["Authorization"] = `Bearer ${githubToken}`;
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -29,7 +42,16 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    const headers: Record<string, string> = {};
+
+    // Add GitHub token if available
+    const githubToken = localStorage.getItem("github_token");
+    if (githubToken) {
+      headers["Authorization"] = `Bearer ${githubToken}`;
+    }
+
     const res = await fetch(queryKey[0] as string, {
+      headers,
       credentials: "include",
     });
 
@@ -38,7 +60,8 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    const data = await res.json();
+    return data;
   };
 
 export const queryClient = new QueryClient({
@@ -46,8 +69,11 @@ export const queryClient = new QueryClient({
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      // Only refetch on window focus if data is stale
+      refetchOnWindowFocus: true,
+      // Keep repository data fresh for 5 minutes
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 60, // Keep unused data for 1 hour
       retry: false,
     },
     mutations: {
@@ -55,3 +81,45 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// Set up cache persistence with localStorage
+const localStoragePersister = createSyncStoragePersister({
+  storage: window.localStorage,
+  key: 'PORTFOLIO_QUERY_CACHE', // Specific key for our app
+  throttleTime: 1000, // Save to storage at most once per second
+  serialize: (data) => JSON.stringify(data),
+  deserialize: (data) => JSON.parse(data),
+});
+
+// Configure cache persistence
+persistQueryClient({
+  queryClient,
+  persister: localStoragePersister,
+  maxAge: 1000 * 60 * 60 * 24, // Cache persists for 24 hours
+  buster: 'v1', // Cache version, increment when structure changes
+  dehydrateOptions: {
+    shouldDehydrateQuery: ({ queryKey }) => {
+      // Only persist repository data
+      return queryKey[0] === '/api/repositories';
+    },
+  },
+});
+
+// Helper to clear cache (useful for debugging)
+export function clearQueryCache() {
+  queryClient.clear();
+  console.log('Query cache cleared');
+}
+
+// Force refresh repositories only when explicitly needed
+export function forceRefreshRepositories() {
+  console.log('Forcing repository data refresh');
+  return queryClient.invalidateQueries({ queryKey: ['/api/repositories'] });
+}
+
+// Clear all data when returning to home
+export function clearAllData() {
+  localStorage.removeItem("github_token");
+  localStorage.removeItem("github_username");
+  queryClient.clear();
+}

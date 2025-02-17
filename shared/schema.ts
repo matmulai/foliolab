@@ -18,6 +18,7 @@ export interface Repository {
   summary: string | null;
   selected: boolean;
   metadata: {
+    id: number;  // Added GitHub repository ID
     stars: number;
     language: string | null;
     topics: string[];
@@ -34,6 +35,7 @@ export const repositorySchema = z.object({
   summary: z.string().nullable(),
   selected: z.boolean(),
   metadata: z.object({
+    id: z.number(),  // Added GitHub repository ID validation
     stars: z.number(),
     language: z.string().nullable(),
     topics: z.array(z.string()),

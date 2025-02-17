@@ -1,11 +1,40 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { registerRoutes } from "./routes.js";  // Add .js extension for ESM
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Add CORS headers
+app.use((req, res, next) => {
+  // Allow specific origins in production, or all in development
+  let origin = '*';
+  if (process.env.NODE_ENV === 'production') {
+    // Allow both production and preview URLs
+    const allowedOrigins = [
+      'https://foliolab.vercel.app',
+      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null
+    ].filter(Boolean);
+
+    const requestOrigin = req.headers.origin;
+    if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+      origin = requestOrigin;
+    }
+  }
+
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  next();
+});
+
+// Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -29,7 +58,7 @@ app.use((req, res, next) => {
         logLine = logLine.slice(0, 79) + "…";
       }
 
-      log(logLine);
+      console.log(logLine);
     }
   });
 
@@ -47,14 +76,21 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
+  // In production, serve static files from the dist directory
+  if (process.env.NODE_ENV === "production") {
+    app.use(express.static("dist/public"));
+    // Serve index.html for client-side routing
+    app.get("*", (_req, res) => {
+      res.sendFile("dist/public/index.html", { root: "." });
+    });
   } else {
-    serveStatic(app);
+    // Only import and setup Vite in development
+    const { setupVite } = await import("./vite.js");
+    await setupVite(app, server);
   }
 
-  const PORT = 5000;
-  server.listen(PORT, "0.0.0.0", () => {
-    log(`serving on port ${PORT}`);
+  const port = Number(process.env.PORT) || 5000;
+  server.listen(port, "0.0.0.0", () => {
+    console.log(`serving on port ${port}`);
   });
 })();

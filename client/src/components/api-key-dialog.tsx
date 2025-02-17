@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,16 @@ export function ApiKeyDialog({ open, onOpenAIKey, onClose }: ApiKeyDialogProps) 
   const [apiKey, setApiKey] = useState("");
   const { toast } = useToast();
 
+  useEffect(() => {
+    // Load saved API key from localStorage when dialog opens
+    if (open) {
+      const savedKey = localStorage.getItem("openai_api_key");
+      if (savedKey) {
+        setApiKey(savedKey);
+      }
+    }
+  }, [open]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!apiKey.trim().startsWith("sk-")) {
@@ -30,6 +40,8 @@ export function ApiKeyDialog({ open, onOpenAIKey, onClose }: ApiKeyDialogProps) 
       });
       return;
     }
+    // Save API key to localStorage
+    localStorage.setItem("openai_api_key", apiKey.trim());
     onOpenAIKey(apiKey.trim());
     onClose();
   };

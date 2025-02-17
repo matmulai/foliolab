@@ -1,14 +1,30 @@
 import type { Express } from "express";
 import { createServer } from "http";
-import { getRepositories, getReadmeContent, getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages } from "./lib/github";
-import { generateRepoSummary } from "./lib/openai";
-import { Repository } from "@shared/schema";
-
-// In-memory storage for the current session
-let selectedRepos: Repository[] = [];
+import { getRepositories, getReadmeContent, getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages } from "./lib/github.js";
+import { generateRepoSummary } from "./lib/openai.js";
+import { Repository } from "@shared/schema.js";
 
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
+
+  app.get("/api/repositories", async (req, res) => {
+    const accessToken = req.headers.authorization?.replace('Bearer ', '');
+    if (!accessToken) {
+      return res.status(401).json({ error: "No access token provided" });
+    }
+
+    try {
+      // Get fresh repository data from GitHub
+      const repos = await getRepositories(accessToken);
+      res.json({ repositories: repos });
+    } catch (error) {
+      console.error('Failed to fetch repositories:', error);
+      res.status(500).json({
+        error: "Failed to fetch repositories",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 
   app.post("/api/fetch-repos", async (req, res) => {
     const { code } = req.body;
@@ -17,40 +33,38 @@ export async function registerRoutes(app: Express) {
         return res.status(400).json({ error: "Authorization code is required" });
       }
 
-      // Exchange code for access token
+      const params = new URLSearchParams();
+      params.append('client_id', process.env.GITHUB_CLIENT_ID!);
+      params.append('client_secret', process.env.GITHUB_CLIENT_SECRET!);
+      params.append('code', code);
+
       const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
+          "Accept": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "FolioLab/1.0.0",
+          "X-GitHub-Api-Version": "2022-11-28"
         },
-        body: JSON.stringify({
-          client_id: process.env.GITHUB_CLIENT_ID,
-          client_secret: process.env.GITHUB_CLIENT_SECRET,
-          code,
-        }),
+        body: params.toString()
       });
 
       const tokenData = await tokenResponse.json();
-      if (!tokenData.access_token) {
-        console.error("GitHub token response:", tokenData);
-        throw new Error(tokenData.error_description || "Failed to get access token");
+
+      if (tokenData.error) {
+        throw new Error(`GitHub OAuth error: ${tokenData.error_description || tokenData.error}`);
       }
 
-      // Get user info
+      if (!tokenData.access_token) {
+        throw new Error("No access token in GitHub response");
+      }
+
       const githubUser = await getGithubUser(tokenData.access_token);
-
-      // Fetch repositories using the access token
       const repos = await getRepositories(tokenData.access_token);
-      selectedRepos = repos.map((repo, index) => ({
-        ...repo,
-        id: index + 1,
-        selected: false,
-        summary: null
-      }));
 
+      // Return fresh data without any server-side state
       res.json({
-        repositories: selectedRepos,
+        repositories: repos,
         accessToken: tokenData.access_token,
         username: githubUser.username
       });
@@ -63,25 +77,15 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  app.post("/api/repositories/:id/select", async (req, res) => {
-    const { id } = req.params;
-    const { selected } = req.body;
-    try {
-      const repoIndex = selectedRepos.findIndex(r => r.id === parseInt(id));
-      if (repoIndex === -1) {
-        return res.status(404).json({ error: "Repository not found" });
-      }
-      selectedRepos[repoIndex].selected = selected;
-      res.json({ repository: selectedRepos[repoIndex] });
-    } catch (error) {
-      console.error('Failed to update repository:', error);
-      res.status(500).json({ error: "Failed to update repository" });
-    }
+  app.post("/api/repositories/:id/select", (_req, res) => {
+    // Selection state is maintained client-side only
+    res.json({ success: true });
   });
 
   app.post("/api/repositories/:id/analyze", async (req, res) => {
     const { id } = req.params;
     const { accessToken, username, openaiKey } = req.body;
+    const repoId = parseInt(id);
 
     if (!accessToken || !username) {
       return res.status(400).json({ error: "Access token and username are required" });
@@ -92,33 +96,37 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
-      const repoIndex = selectedRepos.findIndex(r => r.id === parseInt(id));
-      if (repoIndex === -1) {
-        return res.status(404).json({ error: "Repository not found" });
+      // Get fresh repository data from GitHub
+      const repos = await getRepositories(accessToken);
+      const repo = repos.find(r => r.id === repoId);
+
+      if (!repo) {
+        return res.status(404).json({ 
+          error: "Repository not found",
+          details: `No repository found with ID ${repoId}`
+        });
       }
 
-      const repo = selectedRepos[repoIndex];
       const readme = await getReadmeContent(
         accessToken,
         username,
         repo.name
       ) || '';
 
-      // Set OpenAI key for this request
-      process.env.OPENAI_API_KEY = openaiKey;
-
       const summary = await generateRepoSummary(
         repo.name,
         repo.description || '',
-        readme
+        readme,
+        openaiKey
       );
 
-      selectedRepos[repoIndex] = {
-        ...repo,
-        summary: summary.summary
-      };
-
-      res.json({ repository: selectedRepos[repoIndex] });
+      // Return the repository with the new summary
+      res.json({
+        repository: {
+          ...repo,
+          summary: summary.summary
+        }
+      });
     } catch (error) {
       console.error('Failed to analyze repository:', error);
       res.status(500).json({
@@ -128,25 +136,15 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  app.get("/api/repositories", (_req, res) => {
-    res.json({ repositories: selectedRepos });
-  });
-
   app.post("/api/deploy/github", async (req, res) => {
-    const { accessToken, downloadOnly } = req.body;
+    const { accessToken, downloadOnly, repositories } = req.body;
 
     if (!accessToken) {
       return res.status(400).json({ error: "GitHub access token is required" });
     }
 
     try {
-      // Get the username from GitHub first
       const user = await getGithubUser(accessToken);
-
-      // Get the selected repositories with their summaries
-      const displayRepos = selectedRepos.filter(repo => repo.selected);
-
-      // Generate portfolio site HTML
       const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -162,7 +160,7 @@ export async function registerRoutes(app: Express) {
             <p class="text-gray-600">A showcase of my work</p>
         </header>
         <div class="grid gap-8 max-w-4xl mx-auto">
-            ${displayRepos.map(repo => `
+            ${repositories.map(repo => `
                 <article class="bg-white rounded-lg shadow-md p-6">
                     <h2 class="text-2xl font-semibold mb-2">${repo.name}</h2>
                     <p class="text-gray-600 mb-4">${repo.summary || repo.description || ''}</p>
@@ -184,15 +182,11 @@ export async function registerRoutes(app: Express) {
 </body>
 </html>`;
 
-      // If downloadOnly is true, return the HTML content
       if (downloadOnly) {
         return res.json({ html });
       }
 
-      // Otherwise, create/update the repository and commit the files
       const { repoUrl, wasCreated } = await createPortfolioRepository(accessToken, user.username);
-
-      // Commit the files to the repository
       await commitPortfolioFiles(accessToken, user.username, [
         {
           path: "index.html",
@@ -218,20 +212,14 @@ export async function registerRoutes(app: Express) {
   });
 
   app.post("/api/deploy/github-pages", async (req, res) => {
-    const { accessToken } = req.body;
+    const { accessToken, repositories } = req.body;
 
     if (!accessToken) {
       return res.status(400).json({ error: "GitHub access token is required" });
     }
 
     try {
-      // Get the username from GitHub first
       const user = await getGithubUser(accessToken);
-
-      // Get the selected repositories with their summaries
-      const displayRepos = selectedRepos.filter(repo => repo.selected);
-
-      // Generate portfolio site HTML
       const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -247,7 +235,7 @@ export async function registerRoutes(app: Express) {
             <p class="text-gray-600">A showcase of my work</p>
         </header>
         <div class="grid gap-8 max-w-4xl mx-auto">
-            ${displayRepos.map(repo => `
+            ${repositories.map(repo => `
                 <article class="bg-white rounded-lg shadow-md p-6">
                     <h2 class="text-2xl font-semibold mb-2">${repo.name}</h2>
                     <p class="text-gray-600 mb-4">${repo.summary || repo.description || ''}</p>
