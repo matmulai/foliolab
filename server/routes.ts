@@ -2,7 +2,6 @@ import type { Express } from "express";
 import { createServer } from "http";
 import { getRepositories, getReadmeContent, getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages } from "./lib/github.js";
 import { generateRepoSummary } from "./lib/openai.js";
-import { Repository } from "@shared/schema.js";
 
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
@@ -62,7 +61,7 @@ export async function registerRoutes(app: Express) {
       const githubUser = await getGithubUser(tokenData.access_token);
       const repos = await getRepositories(tokenData.access_token);
 
-      // Return fresh data without any server-side state
+      // Return fresh data to be stored on client side
       res.json({
         repositories: repos,
         accessToken: tokenData.access_token,
@@ -75,11 +74,6 @@ export async function registerRoutes(app: Express) {
         details: error instanceof Error ? error.message : String(error)
       });
     }
-  });
-
-  app.post("/api/repositories/:id/select", (_req, res) => {
-    // Selection state is maintained client-side only
-    res.json({ success: true });
   });
 
   app.post("/api/repositories/:id/analyze", async (req, res) => {
@@ -145,42 +139,7 @@ export async function registerRoutes(app: Express) {
 
     try {
       const user = await getGithubUser(accessToken);
-      const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${user.username}'s Portfolio</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50">
-    <div class="container mx-auto px-4 py-20">
-        <header class="text-center mb-16">
-            <h1 class="text-4xl font-bold mb-4">My Projects</h1>
-            <p class="text-gray-600">A showcase of my work</p>
-        </header>
-        <div class="grid gap-8 max-w-4xl mx-auto">
-            ${repositories.map(repo => `
-                <article class="bg-white rounded-lg shadow-md p-6">
-                    <h2 class="text-2xl font-semibold mb-2">${repo.name}</h2>
-                    <p class="text-gray-600 mb-4">${repo.summary || repo.description || ''}</p>
-                    <div class="flex gap-2 flex-wrap">
-                        ${repo.metadata.topics.map(topic => 
-                            `<span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">${topic}</span>`
-                        ).join('')}
-                    </div>
-                    <div class="mt-4 flex gap-4">
-                        <a href="${repo.url}" class="text-blue-600 hover:underline" target="_blank">View on GitHub</a>
-                        ${repo.metadata.url ? 
-                            `<a href="${repo.metadata.url}" class="text-blue-600 hover:underline" target="_blank">Live Demo</a>` 
-                            : ''}
-                    </div>
-                </article>
-            `).join('')}
-        </div>
-    </div>
-</body>
-</html>`;
+      const html = generatePortfolioHtml(user.username, repositories);
 
       if (downloadOnly) {
         return res.json({ html });
@@ -220,42 +179,7 @@ export async function registerRoutes(app: Express) {
 
     try {
       const user = await getGithubUser(accessToken);
-      const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${user.username}'s Portfolio</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50">
-    <div class="container mx-auto px-4 py-20">
-        <header class="text-center mb-16">
-            <h1 class="text-4xl font-bold mb-4">My Projects</h1>
-            <p class="text-gray-600">A showcase of my work</p>
-        </header>
-        <div class="grid gap-8 max-w-4xl mx-auto">
-            ${repositories.map(repo => `
-                <article class="bg-white rounded-lg shadow-md p-6">
-                    <h2 class="text-2xl font-semibold mb-2">${repo.name}</h2>
-                    <p class="text-gray-600 mb-4">${repo.summary || repo.description || ''}</p>
-                    <div class="flex gap-2 flex-wrap">
-                        ${repo.metadata.topics.map(topic => 
-                            `<span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">${topic}</span>`
-                        ).join('')}
-                    </div>
-                    <div class="mt-4 flex gap-4">
-                        <a href="${repo.url}" class="text-blue-600 hover:underline" target="_blank">View on GitHub</a>
-                        ${repo.metadata.url ? 
-                            `<a href="${repo.metadata.url}" class="text-blue-600 hover:underline" target="_blank">Live Demo</a>` 
-                            : ''}
-                    </div>
-                </article>
-            `).join('')}
-        </div>
-    </div>
-</body>
-</html>`;
+      const html = generatePortfolioHtml(user.username, repositories);
 
       const { url, wasCreated } = await deployToGitHubPages(accessToken, user.username, html);
 
@@ -275,6 +199,46 @@ export async function registerRoutes(app: Express) {
       });
     }
   });
+
+  // Helper function to generate portfolio HTML
+  function generatePortfolioHtml(username: string, repositories: any[]) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${username}'s Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-20">
+        <header class="text-center mb-16">
+            <h1 class="text-4xl font-bold mb-4">My Projects</h1>
+            <p class="text-gray-600">A showcase of my work</p>
+        </header>
+        <div class="grid gap-8 max-w-4xl mx-auto">
+            ${repositories.map(repo => `
+                <article class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-semibold mb-2">${repo.name}</h2>
+                    <p class="text-gray-600 mb-4">${repo.summary || repo.description || ''}</p>
+                    <div class="flex gap-2 flex-wrap">
+                        ${repo.metadata.topics.map((topic: string) => 
+                            `<span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">${topic}</span>`
+                        ).join('')}
+                    </div>
+                    <div class="mt-4 flex gap-4">
+                        <a href="${repo.url}" class="text-blue-600 hover:underline" target="_blank">View on GitHub</a>
+                        ${repo.metadata.url ? 
+                            `<a href="${repo.metadata.url}" class="text-blue-600 hover:underline" target="_blank">Live Demo</a>` 
+                            : ''}
+                    </div>
+                </article>
+            `).join('')}
+        </div>
+    </div>
+</body>
+</html>`;
+  }
 
   return httpServer;
 }
