@@ -11,7 +11,7 @@ import { Repository } from "@shared/schema";
 import { Loader2, Search } from "lucide-react";
 import { ApiKeyDialog } from "@/components/api-key-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { toggleRepositorySelection } from "@/lib/storage";
+import { toggleRepositorySelection, saveRepositories, getRepositories } from "@/lib/storage";
 
 const REPOS_PER_PAGE = 10;
 
@@ -27,6 +27,12 @@ export default function RepoSelect() {
 
   const { data, isLoading } = useQuery<{ repositories: Repository[] }>({
     queryKey: ["/api/repositories"],
+    onSuccess: (data) => {
+      // Initialize repositories in local storage when first fetched
+      if (data?.repositories) {
+        saveRepositories(data.repositories);
+      }
+    }
   });
 
   // Updated to use local storage instead of API call
@@ -34,6 +40,12 @@ export default function RepoSelect() {
     mutationFn: async ({ id, selected }: { id: number; selected: boolean }) => {
       if (!id) {
         throw new Error('Repository ID is required');
+      }
+
+      // Verify repositories exist in storage
+      const storedRepos = getRepositories();
+      if (!storedRepos || storedRepos.length === 0) {
+        throw new Error('No repositories found in storage');
       }
 
       // Use the local storage function instead of API call
@@ -81,7 +93,6 @@ export default function RepoSelect() {
     }
   });
 
-  // Rest of the component remains unchanged
   const { mutate: analyzeRepo, isPending: isAnalyzing } = useMutation({
     mutationFn: async ({ id, openaiKey }: { id: number; openaiKey: string }) => {
       if (!id) {

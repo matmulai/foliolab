@@ -32,12 +32,26 @@ export function removeUser() {
 }
 
 export function saveRepositories(repositories: Repository[]) {
-  localStorage.setItem(STORAGE_KEYS.REPOSITORIES, JSON.stringify(repositories));
+  // Preserve existing selection state when saving new repositories
+  const existingRepos = getRepositories();
+  const updatedRepos = repositories.map(repo => {
+    const existing = existingRepos.find(r => r.id === repo.id);
+    return {
+      ...repo,
+      selected: existing ? existing.selected : false
+    };
+  });
+  localStorage.setItem(STORAGE_KEYS.REPOSITORIES, JSON.stringify(updatedRepos));
 }
 
 export function getRepositories(): Repository[] {
-  const data = localStorage.getItem(STORAGE_KEYS.REPOSITORIES);
-  return data ? JSON.parse(data) : [];
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.REPOSITORIES);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Error reading repositories from storage:', error);
+    return [];
+  }
 }
 
 export function updateRepository(repository: Repository) {
@@ -52,7 +66,7 @@ export function updateRepository(repository: Repository) {
   }
 }
 
-export function toggleRepositorySelection(id: number) {
+export function toggleRepositorySelection(id: number): Repository | null {
   const repositories = getRepositories();
   const index = repositories.findIndex(r => r.id === id);
   if (index !== -1) {
