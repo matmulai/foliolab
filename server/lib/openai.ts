@@ -42,8 +42,6 @@ async function generateWithOpenRouter(prompt: string, userContent: string): Prom
     method: "POST",
     headers: {
       "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      "HTTP-Referer": "https://replit.com",
-      "X-Title": "FolioLab",
       "Content-Type": "application/json"
     },
     body: JSON.stringify(requestBody)
