@@ -14,6 +14,25 @@ const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_DEFAULT_MODEL = "google/gemini-2.0-flash-lite-preview-02-05:free";
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || OPENROUTER_DEFAULT_MODEL;
 
+function extractJsonFromMarkdown(content: string): string {
+  // Try to extract JSON from markdown code blocks
+  const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+  if (jsonMatch && jsonMatch[1]) {
+    console.log('Extracted JSON from markdown code block');
+    return jsonMatch[1];
+  }
+  
+  // If no markdown blocks found, try to find a JSON object directly
+  const directJsonMatch = content.match(/\s*(\{[\s\S]*\})\s*/);
+  if (directJsonMatch && directJsonMatch[1]) {
+    console.log('Found direct JSON content');
+    return directJsonMatch[1];
+  }
+
+  console.error('Could not extract JSON from content:', content);
+  throw new Error('Invalid response format: Could not extract JSON from response');
+}
+
 async function generateWithOpenRouter(prompt: string, userContent: string): Promise<RepoSummary> {
   console.log('Making OpenRouter API request with:', {
     url: OPENROUTER_API_URL,
@@ -42,6 +61,8 @@ async function generateWithOpenRouter(prompt: string, userContent: string): Prom
     method: "POST",
     headers: {
       "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      "HTTP-Referer": "https://replit.com",
+      "X-Title": "FolioLab",
       "Content-Type": "application/json"
     },
     body: JSON.stringify(requestBody)
@@ -60,7 +81,26 @@ async function generateWithOpenRouter(prompt: string, userContent: string): Prom
   const data = await response.json();
   console.log('OpenRouter API response:', JSON.stringify(data, null, 2));
 
-  return JSON.parse(data.choices[0].message.content) as RepoSummary;
+  const content = data.choices[0].message.content;
+  if (!content) {
+    throw new Error('Empty response from OpenRouter API');
+  }
+
+  try {
+    // Extract and parse JSON from the response
+    const jsonContent = extractJsonFromMarkdown(content);
+    const result = JSON.parse(jsonContent) as RepoSummary;
+
+    // Validate the response format
+    if (!result.summary || !Array.isArray(result.keyFeatures)) {
+      throw new Error('Invalid response structure: missing required fields');
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Failed to parse OpenRouter response:', error);
+    throw new Error(`Failed to parse OpenRouter response: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 async function generateWithOpenAI(
