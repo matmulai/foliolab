@@ -175,6 +175,11 @@ export default function RepoSelect() {
 
   const repositories = data?.repositories || [];
   const selectedRepos = repositories.filter((repo) => repo.selected);
+  console.log('Selected repositories:', {
+    total: repositories.length,
+    selected: selectedRepos.length,
+    selectedIds: selectedRepos.map(r => r.id)
+  });
 
   const handleSelectAll = (checked: boolean) => {
     console.log('Selecting all repositories:', checked);
