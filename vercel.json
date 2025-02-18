@@ -5,6 +5,7 @@
       "src": "server/index.ts",
       "use": "@vercel/node",
       "config": {
+        "maxDuration": 60,
         "includeFiles": [
           "server/**/*",
           "shared/**/*",
@@ -22,11 +23,6 @@
       }
     }
   ],
-  "functions": {
-    "server/index.ts": {
-      "maxDuration": 60
-    }
-  },
   "routes": [
     {
       "src": "/api/(.*)",
