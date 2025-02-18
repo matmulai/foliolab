@@ -11,6 +11,7 @@ import { Repository } from "@shared/schema";
 import { Loader2, Search } from "lucide-react";
 import { ApiKeyDialog } from "@/components/api-key-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { toggleRepositorySelection } from "@/lib/storage";
 
 const REPOS_PER_PAGE = 10;
 
@@ -28,27 +29,22 @@ export default function RepoSelect() {
     queryKey: ["/api/repositories"],
   });
 
+  // Updated to use local storage instead of API call
   const { mutate: toggleRepo, isPending: isToggling } = useMutation({
     mutationFn: async ({ id, selected }: { id: number; selected: boolean }) => {
       if (!id) {
         throw new Error('Repository ID is required');
       }
 
-      try {
-        const res = await apiRequest("POST", `/api/repositories/${id}/select`, {
-          selected,
-        });
-        if (!res.ok) {
-          throw new Error('Failed to update repository selection');
-        }
-        return res.json();
-      } catch (error) {
-        // Revert the optimistic update on error
-        setPendingToggles(prev => ({ ...prev, [id]: !selected }));
-        throw error;
+      // Use the local storage function instead of API call
+      const updatedRepo = toggleRepositorySelection(id);
+      if (!updatedRepo) {
+        throw new Error('Failed to update repository selection');
       }
+      return updatedRepo;
     },
     onMutate: ({ id, selected }) => {
+      console.log('Toggling repository selection:', { id, selected });
       // Optimistically update the UI and cache
       setPendingToggles(prev => ({ ...prev, [id]: selected }));
 
@@ -68,6 +64,7 @@ export default function RepoSelect() {
       return { previousData };
     },
     onError: (error, variables, context) => {
+      console.error('Error toggling repository:', error);
       // Revert cache on error
       if (context?.previousData) {
         queryClient.setQueryData(["/api/repositories"], context.previousData);
@@ -78,9 +75,13 @@ export default function RepoSelect() {
         description: error instanceof Error ? error.message : "Failed to update repository selection",
         variant: "destructive",
       });
+    },
+    onSuccess: (updatedRepo) => {
+      console.log('Successfully toggled repository:', updatedRepo);
     }
   });
 
+  // Rest of the component remains unchanged
   const { mutate: analyzeRepo, isPending: isAnalyzing } = useMutation({
     mutationFn: async ({ id, openaiKey }: { id: number; openaiKey: string }) => {
       if (!id) {
@@ -150,6 +151,7 @@ export default function RepoSelect() {
   const selectedRepos = repositories.filter((repo) => repo.selected);
 
   const handleSelectAll = (checked: boolean) => {
+    console.log('Selecting all repositories:', checked);
     paginatedRepos.forEach((repo) => {
       if (repo.id && repo.selected !== checked) {
         toggleRepo({ id: repo.id, selected: checked });
