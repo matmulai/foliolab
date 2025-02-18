@@ -11,28 +11,35 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { InfoIcon } from "lucide-react";
 
 interface ApiKeyDialogProps {
   open: boolean;
-  onOpenAIKey: (key: string, customPrompt?: string) => void;
+  onOpenAIKey: (key: string | undefined, customPrompt?: string) => void;
   onClose: () => void;
 }
 
 const DEFAULT_PROMPT = `Generate a concise project summary and key features list from the repository information. Keep the summary under 150 words and limit key features to 3-5 bullet points.`;
 
+type ModelType = 'openrouter' | 'openai';
+
 export function ApiKeyDialog({ open, onOpenAIKey, onClose }: ApiKeyDialogProps) {
+  const [selectedModel, setSelectedModel] = useState<ModelType>('openrouter');
   const [apiKey, setApiKey] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [customPrompt, setCustomPrompt] = useState(DEFAULT_PROMPT);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load saved API key and custom prompt from localStorage when dialog opens
     if (open) {
       const savedKey = localStorage.getItem("openai_api_key");
       const savedPrompt = localStorage.getItem("openai_custom_prompt");
       if (savedKey) {
         setApiKey(savedKey);
+        setSelectedModel('openai');
       }
       if (savedPrompt) {
         setCustomPrompt(savedPrompt);
@@ -45,24 +52,31 @@ export function ApiKeyDialog({ open, onOpenAIKey, onClose }: ApiKeyDialogProps) 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!apiKey.trim().startsWith("sk-")) {
-      toast({
-        title: "Invalid API Key",
-        description: "Please enter a valid OpenAI API key starting with 'sk-'",
-        variant: "destructive",
-      });
-      return;
+
+    if (selectedModel === 'openai') {
+      if (!apiKey.trim().startsWith("sk-")) {
+        toast({
+          title: "Invalid API Key",
+          description: "Please enter a valid OpenAI API key starting with 'sk-'",
+          variant: "destructive",
+        });
+        return;
+      }
+      localStorage.setItem("openai_api_key", apiKey.trim());
+    } else {
+      localStorage.removeItem("openai_api_key");
     }
 
-    // Save API key and custom prompt to localStorage
-    localStorage.setItem("openai_api_key", apiKey.trim());
     if (customPrompt.trim() !== DEFAULT_PROMPT) {
       localStorage.setItem("openai_custom_prompt", customPrompt.trim());
     } else {
       localStorage.removeItem("openai_custom_prompt");
     }
 
-    onOpenAIKey(apiKey.trim(), customPrompt.trim() === DEFAULT_PROMPT ? undefined : customPrompt.trim());
+    onOpenAIKey(
+      selectedModel === 'openai' ? apiKey.trim() : undefined,
+      customPrompt.trim() === DEFAULT_PROMPT ? undefined : customPrompt.trim()
+    );
     onClose();
   };
 
@@ -79,20 +93,43 @@ export function ApiKeyDialog({ open, onOpenAIKey, onClose }: ApiKeyDialogProps) 
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Enter OpenAI API Key</DialogTitle>
+          <DialogTitle>Choose AI Model</DialogTitle>
           <DialogDescription>
-            Your API key is required to generate AI-powered summaries for your
-            repositories. The key will be stored in your browser and only used for
-            generating repository descriptions.
+            Select which AI model to use for generating repository summaries.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            placeholder="sk-..."
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            type="password"
-          />
+          <RadioGroup
+            value={selectedModel}
+            onValueChange={(value) => setSelectedModel(value as ModelType)}
+            className="grid gap-4"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="openrouter" id="openrouter" />
+              <Label htmlFor="openrouter">Use OpenRouter AI (Free)</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="openai" id="openai" />
+              <Label htmlFor="openai">Use OpenAI (Better Results)</Label>
+            </div>
+          </RadioGroup>
+
+          {selectedModel === 'openai' && (
+            <>
+              <Alert>
+                <InfoIcon className="h-4 w-4" />
+                <AlertDescription>
+                  OpenAI provides higher quality results but requires your own API key.
+                </AlertDescription>
+              </Alert>
+              <Input
+                placeholder="sk-..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                type="password"
+              />
+            </>
+          )}
 
           <div className="space-y-2">
             <button
