@@ -6,7 +6,15 @@ interface RepoSummary {
   keyFeatures: string[];
 }
 
-export async function generateRepoSummary(name: string, description: string, readme: string, apiKey: string): Promise<RepoSummary> {
+const DEFAULT_PROMPT = "Generate a concise project summary and key features list from the repository information. Keep the summary under 150 words and limit key features to 3-5 bullet points. Respond with JSON in this format: { 'summary': string, 'keyFeatures': string[] }";
+
+export async function generateRepoSummary(
+  name: string, 
+  description: string, 
+  readme: string, 
+  apiKey: string,
+  customPrompt?: string
+): Promise<RepoSummary> {
   try {
     const openai = new OpenAI({ apiKey });
 
@@ -21,7 +29,7 @@ export async function generateRepoSummary(name: string, description: string, rea
       messages: [
         {
           role: "system",
-          content: "Generate a concise project summary and key features list from the repository information. Keep the summary under 150 words and limit key features to 3-5 bullet points. Respond with JSON in this format: { 'summary': string, 'keyFeatures': string[] }"
+          content: customPrompt || DEFAULT_PROMPT
         },
         {
           role: "user",

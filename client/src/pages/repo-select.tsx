@@ -123,7 +123,7 @@ export default function RepoSelect() {
   });
 
   const { mutate: analyzeRepo, isPending: isAnalyzing } = useMutation({
-    mutationFn: async ({ id, openaiKey }: { id: number; openaiKey: string }) => {
+    mutationFn: async ({ id, openaiKey, customPrompt }: { id: number; openaiKey: string; customPrompt?: string }) => {
       if (!id) {
         throw new Error('Repository ID is required');
       }
@@ -132,6 +132,7 @@ export default function RepoSelect() {
         accessToken: localStorage.getItem("github_token"),
         username: localStorage.getItem("github_username"),
         openaiKey,
+        customPrompt,
       });
 
       if (!res.ok) {
@@ -204,12 +205,16 @@ export default function RepoSelect() {
     });
   };
 
-  const handleAnalyzeRepos = async (openaiKey: string) => {
+  const handleAnalyzeRepos = async (openaiKey: string, customPrompt?: string) => {
     try {
       // Analyze repositories sequentially to avoid rate limits
       for (const repo of selectedRepos) {
         if (repo.id) {
-          await analyzeRepo({ id: repo.id, openaiKey });
+          await analyzeRepo({ 
+            id: repo.id, 
+            openaiKey,
+            customPrompt 
+          });
         }
       }
 
@@ -233,7 +238,7 @@ export default function RepoSelect() {
     <div className="container mx-auto p-4 md:p-6">
       <div className="flex flex-col gap-6">
         {/* Header and search section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-row justify-between items-start md:items-center gap-4">
           <h1 className="text-2xl md:text-3xl font-bold">Select Repositories</h1>
           <div className="w-full md:w-auto flex items-center gap-4">
             <div className="relative flex-1 md:w-64">

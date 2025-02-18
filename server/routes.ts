@@ -78,7 +78,7 @@ export async function registerRoutes(app: Express) {
 
   app.post("/api/repositories/:id/analyze", async (req, res) => {
     const { id } = req.params;
-    const { accessToken, username, openaiKey } = req.body;
+    const { accessToken, username, openaiKey, customPrompt } = req.body;
     const repoId = parseInt(id);
 
     if (!accessToken || !username) {
@@ -111,7 +111,8 @@ export async function registerRoutes(app: Express) {
         repo.name,
         repo.description || '',
         readme,
-        openaiKey
+        openaiKey,
+        customPrompt
       );
 
       // Return the repository with the new summary
