@@ -22,12 +22,16 @@
       }
     }
   ],
+  "functions": {
+    "server/index.ts": {
+      "maxDuration": 60
+    }
+  },
   "routes": [
     {
       "src": "/api/(.*)",
       "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-      "dest": "/server/index.ts",
-      "maxDuration": 60
+      "dest": "/server/index.ts"
     },
     {
       "src": "/assets/(.*)",
