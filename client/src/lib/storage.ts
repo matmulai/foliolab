@@ -34,11 +34,16 @@ export function removeUser() {
 export function saveRepositories(repositories: Repository[]) {
   try {
     console.log('Saving repositories to storage:', repositories.length);
-    // Preserve existing selection state when saving new repositories
     const existingRepos = getRepositories();
     console.log('Existing repos in storage:', existingRepos.length);
 
     const updatedRepos = repositories.map(repo => {
+      // Check if the repo already has a selection state
+      if ('selected' in repo) {
+        return repo;
+      }
+
+      // Look for existing selection state
       const existing = existingRepos.find(r => r.id === repo.id);
       return {
         ...repo,
@@ -80,7 +85,8 @@ export function updateRepository(repository: Repository) {
   if (index !== -1) {
     repositories[index] = {
       ...repositories[index],
-      ...repository
+      ...repository,
+      selected: repository.selected ?? repositories[index].selected // Preserve selection state
     };
     saveRepositories(repositories);
   }
@@ -92,18 +98,27 @@ export function toggleRepositorySelection(id: number): Repository | null {
   console.log('Found repositories in storage:', repositories.length);
 
   const index = repositories.findIndex(r => r.id === id);
-  if (index !== -1) {
-    repositories[index] = {
-      ...repositories[index],
-      selected: !repositories[index].selected
-    };
-    console.log('Updated repository selection:', repositories[index].selected);
-
-    saveRepositories(repositories);
-    return repositories[index];
+  if (index === -1) {
+    console.log('Repository not found in storage:', id);
+    return null;
   }
-  console.log('Repository not found in storage:', id);
-  return null;
+
+  const updatedRepo = {
+    ...repositories[index],
+    selected: !repositories[index].selected
+  };
+  console.log('Updating repository selection:', { 
+    id: updatedRepo.id,
+    selected: updatedRepo.selected 
+  });
+
+  // Update the repository in the array
+  repositories[index] = updatedRepo;
+
+  // Save the entire array back to storage
+  localStorage.setItem(STORAGE_KEYS.REPOSITORIES, JSON.stringify(repositories));
+
+  return updatedRepo;
 }
 
 export function clearStorage() {
