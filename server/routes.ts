@@ -85,8 +85,9 @@ export async function registerRoutes(app: Express) {
       return res.status(400).json({ error: "Access token and username are required" });
     }
 
-    if (!openaiKey) {
-      return res.status(400).json({ error: "OpenAI API key is required" });
+    // Only check for OpenAI key if explicitly provided (user chose OpenAI option)
+    if (openaiKey && !openaiKey.startsWith('sk-')) {
+      return res.status(400).json({ error: "Invalid OpenAI API key format" });
     }
 
     try {
