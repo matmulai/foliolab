@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer } from "http";
 import { getRepositories, getReadmeContent, getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages } from "./lib/github.js";
 import { generateRepoSummary } from "./lib/openai.js";
+import { Repository } from "@shared/schema";
 
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
@@ -179,6 +180,10 @@ export async function registerRoutes(app: Express) {
       return res.status(400).json({ error: "GitHub access token is required" });
     }
 
+    if (!Array.isArray(repositories) || repositories.length === 0) {
+      return res.status(400).json({ error: "No repositories provided for deployment" });
+    }
+
     try {
       const user = await getGithubUser(accessToken);
       const html = generatePortfolioHtml(user.username, repositories);
@@ -203,7 +208,17 @@ export async function registerRoutes(app: Express) {
   });
 
   // Helper function to generate portfolio HTML
-  function generatePortfolioHtml(username: string, repositories: any[]) {
+  function generatePortfolioHtml(username: string, repositories: Repository[]): string {
+    if (!repositories || repositories.length === 0) {
+      throw new Error("No repositories provided for portfolio generation");
+    }
+
+    console.log('Generating portfolio HTML for:', {
+      username,
+      repositoryCount: repositories.length,
+      repositoryIds: repositories.map(r => r.id)
+    });
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -219,23 +234,33 @@ export async function registerRoutes(app: Express) {
             <p class="text-gray-600">A showcase of my work</p>
         </header>
         <div class="grid gap-8 max-w-4xl mx-auto">
-            ${repositories.map(repo => `
+            ${repositories.map(repo => {
+              if (!repo || typeof repo !== 'object') {
+                console.error('Invalid repository object:', repo);
+                return '';
+              }
+
+              const topics = Array.isArray(repo.metadata?.topics) ? repo.metadata.topics : [];
+              const description = repo.summary || repo.description || '';
+
+              return `
                 <article class="bg-white rounded-lg shadow-md p-6">
-                    <h2 class="text-2xl font-semibold mb-2">${repo.name}</h2>
-                    <p class="text-gray-600 mb-4">${repo.summary || repo.description || ''}</p>
+                    <h2 class="text-2xl font-semibold mb-2">${repo.name || 'Untitled Project'}</h2>
+                    <p class="text-gray-600 mb-4">${description}</p>
                     <div class="flex gap-2 flex-wrap">
-                        ${repo.metadata.topics.map((topic: string) => 
+                        ${topics.map(topic => 
                             `<span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">${topic}</span>`
                         ).join('')}
                     </div>
                     <div class="mt-4 flex gap-4">
                         <a href="${repo.url}" class="text-blue-600 hover:underline" target="_blank">View on GitHub</a>
-                        ${repo.metadata.url ? 
+                        ${repo.metadata?.url ? 
                             `<a href="${repo.metadata.url}" class="text-blue-600 hover:underline" target="_blank">Live Demo</a>` 
                             : ''}
                     </div>
                 </article>
-            `).join('')}
+              `;
+            }).join('')}
         </div>
     </div>
 </body>
