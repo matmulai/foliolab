@@ -44,9 +44,26 @@ export function updateRepository(repository: Repository) {
   const repositories = getRepositories();
   const index = repositories.findIndex(r => r.id === repository.id);
   if (index !== -1) {
-    repositories[index] = repository;
+    repositories[index] = {
+      ...repositories[index],
+      ...repository
+    };
     saveRepositories(repositories);
   }
+}
+
+export function toggleRepositorySelection(id: number) {
+  const repositories = getRepositories();
+  const index = repositories.findIndex(r => r.id === id);
+  if (index !== -1) {
+    repositories[index] = {
+      ...repositories[index],
+      selected: !repositories[index].selected
+    };
+    saveRepositories(repositories);
+    return repositories[index];
+  }
+  return null;
 }
 
 export function clearStorage() {
