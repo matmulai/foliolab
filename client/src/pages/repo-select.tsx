@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -37,6 +37,19 @@ export default function RepoSelect() {
     retry: 2
   });
 
+  // Sync query cache with local storage
+  useEffect(() => {
+    if (data?.repositories) {
+      const storedRepos = getRepositories();
+      if (storedRepos.length > 0) {
+        // Update the cache to match storage
+        queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
+          repositories: storedRepos
+        });
+      }
+    }
+  }, [data]);
+
   // Updated to use local storage instead of API call
   const { mutate: toggleRepo, isPending: isToggling } = useMutation({
     mutationFn: async ({ id, selected }: { id: number; selected: boolean }) => {
@@ -67,7 +80,7 @@ export default function RepoSelect() {
     },
     onMutate: ({ id, selected }) => {
       console.log('Optimistically updating UI for repo:', id, 'selected:', selected);
-      // Optimistically update the UI and cache
+      // Optimistically update the UI
       setPendingToggles(prev => ({ ...prev, [id]: selected }));
 
       // Get current query data
@@ -102,6 +115,7 @@ export default function RepoSelect() {
       console.log('Successfully toggled repository:', updatedRepo);
       // Update the repositories in the query cache to match storage
       const storedRepos = getRepositories();
+      console.log('Updating cache with stored repos:', storedRepos.length);
       queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
         repositories: storedRepos
       });
