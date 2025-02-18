@@ -26,7 +26,10 @@
     {
       "src": "/api/(.*)",
       "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-      "dest": "/server/index.ts"
+      "dest": "/server/index.ts",
+      "config": {
+        "maxDuration": 60
+      }
     },
     {
       "src": "/assets/(.*)",
