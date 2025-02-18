@@ -11,36 +11,57 @@ const DEFAULT_PROMPT = "Generate a concise project summary and key features list
 const JSON_FORMAT_SUFFIX = "Respond with JSON in this format: { 'summary': string, 'keyFeatures': string[] }";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-const OPENROUTER_MODEL = "cognitivecomputations/dolphin3.0-r1-mistral-24b:free";
+const OPENROUTER_DEFAULT_MODEL = "google/gemini-2.0-flash-lite-preview-02-05:free";
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || OPENROUTER_DEFAULT_MODEL;
 
 async function generateWithOpenRouter(prompt: string, userContent: string): Promise<RepoSummary> {
+  console.log('Making OpenRouter API request with:', {
+    url: OPENROUTER_API_URL,
+    model: OPENROUTER_MODEL,
+    prompt,
+    contentLength: userContent.length
+  });
+
+  const requestBody = {
+    model: OPENROUTER_MODEL,
+    messages: [
+      {
+        role: "system",
+        content: prompt
+      },
+      {
+        role: "user",
+        content: userContent
+      }
+    ]
+  };
+
+  console.log('OpenRouter request body:', JSON.stringify(requestBody, null, 2));
+
   const response = await fetch(OPENROUTER_API_URL, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      "HTTP-Referer": "https://replit.com",
       "X-Title": "FolioLab",
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({
-      model: OPENROUTER_MODEL,
-      messages: [
-        {
-          role: "system",
-          content: prompt
-        },
-        {
-          role: "user",
-          content: userContent
-        }
-      ]
-    })
+    body: JSON.stringify(requestBody)
   });
 
   if (!response.ok) {
-    throw new Error(`OpenRouter API error: ${response.statusText}`);
+    const errorText = await response.text();
+    console.error('OpenRouter API error:', {
+      status: response.status,
+      statusText: response.statusText,
+      error: errorText
+    });
+    throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
+  console.log('OpenRouter API response:', JSON.stringify(data, null, 2));
+
   return JSON.parse(data.choices[0].message.content) as RepoSummary;
 }
 
@@ -84,6 +105,15 @@ export async function generateRepoSummary(
   customPrompt?: string
 ): Promise<RepoSummary> {
   try {
+    console.log('Generating repo summary for:', {
+      name,
+      descriptionLength: description?.length,
+      readmeLength: readme?.length,
+      usingOpenAI: !!apiKey,
+      hasCustomPrompt: !!customPrompt,
+      openrouterModel: OPENROUTER_MODEL
+    });
+
     // Prepare a concise input by trimming the README to essential parts
     const maxReadmeLength = 2000;
     const trimmedReadme = readme.length > maxReadmeLength 
@@ -95,13 +125,16 @@ export async function generateRepoSummary(
 
     // If no API key is provided, use OpenRouter
     if (!apiKey) {
+      console.log('Using OpenRouter API for generation with model:', OPENROUTER_MODEL);
       return generateWithOpenRouter(prompt, userContent);
     }
 
     // Otherwise use OpenAI
+    console.log('Using OpenAI API for generation');
     return generateWithOpenAI(prompt, userContent, apiKey);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Failed to generate summary:', errorMessage);
     throw new Error("Failed to generate summary: " + errorMessage);
   }
 }
