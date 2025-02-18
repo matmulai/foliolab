@@ -32,22 +32,42 @@ export function removeUser() {
 }
 
 export function saveRepositories(repositories: Repository[]) {
-  // Preserve existing selection state when saving new repositories
-  const existingRepos = getRepositories();
-  const updatedRepos = repositories.map(repo => {
-    const existing = existingRepos.find(r => r.id === repo.id);
-    return {
-      ...repo,
-      selected: existing ? existing.selected : false
-    };
-  });
-  localStorage.setItem(STORAGE_KEYS.REPOSITORIES, JSON.stringify(updatedRepos));
+  try {
+    console.log('Saving repositories to storage:', repositories.length);
+    // Preserve existing selection state when saving new repositories
+    const existingRepos = getRepositories();
+    console.log('Existing repos in storage:', existingRepos.length);
+
+    const updatedRepos = repositories.map(repo => {
+      const existing = existingRepos.find(r => r.id === repo.id);
+      return {
+        ...repo,
+        selected: existing ? existing.selected : false
+      };
+    });
+
+    localStorage.setItem(STORAGE_KEYS.REPOSITORIES, JSON.stringify(updatedRepos));
+    console.log('Successfully saved repositories to storage');
+
+    // Verify the save worked
+    const savedRepos = getRepositories();
+    console.log('Verified saved repos count:', savedRepos.length);
+  } catch (error) {
+    console.error('Error saving repositories to storage:', error);
+    throw error;
+  }
 }
 
 export function getRepositories(): Repository[] {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.REPOSITORIES);
-    return data ? JSON.parse(data) : [];
+    if (!data) {
+      console.log('No repositories found in storage');
+      return [];
+    }
+    const repos = JSON.parse(data);
+    console.log('Retrieved repositories from storage:', repos.length);
+    return repos;
   } catch (error) {
     console.error('Error reading repositories from storage:', error);
     return [];
@@ -67,16 +87,22 @@ export function updateRepository(repository: Repository) {
 }
 
 export function toggleRepositorySelection(id: number): Repository | null {
+  console.log('Toggling selection for repository:', id);
   const repositories = getRepositories();
+  console.log('Found repositories in storage:', repositories.length);
+
   const index = repositories.findIndex(r => r.id === id);
   if (index !== -1) {
     repositories[index] = {
       ...repositories[index],
       selected: !repositories[index].selected
     };
+    console.log('Updated repository selection:', repositories[index].selected);
+
     saveRepositories(repositories);
     return repositories[index];
   }
+  console.log('Repository not found in storage:', id);
   return null;
 }
 

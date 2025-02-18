@@ -30,22 +30,32 @@ export default function RepoSelect() {
     onSuccess: (data) => {
       // Initialize repositories in local storage when first fetched
       if (data?.repositories) {
+        console.log('Received repositories from API:', data.repositories.length);
         saveRepositories(data.repositories);
       }
-    }
+    },
+    retry: 2
   });
 
   // Updated to use local storage instead of API call
   const { mutate: toggleRepo, isPending: isToggling } = useMutation({
     mutationFn: async ({ id, selected }: { id: number; selected: boolean }) => {
+      console.log('Starting toggle mutation for repo:', id, 'selected:', selected);
       if (!id) {
         throw new Error('Repository ID is required');
       }
 
       // Verify repositories exist in storage
       const storedRepos = getRepositories();
+      console.log('Found stored repositories:', storedRepos.length);
+
       if (!storedRepos || storedRepos.length === 0) {
-        throw new Error('No repositories found in storage');
+        console.error('No repositories in storage, reinitializing from API data');
+        if (data?.repositories) {
+          saveRepositories(data.repositories);
+        } else {
+          throw new Error('No repositories found in storage or API data');
+        }
       }
 
       // Use the local storage function instead of API call
@@ -56,7 +66,7 @@ export default function RepoSelect() {
       return updatedRepo;
     },
     onMutate: ({ id, selected }) => {
-      console.log('Toggling repository selection:', { id, selected });
+      console.log('Optimistically updating UI for repo:', id, 'selected:', selected);
       // Optimistically update the UI and cache
       setPendingToggles(prev => ({ ...prev, [id]: selected }));
 
@@ -90,6 +100,11 @@ export default function RepoSelect() {
     },
     onSuccess: (updatedRepo) => {
       console.log('Successfully toggled repository:', updatedRepo);
+      // Update the repositories in the query cache to match storage
+      const storedRepos = getRepositories();
+      queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
+        repositories: storedRepos
+      });
     }
   });
 
