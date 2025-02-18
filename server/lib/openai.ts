@@ -6,7 +6,9 @@ interface RepoSummary {
   keyFeatures: string[];
 }
 
-const DEFAULT_PROMPT = "Generate a concise project summary and key features list from the repository information. Keep the summary under 150 words and limit key features to 3-5 bullet points. Respond with JSON in this format: { 'summary': string, 'keyFeatures': string[] }";
+const DEFAULT_PROMPT = "Generate a concise project summary and key features list from the repository information. Keep the summary under 150 words and limit key features to 3-5 bullet points.";
+
+const JSON_FORMAT_SUFFIX = "Respond with JSON in this format: { 'summary': string, 'keyFeatures': string[] }";
 
 export async function generateRepoSummary(
   name: string, 
@@ -29,7 +31,7 @@ export async function generateRepoSummary(
       messages: [
         {
           role: "system",
-          content: customPrompt || DEFAULT_PROMPT
+          content: `${customPrompt || DEFAULT_PROMPT} ${JSON_FORMAT_SUFFIX}`
         },
         {
           role: "user",

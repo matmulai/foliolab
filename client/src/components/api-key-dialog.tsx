@@ -18,16 +18,16 @@ interface ApiKeyDialogProps {
   onClose: () => void;
 }
 
-const DEFAULT_PROMPT = `Generate a concise project summary and key features list from the repository information. Keep the summary under 150 words and limit key features to 3-5 bullet points. Respond with JSON in this format: { 'summary': string, 'keyFeatures': string[] }`;
+const DEFAULT_PROMPT = `Generate a concise project summary and key features list from the repository information. Keep the summary under 150 words and limit key features to 3-5 bullet points.`;
 
 export function ApiKeyDialog({ open, onOpenAIKey, onClose }: ApiKeyDialogProps) {
   const [apiKey, setApiKey] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [customPrompt, setCustomPrompt] = useState("");
+  const [customPrompt, setCustomPrompt] = useState(DEFAULT_PROMPT);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load saved API key from localStorage when dialog opens
+    // Load saved API key and custom prompt from localStorage when dialog opens
     if (open) {
       const savedKey = localStorage.getItem("openai_api_key");
       const savedPrompt = localStorage.getItem("openai_custom_prompt");
@@ -37,6 +37,8 @@ export function ApiKeyDialog({ open, onOpenAIKey, onClose }: ApiKeyDialogProps) 
       if (savedPrompt) {
         setCustomPrompt(savedPrompt);
         setShowAdvanced(true);
+      } else {
+        setCustomPrompt(DEFAULT_PROMPT);
       }
     }
   }, [open]);
@@ -54,18 +56,18 @@ export function ApiKeyDialog({ open, onOpenAIKey, onClose }: ApiKeyDialogProps) 
 
     // Save API key and custom prompt to localStorage
     localStorage.setItem("openai_api_key", apiKey.trim());
-    if (customPrompt.trim()) {
+    if (customPrompt.trim() !== DEFAULT_PROMPT) {
       localStorage.setItem("openai_custom_prompt", customPrompt.trim());
     } else {
       localStorage.removeItem("openai_custom_prompt");
     }
 
-    onOpenAIKey(apiKey.trim(), customPrompt.trim() || undefined);
+    onOpenAIKey(apiKey.trim(), customPrompt.trim() === DEFAULT_PROMPT ? undefined : customPrompt.trim());
     onClose();
   };
 
   const resetPrompt = () => {
-    setCustomPrompt("");
+    setCustomPrompt(DEFAULT_PROMPT);
     localStorage.removeItem("openai_custom_prompt");
     toast({
       title: "Prompt Reset",
@@ -120,7 +122,6 @@ export function ApiKeyDialog({ open, onOpenAIKey, onClose }: ApiKeyDialogProps) 
                   </Button>
                 </div>
                 <Textarea
-                  placeholder={DEFAULT_PROMPT}
                   value={customPrompt}
                   onChange={(e) => setCustomPrompt(e.target.value)}
                   className="h-32"
