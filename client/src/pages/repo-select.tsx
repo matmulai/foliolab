@@ -12,6 +12,7 @@ import { Search } from "lucide-react";
 import { ApiKeyDialog } from "@/components/api-key-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { toggleRepositorySelection, saveRepositories, getRepositories } from "@/lib/storage";
+import { AnalysisProgress } from "@/components/analysis-progress";
 
 const REPOS_PER_PAGE = 10;
 
@@ -21,6 +22,12 @@ export default function RepoSelect() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
+  const [analysisProgress, setAnalysisProgress] = useState({
+    isAnalyzing: false,
+    currentRepo: 0,
+    repoName: '',
+    progress: 0
+  });
 
   const { data, isLoading } = useQuery<{ repositories: Repository[] }>({
     queryKey: ["/api/repositories"],
@@ -95,9 +102,24 @@ export default function RepoSelect() {
 
   const handleAnalyzeRepos = async (openaiKey: string, customPrompt?: string) => {
     try {
+      setAnalysisProgress({
+        isAnalyzing: true,
+        currentRepo: 0,
+        repoName: '',
+        progress: 0
+      });
+
       // Analyze repositories sequentially to avoid rate limits
-      for (const repo of selectedRepos) {
+      for (let i = 0; i < selectedRepos.length; i++) {
+        const repo = selectedRepos[i];
         if (repo.id) {
+          setAnalysisProgress(prev => ({
+            ...prev,
+            currentRepo: i + 1,
+            repoName: repo.name,
+            progress: (i / selectedRepos.length) * 100
+          }));
+
           const res = await apiRequest("POST", `/api/repositories/${repo.id}/analyze`, {
             accessToken: localStorage.getItem("github_token"),
             username: localStorage.getItem("github_username"),
@@ -123,6 +145,15 @@ export default function RepoSelect() {
         }
       }
 
+      // Set progress to 100% when complete
+      setAnalysisProgress(prev => ({
+        ...prev,
+        progress: 100
+      }));
+
+      // Small delay to show 100% completion before navigating
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       setLocation("/preview");
       toast({
         title: "Success",
@@ -133,6 +164,13 @@ export default function RepoSelect() {
         title: "Error",
         description: "Failed to analyze repositories. Please try again.",
         variant: "destructive",
+      });
+    } finally {
+      setAnalysisProgress({
+        isAnalyzing: false,
+        currentRepo: 0,
+        repoName: '',
+        progress: 0
       });
     }
   };
@@ -259,6 +297,14 @@ export default function RepoSelect() {
         open={showApiKeyDialog}
         onOpenAIKey={handleAnalyzeRepos}
         onClose={() => setShowApiKeyDialog(false)}
+      />
+
+      <AnalysisProgress
+        open={analysisProgress.isAnalyzing}
+        totalRepos={selectedRepos.length}
+        currentRepo={analysisProgress.currentRepo}
+        repoName={analysisProgress.repoName}
+        progress={analysisProgress.progress}
       />
     </div>
   );

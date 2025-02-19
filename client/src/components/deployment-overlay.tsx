@@ -19,7 +19,7 @@ export function DeploymentOverlay({
   portfolioUrl,
   username
 }: DeploymentOverlayProps) {
-  const [countdown, setCountdown] = useState(10);
+  const [countdown, setCountdown] = useState(60);
   const [customDomain, setCustomDomain] = useState<string | null>(null);
   const { toast } = useToast();
 
