@@ -22,150 +22,76 @@ export default function RepoSelect() {
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
 
-  // Track pending repository toggles locally
-  const [pendingToggles, setPendingToggles] = useState<Record<number, boolean>>({});
-
   const { data, isLoading } = useQuery<{ repositories: Repository[] }>({
-    queryKey: ["/api/repositories"],
-    onSuccess: (data) => {
-      // Initialize repositories in local storage when first fetched
-      if (data?.repositories) {
-        console.log('Received repositories from API:', data.repositories.length);
-        // Load existing selections from storage
-        const storedRepos = getRepositories();
-        const mergedRepos = data.repositories.map(repo => {
-          const stored = storedRepos.find(r => r.id === repo.id);
-          return {
-            ...repo,
-            selected: stored ? stored.selected : false
-          };
-        });
-        saveRepositories(mergedRepos);
-      }
-    },
-    retry: 2
+    queryKey: ["/api/repositories"]
   });
 
   // Sync query cache with local storage
   useEffect(() => {
     if (data?.repositories) {
       const storedRepos = getRepositories();
-      if (storedRepos.length > 0) {
-        // Update the cache to match storage
-        queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
-          repositories: storedRepos
-        });
-      }
+      const mergedRepos = data.repositories.map(repo => ({
+        ...repo,
+        selected: storedRepos.find(r => r.id === repo.id)?.selected || false
+      }));
+
+      // Update both storage and cache
+      saveRepositories(mergedRepos);
+      queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
+        repositories: mergedRepos
+      });
+
+      console.log('Synced repositories:', {
+        total: mergedRepos.length,
+        selected: mergedRepos.filter(r => r.selected).length
+      });
     }
   }, [data]);
 
-  // Updated to use local storage instead of API call
   const { mutate: toggleRepo, isPending: isToggling } = useMutation({
     mutationFn: async ({ id, selected }: { id: number; selected: boolean }) => {
-      console.log('Starting toggle mutation for repo:', id, 'selected:', selected);
-      if (!id) {
-        throw new Error('Repository ID is required');
-      }
+      if (!id) throw new Error('Repository ID is required');
 
-      // Verify repositories exist in storage
-      const storedRepos = getRepositories();
-      console.log('Found stored repositories:', storedRepos.length);
-
-      if (!storedRepos || storedRepos.length === 0) {
-        console.error('No repositories in storage, reinitializing from API data');
-        if (data?.repositories) {
-          saveRepositories(data.repositories);
-        } else {
-          throw new Error('No repositories found in storage or API data');
-        }
-      }
-
-      // Use the local storage function instead of API call
+      // Update local storage and get the updated repo
       const updatedRepo = toggleRepositorySelection(id);
-      if (!updatedRepo) {
-        throw new Error('Failed to update repository selection');
-      }
+      if (!updatedRepo) throw new Error('Failed to update repository selection');
+
       return updatedRepo;
     },
     onMutate: ({ id, selected }) => {
-      console.log('Optimistically updating UI for repo:', id, 'selected:', selected);
-      // Optimistically update the UI
-      setPendingToggles(prev => ({ ...prev, [id]: selected }));
-
-      // Get current query data
       const previousData = queryClient.getQueryData<{ repositories: Repository[] }>(["/api/repositories"]);
 
-      // Optimistically update the cache
       if (previousData) {
         const updatedRepos = previousData.repositories.map(repo =>
           repo.id === id ? { ...repo, selected } : repo
         );
+
+        // Update both cache and storage synchronously
         queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
           repositories: updatedRepos
         });
+        saveRepositories(updatedRepos);
+
+        console.log('Updated selection:', {
+          repoId: id,
+          selected,
+          totalSelected: updatedRepos.filter(r => r.selected).length
+        });
       }
 
-      // Return previous data for rollback
       return { previousData };
     },
     onError: (error, variables, context) => {
       console.error('Error toggling repository:', error);
-      // Revert cache on error
       if (context?.previousData) {
+        // Revert both cache and storage
         queryClient.setQueryData(["/api/repositories"], context.previousData);
+        saveRepositories(context.previousData.repositories);
       }
 
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update repository selection",
-        variant: "destructive",
-      });
-    },
-    onSuccess: (updatedRepo) => {
-      console.log('Successfully toggled repository:', updatedRepo);
-      // Update the repositories in the query cache to match storage
-      const storedRepos = getRepositories();
-      console.log('Updating cache with stored repos:', storedRepos.length);
-      queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
-        repositories: storedRepos
-      });
-    }
-  });
-
-  const { mutate: analyzeRepo, isPending: isAnalyzing } = useMutation({
-    mutationFn: async ({ id, openaiKey, customPrompt }: { id: number; openaiKey: string; customPrompt?: string }) => {
-      if (!id) {
-        throw new Error('Repository ID is required');
-      }
-
-      const res = await apiRequest("POST", `/api/repositories/${id}/analyze`, {
-        accessToken: localStorage.getItem("github_token"),
-        username: localStorage.getItem("github_username"),
-        openaiKey,
-        customPrompt,
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to analyze repository');
-      }
-
-      return res.json();
-    },
-    onSuccess: (data) => {
-      // Update the cache with the new summary
-      const currentData = queryClient.getQueryData<{ repositories: Repository[] }>(["/api/repositories"]);
-      if (currentData) {
-        queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
-          repositories: currentData.repositories.map(repo =>
-            repo.id === data.repository.id ? { ...repo, summary: data.repository.summary } : repo
-          )
-        });
-      }
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to analyze repository. Please try again.",
         variant: "destructive",
       });
     }
@@ -185,35 +111,24 @@ export default function RepoSelect() {
   }, [filteredRepos, currentPage]);
 
   const totalPages = Math.ceil((filteredRepos?.length || 0) / REPOS_PER_PAGE);
+  const selectedRepos = data?.repositories.filter((repo) => repo.selected) || [];
+  const selectedCount = selectedRepos.length;
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-4 md:p-6">
-        <div className="grid gap-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-32" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  const repositories = data?.repositories || [];
-  const selectedRepos = repositories.filter((repo) => repo.selected);
-  console.log('Selected repositories:', {
-    total: repositories.length,
-    selected: selectedRepos.length,
-    selectedIds: selectedRepos.map(r => r.id)
+  console.log('Current state:', {
+    totalRepos: data?.repositories?.length || 0,
+    selectedCount,
+    pageRepos: paginatedRepos.length
   });
 
   const handleSelectAll = (checked: boolean) => {
-    console.log('Selecting all repositories:', checked);
     paginatedRepos.forEach((repo) => {
       if (repo.id && repo.selected !== checked) {
         toggleRepo({ id: repo.id, selected: checked });
       }
     });
   };
+
+  const allSelected = paginatedRepos.length > 0 && paginatedRepos.every((repo) => repo.selected);
 
   const handleAnalyzeRepos = async (openaiKey: string, customPrompt?: string) => {
     try {
@@ -242,8 +157,6 @@ export default function RepoSelect() {
     }
   };
 
-  const allSelected = paginatedRepos.length > 0 && paginatedRepos.every((repo) => repo.selected);
-
   return (
     <div className="container mx-auto p-4 md:p-6">
       <div className="flex flex-col gap-6">
@@ -268,7 +181,7 @@ export default function RepoSelect() {
                 id="select-all"
                 checked={allSelected}
                 onCheckedChange={handleSelectAll}
-                disabled={isAnalyzing || isToggling || paginatedRepos.length === 0}
+                disabled={isToggling || paginatedRepos.length === 0}
               />
               <label htmlFor="select-all" className="text-sm font-medium whitespace-nowrap">
                 Select All
@@ -279,22 +192,23 @@ export default function RepoSelect() {
 
         {/* Repository list */}
         <div className="grid gap-4">
-          {paginatedRepos.map((repo) => {
-            const isTogglePending = repo.id in pendingToggles;
-            const effectiveSelected = isTogglePending ? pendingToggles[repo.id] : repo.selected;
-
-            return (
+          {isLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-32" />
+            ))
+          ) : (
+            paginatedRepos.map((repo) => (
               <Card key={repo.id} className="transition-shadow hover:shadow-md">
                 <CardHeader className="flex flex-row items-start gap-4 p-4 md:p-6">
                   <Checkbox
                     id={`repo-${repo.id}`}
-                    checked={effectiveSelected}
+                    checked={repo.selected}
                     onCheckedChange={(checked) => {
                       if (repo.id) {
                         toggleRepo({ id: repo.id, selected: !!checked });
                       }
                     }}
-                    disabled={isAnalyzing || isToggling}
+                    disabled={isToggling}
                   />
                   <div className="flex-1">
                     <label
@@ -318,8 +232,8 @@ export default function RepoSelect() {
                   </div>
                 </CardHeader>
               </Card>
-            );
-          })}
+            ))
+          )}
         </div>
 
         {/* Pagination */}
@@ -348,15 +262,14 @@ export default function RepoSelect() {
         )}
 
         {/* Generate Portfolio button */}
-        {selectedRepos.length > 0 && (
+        {selectedCount > 0 && (
           <div className="mt-6 flex justify-end">
             <Button
               onClick={() => setShowApiKeyDialog(true)}
-              disabled={isAnalyzing || isToggling}
+              disabled={isToggling}
               className="w-full md:w-auto"
             >
-              {isAnalyzing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Generate Portfolio ({selectedRepos.length} selected)
+              Generate Portfolio ({selectedCount} selected)
             </Button>
           </div>
         )}
