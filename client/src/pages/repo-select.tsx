@@ -1,14 +1,14 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Repository } from "@shared/schema";
-import { Loader2, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { ApiKeyDialog } from "@/components/api-key-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { toggleRepositorySelection, saveRepositories, getRepositories } from "@/lib/storage";
@@ -23,72 +23,41 @@ export default function RepoSelect() {
   const { toast } = useToast();
 
   const { data, isLoading } = useQuery<{ repositories: Repository[] }>({
-    queryKey: ["/api/repositories"]
-  });
-
-  // Sync query cache with local storage
-  useEffect(() => {
-    if (data?.repositories) {
+    queryKey: ["/api/repositories"],
+    initialData: () => {
+      // Load initial data from storage
       const storedRepos = getRepositories();
-      const mergedRepos = data.repositories.map(repo => ({
-        ...repo,
-        selected: storedRepos.find(r => r.id === repo.id)?.selected || false
-      }));
-
-      // Update both storage and cache
-      saveRepositories(mergedRepos);
-      queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
-        repositories: mergedRepos
-      });
-
-      console.log('Synced repositories:', {
-        total: mergedRepos.length,
-        selected: mergedRepos.filter(r => r.selected).length
-      });
+      return storedRepos.length ? { repositories: storedRepos } : undefined;
     }
-  }, [data]);
+  });
 
   const { mutate: toggleRepo, isPending: isToggling } = useMutation({
     mutationFn: async ({ id, selected }: { id: number; selected: boolean }) => {
       if (!id) throw new Error('Repository ID is required');
 
-      // Update local storage and get the updated repo
-      const updatedRepo = toggleRepositorySelection(id);
-      if (!updatedRepo) throw new Error('Failed to update repository selection');
+      // Get the current repository data
+      const repositories = data?.repositories || [];
+      const updatedRepo = {
+        ...repositories.find(r => r.id === id)!,
+        selected
+      };
+
+      // Update both cache and storage atomically
+      const updatedRepos = repositories.map(repo =>
+        repo.id === id ? updatedRepo : repo
+      );
+
+      // Save to storage first
+      saveRepositories(updatedRepos);
+
+      // Update cache
+      queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
+        repositories: updatedRepos
+      });
 
       return updatedRepo;
     },
-    onMutate: ({ id, selected }) => {
-      const previousData = queryClient.getQueryData<{ repositories: Repository[] }>(["/api/repositories"]);
-
-      if (previousData) {
-        const updatedRepos = previousData.repositories.map(repo =>
-          repo.id === id ? { ...repo, selected } : repo
-        );
-
-        // Update both cache and storage synchronously
-        queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
-          repositories: updatedRepos
-        });
-        saveRepositories(updatedRepos);
-
-        console.log('Updated selection:', {
-          repoId: id,
-          selected,
-          totalSelected: updatedRepos.filter(r => r.selected).length
-        });
-      }
-
-      return { previousData };
-    },
-    onError: (error, variables, context) => {
-      console.error('Error toggling repository:', error);
-      if (context?.previousData) {
-        // Revert both cache and storage
-        queryClient.setQueryData(["/api/repositories"], context.previousData);
-        saveRepositories(context.previousData.repositories);
-      }
-
+    onError: (error) => {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update repository selection",
@@ -114,12 +83,6 @@ export default function RepoSelect() {
   const selectedRepos = data?.repositories.filter((repo) => repo.selected) || [];
   const selectedCount = selectedRepos.length;
 
-  console.log('Current state:', {
-    totalRepos: data?.repositories?.length || 0,
-    selectedCount,
-    pageRepos: paginatedRepos.length
-  });
-
   const handleSelectAll = (checked: boolean) => {
     paginatedRepos.forEach((repo) => {
       if (repo.id && repo.selected !== checked) {
@@ -135,10 +98,27 @@ export default function RepoSelect() {
       // Analyze repositories sequentially to avoid rate limits
       for (const repo of selectedRepos) {
         if (repo.id) {
-          await analyzeRepo({ 
-            id: repo.id, 
+          const res = await apiRequest("POST", `/api/repositories/${repo.id}/analyze`, {
+            accessToken: localStorage.getItem("github_token"),
+            username: localStorage.getItem("github_username"),
             openaiKey,
-            customPrompt 
+            customPrompt,
+          });
+
+          if (!res.ok) {
+            throw new Error('Failed to analyze repository');
+          }
+
+          const data = await res.json();
+
+          // Update the cache with the new summary
+          queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], (old) => {
+            if (!old) return old;
+            return {
+              repositories: old.repositories.map(r =>
+                r.id === data.repository.id ? { ...r, summary: data.repository.summary } : r
+              )
+            };
           });
         }
       }
