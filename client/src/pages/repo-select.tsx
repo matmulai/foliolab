@@ -31,7 +31,16 @@ export default function RepoSelect() {
       // Initialize repositories in local storage when first fetched
       if (data?.repositories) {
         console.log('Received repositories from API:', data.repositories.length);
-        saveRepositories(data.repositories);
+        // Load existing selections from storage
+        const storedRepos = getRepositories();
+        const mergedRepos = data.repositories.map(repo => {
+          const stored = storedRepos.find(r => r.id === repo.id);
+          return {
+            ...repo,
+            selected: stored ? stored.selected : false
+          };
+        });
+        saveRepositories(mergedRepos);
       }
     },
     retry: 2
@@ -88,10 +97,11 @@ export default function RepoSelect() {
 
       // Optimistically update the cache
       if (previousData) {
+        const updatedRepos = previousData.repositories.map(repo =>
+          repo.id === id ? { ...repo, selected } : repo
+        );
         queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
-          repositories: previousData.repositories.map(repo =>
-            repo.id === id ? { ...repo, selected } : repo
-          )
+          repositories: updatedRepos
         });
       }
 
