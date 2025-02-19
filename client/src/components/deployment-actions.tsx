@@ -10,12 +10,14 @@ import {
 import { Loader2, Github, Download, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Repository } from "@shared/schema";
 
 interface DeploymentActionsProps {
   onSuccess?: () => void;
+  repositories: Repository[];
 }
 
-export function DeploymentActions({ onSuccess }: DeploymentActionsProps) {
+export function DeploymentActions({ onSuccess, repositories }: DeploymentActionsProps) {
   const [isCreatingRepo, setIsCreatingRepo] = useState(false);
   const [isDeployingToPages, setIsDeployingToPages] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -28,6 +30,7 @@ export function DeploymentActions({ onSuccess }: DeploymentActionsProps) {
       const res = await apiRequest("POST", "/api/deploy/github", {
         accessToken: localStorage.getItem("github_token"),
         downloadOnly: true,
+        repositories
       });
 
       if (!res.ok) {
@@ -71,6 +74,7 @@ export function DeploymentActions({ onSuccess }: DeploymentActionsProps) {
       setIsCreatingRepo(true);
       const res = await apiRequest("POST", "/api/deploy/github", {
         accessToken: localStorage.getItem("github_token"),
+        repositories
       });
 
       if (!res.ok) {
@@ -103,6 +107,7 @@ export function DeploymentActions({ onSuccess }: DeploymentActionsProps) {
       setIsDeployingToPages(true);
       const res = await apiRequest("POST", "/api/deploy/github-pages", {
         accessToken: localStorage.getItem("github_token"),
+        repositories
       });
 
       if (!res.ok) {
@@ -117,7 +122,9 @@ export function DeploymentActions({ onSuccess }: DeploymentActionsProps) {
       });
 
       // Open the GitHub Pages URL in a new tab
-      window.open(data.url, '_blank');
+      if (data.url) {
+        window.open(data.url, '_blank');
+      }
     } catch (error) {
       toast({
         title: "Error",

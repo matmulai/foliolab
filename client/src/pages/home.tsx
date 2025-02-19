@@ -3,11 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Github, Shield } from "lucide-react";
 import { clearAllData } from "@/lib/queryClient";
+import { clearStorage } from "@/lib/storage";
+import { useEffect } from "react";
 
 export default function Home() {
+  // Clear all data when the component mounts
+  useEffect(() => {
+    clearStorage(); // Clear local storage data
+    clearAllData(); // Clear query cache
+  }, []);
+
   // Add clearAllData to the GitHub auth button click
   const handleStartClick = () => {
     clearAllData(); // Clear all data before starting new auth
+    clearStorage(); // Clear local storage as well
   };
 
   return (
