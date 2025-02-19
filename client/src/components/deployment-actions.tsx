@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle 
 } from "@/components/ui/dialog";
 import { Loader2, Github, Download, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { DeploymentOverlay } from "./deployment-overlay";
 import { Repository } from "@shared/schema";
 
 interface DeploymentActionsProps {
@@ -22,6 +23,12 @@ export function DeploymentActions({ onSuccess, repositories }: DeploymentActions
   const [isDeployingToPages, setIsDeployingToPages] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showVercelDialog, setShowVercelDialog] = useState(false);
+  const [showDeploymentOverlay, setShowDeploymentOverlay] = useState(false);
+  const [deploymentInfo, setDeploymentInfo] = useState<{
+    deploymentUrl: string;
+    portfolioUrl: string;
+    username: string;
+  } | null>(null);
   const { toast } = useToast();
 
   const handleDownload = async () => {
@@ -116,15 +123,22 @@ export function DeploymentActions({ onSuccess, repositories }: DeploymentActions
 
       const data = await res.json();
 
+      if (data.success) {
+        const username = localStorage.getItem("github_username");
+        if (!username) throw new Error("GitHub username not found");
+
+        setDeploymentInfo({
+          deploymentUrl: `https://github.com/${username}/${username}.github.io/blob/main/portfolio.html`,
+          portfolioUrl: `https://${username}.github.io/portfolio.html`,
+          username
+        });
+        setShowDeploymentOverlay(true);
+      }
+
       toast({
         title: data.wasCreated ? "GitHub Pages Created" : "GitHub Pages Updated",
         description: data.message,
       });
-
-      // Open the GitHub Pages URL in a new tab
-      if (data.url) {
-        window.open(data.url, '_blank');
-      }
     } catch (error) {
       toast({
         title: "Error",
@@ -178,6 +192,16 @@ export function DeploymentActions({ onSuccess, repositories }: DeploymentActions
         )}
         Deploy to Vercel
       </Button>
+
+      {deploymentInfo && (
+        <DeploymentOverlay
+          open={showDeploymentOverlay}
+          onClose={() => setShowDeploymentOverlay(false)}
+          deploymentUrl={deploymentInfo.deploymentUrl}
+          portfolioUrl={deploymentInfo.portfolioUrl}
+          username={deploymentInfo.username}
+        />
+      )}
 
       <Dialog open={showVercelDialog} onOpenChange={setShowVercelDialog}>
         <DialogContent>
