@@ -223,7 +223,7 @@ export function DeploymentActions({ onSuccess, repositories }: DeploymentActions
           <div className="flex justify-end gap-3">
             <Button
               onClick={() => {
-                const vercelDeployUrl = `https://vercel.com/new/git/external?repository=https://github.com/${localStorage.getItem("github_username")}/portfolio-showcase`;
+                const vercelDeployUrl = `https://vercel.com/new/git/external?repository-url=https://github.com/${localStorage.getItem("github_username")}/portfolio-showcase&project-name=${localStorage.getItem("github_username")}&repository-name=portfolio-showcase`;
                 window.open(vercelDeployUrl, "_blank");
                 setShowVercelDialog(false);
               }}
