@@ -97,7 +97,7 @@ export async function registerRoutes(app: Express) {
       const repo = repos.find(r => r.id === repoId);
 
       if (!repo) {
-        return res.status(404).json({ 
+        return res.status(404).json({
           error: "Repository not found",
           details: `No repository found with ID ${repoId}`
         });
@@ -160,7 +160,7 @@ export async function registerRoutes(app: Express) {
         success: true,
         repoUrl,
         wasCreated,
-        message: wasCreated 
+        message: wasCreated
           ? "Repository created and portfolio files added successfully"
           : "Portfolio repository updated successfully"
       });
@@ -194,7 +194,7 @@ export async function registerRoutes(app: Express) {
         success: true,
         url,
         wasCreated,
-        message: wasCreated 
+        message: wasCreated
           ? "GitHub Pages repository created and portfolio deployed successfully"
           : "Portfolio deployed to GitHub Pages successfully"
       });
@@ -205,6 +205,13 @@ export async function registerRoutes(app: Express) {
         details: error instanceof Error ? error.message : String(error)
       });
     }
+  });
+
+  app.get("/api/deploy/vercel/config", (req, res) => {
+    res.json({
+      clientId: process.env.VERCEL_CLIENT_ID,
+      redirectUri: `${process.env.APP_URL}/api/deploy/vercel/callback`,
+    });
   });
 
   app.post("/api/deploy/vercel/auth", async (req, res) => {
@@ -437,14 +444,14 @@ export async function registerRoutes(app: Express) {
                     <h2 class="text-2xl font-semibold mb-2">${repo.name || 'Untitled Project'}</h2>
                     <p class="text-gray-600 mb-4">${description}</p>
                     <div class="flex gap-2 flex-wrap">
-                        ${topics.map(topic => 
+                        ${topics.map(topic =>
                             `<span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">${topic}</span>`
                         ).join('')}
                     </div>
                     <div class="mt-4 flex gap-4">
                         <a href="${repo.url}" class="text-blue-600 hover:underline" target="_blank">View on GitHub</a>
-                        ${repo.metadata?.url ? 
-                            `<a href="${repo.metadata.url}" class="text-blue-600 hover:underline" target="_blank">Live Demo</a>` 
+                        ${repo.metadata?.url ?
+                            `<a href="${repo.metadata.url}" class="text-blue-600 hover:underline" target="_blank">Live Demo</a>`
                             : ''}
                     </div>
                 </article>

@@ -121,9 +121,16 @@ export function DeploymentActions({
     }
   };
 
-  const handleVercelDeploy = () => {
+  const handleVercelDeploy = async () => {
     try {
       setIsCreatingRepo(true);
+
+      // Get Vercel OAuth configuration
+      const configRes = await fetch('/api/deploy/vercel/config');
+      if (!configRes.ok) {
+        throw new Error('Failed to get Vercel configuration');
+      }
+      const config = await configRes.json();
 
       // Generate CSRF token
       const state = Array.from(crypto.getRandomValues(new Uint8Array(16)))
@@ -135,8 +142,8 @@ export function DeploymentActions({
 
       // Redirect to Vercel OAuth
       const params = new URLSearchParams({
-        client_id: import.meta.env.VITE_VERCEL_CLIENT_ID,
-        redirect_uri: `${window.location.origin}/api/deploy/vercel/callback`,
+        client_id: config.clientId,
+        redirect_uri: config.redirectUri,
         scope: 'deployments:write',
         state,
       });
