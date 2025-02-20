@@ -216,8 +216,6 @@ export async function registerRoutes(app: Express) {
       params.append('client_secret', process.env.VERCEL_CLIENT_SECRET!);
       params.append('code', code);
       params.append('redirect_uri', `${process.env.APP_URL}/api/deploy/vercel/callback`);
-      params.append('grant_type', 'authorization_code');
-      console.log(params.toString());
 
       const tokenResponse = await fetch("https://api.vercel.com/v2/oauth/access_token", {
         method: "POST",
@@ -228,7 +226,6 @@ export async function registerRoutes(app: Express) {
       });
 
       const tokenData = await tokenResponse.json();
-      console.log(tokenData);
 
       if (tokenData.error) {
         throw new Error(`Vercel OAuth error: ${tokenData.error_description || tokenData.error}`);
@@ -331,6 +328,71 @@ export async function registerRoutes(app: Express) {
         error: "Failed to check deployment status",
         details: error instanceof Error ? error.message : String(error)
       });
+    }
+  });
+
+  app.get("/api/deploy/vercel/callback", async (req, res) => {
+    const { code, state } = req.query;
+
+    if (!code || !state) {
+      return res.status(400).json({ error: "Missing authorization code or state" });
+    }
+
+    try {
+      // Exchange the authorization code for an access token
+      const params = new URLSearchParams();
+      params.append('client_id', process.env.VERCEL_CLIENT_ID!);
+      params.append('client_secret', process.env.VERCEL_CLIENT_SECRET!);
+      params.append('code', code as string);
+      params.append('redirect_uri', `${process.env.APP_URL}/api/deploy/vercel/callback`);
+
+      const tokenResponse = await fetch("https://api.vercel.com/v2/oauth/access_token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: params.toString()
+      });
+
+      const tokenData = await tokenResponse.json();
+
+      if (tokenData.error) {
+        throw new Error(`Vercel OAuth error: ${tokenData.error_description || tokenData.error}`);
+      }
+
+      // Return success page with script to send token back to main window
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <body>
+          <script>
+            window.opener.postMessage(
+              { type: 'vercel-oauth-success', token: '${tokenData.access_token}', teamId: '${tokenData.team_id || ''}' },
+              window.location.origin
+            );
+            window.close();
+          </script>
+          <p>Authorization successful! You can close this window.</p>
+        </body>
+        </html>
+      `);
+    } catch (error) {
+      console.error('Vercel OAuth callback error:', error);
+      res.status(500).send(`
+        <!DOCTYPE html>
+        <html>
+        <body>
+          <script>
+            window.opener.postMessage(
+              { type: 'vercel-oauth-error', error: '${error instanceof Error ? error.message : 'Unknown error'}' },
+              window.location.origin
+            );
+            window.close();
+          </script>
+          <p>Authorization failed. You can close this window.</p>
+        </body>
+        </html>
+      `);
     }
   });
 

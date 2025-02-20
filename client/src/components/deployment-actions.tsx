@@ -107,9 +107,7 @@ export function DeploymentActions({
       }
 
       toast({
-        title: data.wasCreated
-          ? "GitHub Pages Created"
-          : "GitHub Pages Updated",
+        title: data.wasCreated ? "GitHub Pages Created" : "GitHub Pages Updated",
         description: data.message,
       });
     } catch (error) {
@@ -123,64 +121,36 @@ export function DeploymentActions({
     }
   };
 
-  const handleVercelDeploy = async () => {
+  const handleVercelDeploy = () => {
     try {
       setIsCreatingRepo(true);
 
-      // First, get Vercel OAuth token
-      const authResponse = await apiRequest("POST", "/api/deploy/vercel/auth", {
-        code: "VERCEL_AUTH_CODE" // This will need to be obtained via OAuth flow
+      // Generate CSRF token
+      const state = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      localStorage.setItem("vercel_csrf_token", state);
+      localStorage.setItem("pending_repositories", JSON.stringify(repositories));
+
+      // Redirect to Vercel OAuth
+      const params = new URLSearchParams({
+        client_id: import.meta.env.VITE_VERCEL_CLIENT_ID,
+        redirect_uri: `${window.location.origin}/api/deploy/vercel/callback`,
+        scope: 'deployments:write',
+        state,
       });
 
-      if (!authResponse.ok) {
-        throw new Error("Failed to authenticate with Vercel");
-      }
-
-      const authData = await authResponse.json();
-      const username = localStorage.getItem("github_username");
-      if (!username) throw new Error("GitHub username not found");
-
-      // Deploy to Vercel
-      const deployResponse = await apiRequest("POST", "/api/deploy/vercel", {
-        accessToken: authData.accessToken,
-        teamId: authData.teamId,
-        username,
-        repositories,
-      });
-
-      if (!deployResponse.ok) {
-        throw new Error("Failed to deploy to Vercel");
-      }
-
-      const deployData = await deployResponse.json();
-      setShowVercelDeployment(true);
-
-      // Start checking deployment status
-      const checkStatus = async () => {
-        const statusResponse = await apiRequest("GET", `/api/deploy/vercel/status/${deployData.deploymentId}?accessToken=${authData.accessToken}`);
-        const statusData = await statusResponse.json();
-
-        if (statusData.ready) {
-          toast({
-            title: "Deployment Complete",
-            description: "Your portfolio has been deployed to Vercel successfully!",
-          });
-          if (onSuccess) onSuccess();
-        }
-      };
-
-      // Check status every 5 seconds
-      const interval = setInterval(checkStatus, 5000);
-      setTimeout(() => clearInterval(interval), 60000); // Stop checking after 1 minute
+      const authUrl = `https://vercel.com/oauth/authorize?${params.toString()}`;
+      window.location.href = authUrl;
 
     } catch (error) {
+      setIsCreatingRepo(false);
       toast({
         title: "Error",
-        description: "Failed to deploy to Vercel. Please try again.",
+        description: "Failed to initiate Vercel deployment. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsCreatingRepo(false);
     }
   };
 
