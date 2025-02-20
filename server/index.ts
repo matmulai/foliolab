@@ -12,8 +12,7 @@ app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'production') {
     // Allow both production and preview URLs
     const allowedOrigins = [
-      'https://foliolab.vercel.app',
-      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null
+      process.env.APP_URL ? process.env.APP_URL : null
     ].filter(Boolean);
 
     const requestOrigin = req.headers.origin;
