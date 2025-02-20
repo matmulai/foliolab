@@ -216,6 +216,7 @@ export async function registerRoutes(app: Express) {
       params.append('client_secret', process.env.VERCEL_CLIENT_SECRET!);
       params.append('code', code);
       params.append('redirect_uri', `${process.env.APP_URL}/api/deploy/vercel/callback`);
+      params.append('grant_type', 'authorization_code');
 
       const tokenResponse = await fetch("https://api.vercel.com/v2/oauth/access_token", {
         method: "POST",
@@ -226,6 +227,7 @@ export async function registerRoutes(app: Express) {
       });
 
       const tokenData = await tokenResponse.json();
+      console.log(tokenData);
 
       if (tokenData.error) {
         throw new Error(`Vercel OAuth error: ${tokenData.error_description || tokenData.error}`);
