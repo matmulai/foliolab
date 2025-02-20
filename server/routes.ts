@@ -207,6 +207,130 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  app.post("/api/deploy/vercel/auth", async (req, res) => {
+    const { code } = req.body;
+
+    try {
+      const params = new URLSearchParams();
+      params.append('client_id', process.env.VERCEL_CLIENT_ID!);
+      params.append('client_secret', process.env.VERCEL_CLIENT_SECRET!);
+      params.append('code', code);
+      params.append('redirect_uri', `${process.env.APP_URL}/api/deploy/vercel/callback`);
+
+      const tokenResponse = await fetch("https://api.vercel.com/v2/oauth/access_token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: params.toString()
+      });
+
+      const tokenData = await tokenResponse.json();
+
+      if (tokenData.error) {
+        throw new Error(`Vercel OAuth error: ${tokenData.error_description || tokenData.error}`);
+      }
+
+      res.json({
+        accessToken: tokenData.access_token,
+        teamId: tokenData.team_id // might be null for personal account
+      });
+    } catch (error) {
+      console.error('Vercel OAuth error:', error);
+      res.status(500).json({
+        error: "Failed to authenticate with Vercel",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.post("/api/deploy/vercel", async (req, res) => {
+    const { accessToken, teamId, username, repositories } = req.body;
+
+    if (!accessToken || !username) {
+      return res.status(400).json({ error: "Vercel access token and username are required" });
+    }
+
+    try {
+      // Get repository content first
+      const html = generatePortfolioHtml(username, repositories);
+
+      // Create deployment using Vercel API
+      const deploymentResponse = await fetch("https://api.vercel.com/v13/deployments", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: `${username}-folio`,
+          files: [
+            {
+              file: "index.html",
+              content: html
+            }
+          ],
+          projectSettings: {
+            framework: null, // static deployment
+          },
+          target: teamId || undefined
+        })
+      });
+
+      const deploymentData = await deploymentResponse.json();
+
+      if (deploymentData.error) {
+        throw new Error(`Vercel Deployment error: ${deploymentData.error.message || 'Unknown error'}`);
+      }
+
+      res.json({
+        deploymentId: deploymentData.id,
+        url: deploymentData.url,
+      });
+    } catch (error) {
+      console.error('Failed to deploy to Vercel:', error);
+      res.status(500).json({
+        error: "Failed to deploy to Vercel",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.get("/api/deploy/vercel/status/:deploymentId", async (req, res) => {
+    const { deploymentId } = req.params;
+    const { accessToken } = req.query;
+
+    if (!accessToken) {
+      return res.status(400).json({ error: "Vercel access token is required" });
+    }
+
+    try {
+      const statusResponse = await fetch(`https://api.vercel.com/v13/deployments/${deploymentId}`, {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+        }
+      });
+
+      const statusData = await statusResponse.json();
+
+      if (statusData.error) {
+        throw new Error(`Vercel Status error: ${statusData.error.message || 'Unknown error'}`);
+      }
+
+      res.json({
+        ready: statusData.ready,
+        state: statusData.state,
+        url: statusData.url
+      });
+    } catch (error) {
+      console.error('Failed to check Vercel deployment status:', error);
+      res.status(500).json({
+        error: "Failed to check deployment status",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Helper function to generate portfolio HTML
   function generatePortfolioHtml(username: string, repositories: Repository[]): string {
     if (!repositories || repositories.length === 0) {

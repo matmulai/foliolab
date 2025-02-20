@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader2, Github, Download, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -18,7 +18,10 @@ interface DeploymentActionsProps {
   repositories: Repository[];
 }
 
-export function DeploymentActions({ onSuccess, repositories }: DeploymentActionsProps) {
+export function DeploymentActions({
+  onSuccess,
+  repositories,
+}: DeploymentActionsProps) {
   const [isCreatingRepo, setIsCreatingRepo] = useState(false);
   const [isDeployingToPages, setIsDeployingToPages] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -37,7 +40,7 @@ export function DeploymentActions({ onSuccess, repositories }: DeploymentActions
       const res = await apiRequest("POST", "/api/deploy/github", {
         accessToken: localStorage.getItem("github_token"),
         downloadOnly: true,
-        repositories
+        repositories,
       });
 
       if (!res.ok) {
@@ -47,13 +50,13 @@ export function DeploymentActions({ onSuccess, repositories }: DeploymentActions
       const data = await res.json();
 
       // Create a blob from the HTML content
-      const blob = new Blob([data.html], { type: 'text/html' });
+      const blob = new Blob([data.html], { type: "text/html" });
       const url = window.URL.createObjectURL(blob);
 
       // Create a temporary link and trigger download
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = 'portfolio.html';
+      a.download = "portfolio.html";
       document.body.appendChild(a);
       a.click();
 
@@ -81,7 +84,7 @@ export function DeploymentActions({ onSuccess, repositories }: DeploymentActions
       setIsCreatingRepo(true);
       const res = await apiRequest("POST", "/api/deploy/github", {
         accessToken: localStorage.getItem("github_token"),
-        repositories
+        repositories,
       });
 
       if (!res.ok) {
@@ -114,7 +117,7 @@ export function DeploymentActions({ onSuccess, repositories }: DeploymentActions
       setIsDeployingToPages(true);
       const res = await apiRequest("POST", "/api/deploy/github-pages", {
         accessToken: localStorage.getItem("github_token"),
-        repositories
+        repositories,
       });
 
       if (!res.ok) {
@@ -130,13 +133,15 @@ export function DeploymentActions({ onSuccess, repositories }: DeploymentActions
         setDeploymentInfo({
           deploymentUrl: `https://github.com/${username}/${username}.github.io/blob/main/portfolio.html`,
           portfolioUrl: `https://${username}.github.io/portfolio.html`,
-          username
+          username,
         });
         setShowDeploymentOverlay(true);
       }
 
       toast({
-        title: data.wasCreated ? "GitHub Pages Created" : "GitHub Pages Updated",
+        title: data.wasCreated
+          ? "GitHub Pages Created"
+          : "GitHub Pages Updated",
         description: data.message,
       });
     } catch (error) {
@@ -209,13 +214,16 @@ export function DeploymentActions({ onSuccess, repositories }: DeploymentActions
             <DialogTitle>Deploy to Vercel</DialogTitle>
             <DialogDescription className="space-y-4">
               <p>
-                Your portfolio repository has been {isCreatingRepo ? "created" : "updated"}. 
-                To deploy with Vercel:
+                Your portfolio repository has been{" "}
+                {isCreatingRepo ? "created" : "updated"}. To deploy with Vercel:
               </p>
               <ol className="list-decimal list-inside space-y-2">
                 <li>Click below to continue to Vercel</li>
                 <li>In Vercel, select "Import Git Repository"</li>
-                <li>Find and select "portfolio-showcase" from your GitHub repositories</li>
+                <li>
+                  Find and select "foliolab-vercel" from your GitHub
+                  repositories
+                </li>
                 <li>Click Deploy</li>
               </ol>
             </DialogDescription>
@@ -223,7 +231,7 @@ export function DeploymentActions({ onSuccess, repositories }: DeploymentActions
           <div className="flex justify-end gap-3">
             <Button
               onClick={() => {
-                const vercelDeployUrl = `https://vercel.com/new/git/external?repository-url=https://github.com/${localStorage.getItem("github_username")}/portfolio-showcase&project-name=${localStorage.getItem("github_username")}&repository-name=portfolio-showcase`;
+                const vercelDeployUrl = `https://vercel.com/`;
                 window.open(vercelDeployUrl, "_blank");
                 setShowVercelDialog(false);
               }}

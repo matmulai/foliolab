@@ -59,8 +59,8 @@ export async function getRepositories(accessToken: string): Promise<Repository[]
     per_page: 100,
   });
 
-  // Filter out the portfolio-showcase repository
-  const filteredRepos = data.filter(repo => repo.name !== 'portfolio-showcase');
+  // Filter out the foliolab-vercel repository
+  const filteredRepos = data.filter(repo => repo.name !== 'foliolab-vercel');
 
   return filteredRepos.map(repo => ({
     id: repo.id,  // Include the GitHub repository ID
@@ -80,7 +80,7 @@ export async function getRepositories(accessToken: string): Promise<Repository[]
 
 export async function createPortfolioRepository(accessToken: string, username: string): Promise<{repoUrl: string, wasCreated: boolean}> {
   const octokit = new Octokit({ auth: accessToken });
-  const repoName = "portfolio-showcase";
+  const repoName = "foliolab-vercel";
 
   try {
     // Check if repository exists
@@ -132,7 +132,7 @@ export async function commitPortfolioFiles(
   files: Array<{path: string, content: string}>
 ): Promise<void> {
   const octokit = new Octokit({ auth: accessToken });
-  const repoName = "portfolio-showcase";
+  const repoName = "foliolab-vercel";
 
   try {
     // Get the default branch reference
