@@ -217,6 +217,7 @@ export async function registerRoutes(app: Express) {
       params.append('code', code);
       params.append('redirect_uri', `${process.env.APP_URL}/api/deploy/vercel/callback`);
       params.append('grant_type', 'authorization_code');
+      console.log(params.toString());
 
       const tokenResponse = await fetch("https://api.vercel.com/v2/oauth/access_token", {
         method: "POST",

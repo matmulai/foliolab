@@ -7,12 +7,12 @@ interface GithubUser {
 }
 
 interface Repository {
-  id: number;  // Added ID field to match GitHub API response
+  id: number; // Added ID field to match GitHub API response
   name: string;
   description: string | null;
   url: string;
   metadata: {
-    id: number;  // Added ID field in metadata
+    id: number; // Added ID field in metadata
     stars: number;
     language: string | null;
     topics: string[];
@@ -34,13 +34,13 @@ export async function getGithubUser(accessToken: string): Promise<GithubUser> {
 export async function checkRepositoryExists(
   accessToken: string,
   username: string,
-  repoName: string
+  repoName: string,
 ): Promise<boolean> {
   const octokit = new Octokit({ auth: accessToken });
   try {
     await octokit.repos.get({
       owner: username,
-      repo: repoName
+      repo: repoName,
     });
     return true;
   } catch (error) {
@@ -51,34 +51,39 @@ export async function checkRepositoryExists(
   }
 }
 
-export async function getRepositories(accessToken: string): Promise<Repository[]> {
+export async function getRepositories(
+  accessToken: string,
+): Promise<Repository[]> {
   const octokit = new Octokit({ auth: accessToken });
   const { data } = await octokit.repos.listForAuthenticatedUser({
-    visibility: 'public',
-    sort: 'updated',
+    visibility: "public",
+    sort: "updated",
     per_page: 100,
   });
 
   // Filter out the foliolab-vercel repository
-  const filteredRepos = data.filter(repo => repo.name !== 'foliolab-vercel');
+  const filteredRepos = data.filter((repo) => repo.name !== "foliolab-vercel");
 
-  return filteredRepos.map(repo => ({
-    id: repo.id,  // Include the GitHub repository ID
+  return filteredRepos.map((repo) => ({
+    id: repo.id, // Include the GitHub repository ID
     name: repo.name,
     description: repo.description || null,
     url: repo.html_url,
     metadata: {
-      id: repo.id,  // Include the ID in metadata as well
+      id: repo.id, // Include the ID in metadata as well
       stars: repo.stargazers_count,
       language: repo.language,
       topics: repo.topics || [],
       updatedAt: repo.updated_at,
-      url: repo.homepage || null
-    }
+      url: repo.homepage || null,
+    },
   }));
 }
 
-export async function createPortfolioRepository(accessToken: string, username: string): Promise<{repoUrl: string, wasCreated: boolean}> {
+export async function createPortfolioRepository(
+  accessToken: string,
+  username: string,
+): Promise<{ repoUrl: string; wasCreated: boolean }> {
   const octokit = new Octokit({ auth: accessToken });
   const repoName = "foliolab-vercel";
 
@@ -92,7 +97,7 @@ export async function createPortfolioRepository(accessToken: string, username: s
         name: repoName,
         description: "My automatically generated portfolio showcase",
         private: false,
-        auto_init: true
+        auto_init: true,
       });
 
       return { repoUrl: repo.html_url, wasCreated: true };
@@ -100,24 +105,28 @@ export async function createPortfolioRepository(accessToken: string, username: s
       // Repository already exists, return its URL
       const { data: repo } = await octokit.repos.get({
         owner: username,
-        repo: repoName
+        repo: repoName,
       });
 
       return { repoUrl: repo.html_url, wasCreated: false };
     }
   } catch (error) {
-    console.error('Failed to handle portfolio repository:', error);
+    console.error("Failed to handle portfolio repository:", error);
     throw error;
   }
 }
 
-export async function getReadmeContent(accessToken: string, owner: string, repo: string): Promise<string | null> {
+export async function getReadmeContent(
+  accessToken: string,
+  owner: string,
+  repo: string,
+): Promise<string | null> {
   const octokit = new Octokit({ auth: accessToken });
   try {
     const { data } = await octokit.repos.getReadme({
       owner,
       repo,
-      mediaType: { format: 'raw' },
+      mediaType: { format: "raw" },
     });
     return data.toString();
   } catch (error) {
@@ -129,7 +138,7 @@ export async function getReadmeContent(accessToken: string, owner: string, repo:
 export async function commitPortfolioFiles(
   accessToken: string,
   username: string,
-  files: Array<{path: string, content: string}>
+  files: Array<{ path: string; content: string }>,
 ): Promise<void> {
   const octokit = new Octokit({ auth: accessToken });
   const repoName = "foliolab-vercel";
@@ -139,7 +148,7 @@ export async function commitPortfolioFiles(
     const { data: ref } = await octokit.git.getRef({
       owner: username,
       repo: repoName,
-      ref: "heads/main"
+      ref: "heads/main",
     });
 
     // Create a new tree with the files
@@ -147,12 +156,12 @@ export async function commitPortfolioFiles(
       owner: username,
       repo: repoName,
       base_tree: ref.object.sha,
-      tree: files.map(file => ({
+      tree: files.map((file) => ({
         path: file.path,
         mode: "100644",
         type: "blob",
-        content: file.content
-      }))
+        content: file.content,
+      })),
     });
 
     // Create a commit
@@ -161,7 +170,7 @@ export async function commitPortfolioFiles(
       repo: repoName,
       message: "Update portfolio site",
       tree: tree.sha,
-      parents: [ref.object.sha]
+      parents: [ref.object.sha],
     });
 
     // Update the reference
@@ -169,10 +178,10 @@ export async function commitPortfolioFiles(
       owner: username,
       repo: repoName,
       ref: "heads/main",
-      sha: commit.sha
+      sha: commit.sha,
     });
   } catch (error) {
-    console.error('Failed to commit portfolio files:', error);
+    console.error("Failed to commit portfolio files:", error);
     throw error;
   }
 }
@@ -180,8 +189,8 @@ export async function commitPortfolioFiles(
 export async function deployToGitHubPages(
   accessToken: string,
   username: string,
-  html: string
-): Promise<{ url: string, wasCreated: boolean }> {
+  html: string,
+): Promise<{ url: string; wasCreated: boolean }> {
   const octokit = new Octokit({ auth: accessToken });
   const repoName = `${username}.github.io`;
 
@@ -196,7 +205,7 @@ export async function deployToGitHubPages(
         name: repoName,
         description: "My GitHub Pages website",
         private: false,
-        auto_init: true
+        auto_init: true,
       });
       wasCreated = true;
     }
@@ -205,7 +214,7 @@ export async function deployToGitHubPages(
     const { data: ref } = await octokit.git.getRef({
       owner: username,
       repo: repoName,
-      ref: "heads/main"
+      ref: "heads/main",
     });
 
     // Create a new tree with the portfolio.html
@@ -213,21 +222,25 @@ export async function deployToGitHubPages(
       owner: username,
       repo: repoName,
       base_tree: ref.object.sha,
-      tree: [{
-        path: "portfolio.html",
-        mode: "100644",
-        type: "blob",
-        content: html
-      }]
+      tree: [
+        {
+          path: "portfolio.html",
+          mode: "100644",
+          type: "blob",
+          content: html,
+        },
+      ],
     });
 
     // Create a commit
     const { data: commit } = await octokit.git.createCommit({
       owner: username,
       repo: repoName,
-      message: wasCreated ? "Initial portfolio commit" : "Update portfolio page",
+      message: wasCreated
+        ? "Initial portfolio commit"
+        : "Update portfolio page",
       tree: tree.sha,
-      parents: [ref.object.sha]
+      parents: [ref.object.sha],
     });
 
     // Update the reference
@@ -235,15 +248,15 @@ export async function deployToGitHubPages(
       owner: username,
       repo: repoName,
       ref: "heads/main",
-      sha: commit.sha
+      sha: commit.sha,
     });
 
     return {
       url: `https://${username}.github.io/portfolio.html`,
-      wasCreated
+      wasCreated,
     };
   } catch (error) {
-    console.error('Failed to deploy to GitHub Pages:', error);
+    console.error("Failed to deploy to GitHub Pages:", error);
     throw error;
   }
 }
