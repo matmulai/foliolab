@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle 
 } from "@/components/ui/dialog";
 import { Loader2, Github, Download, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { DeploymentOverlay } from "./deployment-overlay";
+import { VercelDeploymentOverlay } from "./vercel-deployment-overlay";
 import { Repository } from "@shared/schema";
 
 interface DeploymentActionsProps {
@@ -25,7 +26,7 @@ export function DeploymentActions({
   const [isCreatingRepo, setIsCreatingRepo] = useState(false);
   const [isDeployingToPages, setIsDeployingToPages] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [showVercelDialog, setShowVercelDialog] = useState(false);
+  const [showVercelDeployment, setShowVercelDeployment] = useState(false);
   const [showDeploymentOverlay, setShowDeploymentOverlay] = useState(false);
   const [deploymentInfo, setDeploymentInfo] = useState<{
     deploymentUrl: string;
@@ -79,39 +80,6 @@ export function DeploymentActions({
     }
   };
 
-  const handleCreateRepo = async () => {
-    try {
-      setIsCreatingRepo(true);
-      const res = await apiRequest("POST", "/api/deploy/github", {
-        accessToken: localStorage.getItem("github_token"),
-        repositories,
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to create repository");
-      }
-
-      const data = await res.json();
-
-      toast({
-        title: data.wasCreated ? "Repository Created" : "Repository Updated",
-        description: data.message,
-      });
-
-      // Show Vercel deployment dialog
-      setShowVercelDialog(true);
-      if (onSuccess) onSuccess();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create repository. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreatingRepo(false);
-    }
-  };
-
   const handleDeployToPages = async () => {
     try {
       setIsDeployingToPages(true);
@@ -155,6 +123,67 @@ export function DeploymentActions({
     }
   };
 
+  const handleVercelDeploy = async () => {
+    try {
+      setIsCreatingRepo(true);
+
+      // First, get Vercel OAuth token
+      const authResponse = await apiRequest("POST", "/api/deploy/vercel/auth", {
+        code: "VERCEL_AUTH_CODE" // This will need to be obtained via OAuth flow
+      });
+
+      if (!authResponse.ok) {
+        throw new Error("Failed to authenticate with Vercel");
+      }
+
+      const authData = await authResponse.json();
+      const username = localStorage.getItem("github_username");
+      if (!username) throw new Error("GitHub username not found");
+
+      // Deploy to Vercel
+      const deployResponse = await apiRequest("POST", "/api/deploy/vercel", {
+        accessToken: authData.accessToken,
+        teamId: authData.teamId,
+        username,
+        repositories,
+      });
+
+      if (!deployResponse.ok) {
+        throw new Error("Failed to deploy to Vercel");
+      }
+
+      const deployData = await deployResponse.json();
+      setShowVercelDeployment(true);
+
+      // Start checking deployment status
+      const checkStatus = async () => {
+        const statusResponse = await apiRequest("GET", `/api/deploy/vercel/status/${deployData.deploymentId}?accessToken=${authData.accessToken}`);
+        const statusData = await statusResponse.json();
+
+        if (statusData.ready) {
+          toast({
+            title: "Deployment Complete",
+            description: "Your portfolio has been deployed to Vercel successfully!",
+          });
+          if (onSuccess) onSuccess();
+        }
+      };
+
+      // Check status every 5 seconds
+      const interval = setInterval(checkStatus, 5000);
+      setTimeout(() => clearInterval(interval), 60000); // Stop checking after 1 minute
+
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to deploy to Vercel. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingRepo(false);
+    }
+  };
+
   return (
     <div className="mt-12 flex flex-wrap justify-center gap-4">
       <Button
@@ -186,7 +215,7 @@ export function DeploymentActions({
       </Button>
 
       <Button
-        onClick={handleCreateRepo}
+        onClick={handleVercelDeploy}
         disabled={isCreatingRepo}
         className="flex items-center gap-2"
       >
@@ -208,39 +237,13 @@ export function DeploymentActions({
         />
       )}
 
-      <Dialog open={showVercelDialog} onOpenChange={setShowVercelDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Deploy to Vercel</DialogTitle>
-            <DialogDescription className="space-y-4">
-              <p>
-                Your portfolio repository has been{" "}
-                {isCreatingRepo ? "created" : "updated"}. To deploy with Vercel:
-              </p>
-              <ol className="list-decimal list-inside space-y-2">
-                <li>Click below to continue to Vercel</li>
-                <li>In Vercel, select "Import Git Repository"</li>
-                <li>
-                  Find and select "foliolab-vercel" from your GitHub
-                  repositories
-                </li>
-                <li>Click Deploy</li>
-              </ol>
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-3">
-            <Button
-              onClick={() => {
-                const vercelDeployUrl = `https://vercel.com/`;
-                window.open(vercelDeployUrl, "_blank");
-                setShowVercelDialog(false);
-              }}
-            >
-              Continue to Vercel
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {showVercelDeployment && (
+        <VercelDeploymentOverlay
+          open={showVercelDeployment}
+          onClose={() => setShowVercelDeployment(false)}
+          username={localStorage.getItem("github_username") || ""}
+        />
+      )}
     </div>
   );
 }
