@@ -209,7 +209,7 @@ export async function registerRoutes(app: Express) {
 
   app.get("/api/deploy/vercel/config", (req, res) => {
     res.json({
-      clientId: process.env.VERCEL_CLIENT_ID,
+      integrationSlug: "foliolab",
       redirectUri: `${process.env.APP_URL}/api/deploy/vercel/callback`,
     });
   });
@@ -339,14 +339,14 @@ export async function registerRoutes(app: Express) {
   });
 
   app.get("/api/deploy/vercel/callback", async (req, res) => {
-    const { code, state } = req.query;
+    const { code, configurationId, next, teamId } = req.query;
 
-    if (!code || !state) {
-      return res.status(400).json({ error: "Missing authorization code or state" });
+    if (!code || !configurationId) {
+      return res.status(400).json({ error: "Missing required parameters" });
     }
 
     try {
-      // Exchange the authorization code for an access token
+      // Exchange the configuration code for an access token
       const params = new URLSearchParams();
       params.append('client_id', process.env.VERCEL_CLIENT_ID!);
       params.append('client_secret', process.env.VERCEL_CLIENT_SECRET!);
@@ -374,7 +374,12 @@ export async function registerRoutes(app: Express) {
         <body>
           <script>
             window.opener.postMessage(
-              { type: 'vercel-oauth-success', token: '${tokenData.access_token}', teamId: '${tokenData.team_id || ''}' },
+              { 
+                type: 'vercel-oauth-success', 
+                token: '${tokenData.access_token}', 
+                teamId: '${teamId || ''}',
+                configurationId: '${configurationId}'
+              },
               window.location.origin
             );
             window.close();
@@ -384,7 +389,7 @@ export async function registerRoutes(app: Express) {
         </html>
       `);
     } catch (error) {
-      console.error('Vercel OAuth callback error:', error);
+      console.error('Vercel integration callback error:', error);
       res.status(500).send(`
         <!DOCTYPE html>
         <html>

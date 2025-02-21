@@ -188,7 +188,7 @@ export function DeploymentActions({
     try {
       setIsCreatingRepo(true);
 
-      // Get Vercel OAuth configuration
+      // Get Vercel integration configuration
       const configRes = await fetch('/api/deploy/vercel/config');
       if (!configRes.ok) {
         throw new Error('Failed to get Vercel configuration');
@@ -200,27 +200,28 @@ export function DeploymentActions({
         .map(b => b.toString(16).padStart(2, '0'))
         .join('');
 
-      // Store data for use after OAuth
+      // Store data for use after installation
       localStorage.setItem("vercel_csrf_token", state);
       localStorage.setItem("pending_repositories", JSON.stringify(repositories));
 
-      // Open OAuth in a popup window
+      // Construct integration URL
       const params = new URLSearchParams({
-        client_id: config.clientId,
-        redirect_uri: config.redirectUri,
-        scope: 'deployments:write',
+        source: 'marketplace',
         state,
+        next: `${window.location.origin}/api/deploy/vercel/callback`
       });
 
-      const authUrl = `https://vercel.com/oauth/authorize?${params.toString()}`;
+      const integrationUrl = `https://vercel.com/integrations/${config.integrationSlug}/new?${params.toString()}`;
+
+      // Open in a popup window
       const width = 600;
       const height = 800;
       const left = window.screenX + (window.outerWidth - width) / 2;
       const top = window.screenY + (window.outerHeight - height) / 2;
 
       window.open(
-        authUrl,
-        'Vercel Authorization',
+        integrationUrl,
+        'Vercel Integration',
         `width=${width},height=${height},left=${left},top=${top}`
       );
 
