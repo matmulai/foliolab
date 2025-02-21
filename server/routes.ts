@@ -301,6 +301,7 @@ export async function registerRoutes(app: Express) {
         headers: {
           "Authorization": `Bearer ${accessToken}`,
           "Content-Type": "application/json",
+          ...(teamId ? { "X-Vercel-Team-Id": teamId } : {})
         },
         body: JSON.stringify({
           name: repoName,
@@ -311,7 +312,6 @@ export async function registerRoutes(app: Express) {
           framework: null, // static deployment
           buildCommand: null,
           outputDirectory: ".",
-          target: teamId || undefined
         })
       });
 
