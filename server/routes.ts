@@ -259,40 +259,51 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
-      // Get repository content first
+      // First, generate the portfolio HTML
       const html = generatePortfolioHtml(username, repositories);
 
-      // Create deployment using Vercel API
-      const deploymentResponse = await fetch("https://api.vercel.com/v13/deployments", {
+      // Create or update the GitHub repository
+      const repoName = `${username}-foliolab`;
+      const { repoUrl, wasCreated } = await createPortfolioRepository(accessToken, username, repoName);
+
+      // Commit portfolio files
+      await commitPortfolioFiles(accessToken, username, [
+        {
+          path: "index.html",
+          content: html
+        }
+      ], repoName);
+
+      // Create Vercel project and trigger deployment
+      const deploymentResponse = await fetch("https://api.vercel.com/v9/projects", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: `${username}-folio`,
-          files: [
-            {
-              file: "index.html",
-              data: Buffer.from(html).toString('base64')
-            }
-          ],
-          projectSettings: {
-            framework: null, // static deployment
+          name: repoName,
+          gitRepository: {
+            repo: `${username}/${repoName}`,
+            type: "github",
           },
+          framework: null, // static deployment
+          buildCommand: null,
+          outputDirectory: ".",
           target: teamId || undefined
         })
       });
 
-      const deploymentData = await deploymentResponse.json();
+      const projectData = await deploymentResponse.json();
 
-      if (deploymentData.error) {
-        throw new Error(`Vercel Deployment error: ${deploymentData.error.message || 'Unknown error'}`);
+      if (projectData.error) {
+        throw new Error(`Vercel Project error: ${projectData.error.message || 'Unknown error'}`);
       }
 
       res.json({
-        deploymentId: deploymentData.id,
-        url: deploymentData.url,
+        projectId: projectData.id,
+        url: `https://${repoName}.vercel.app`,
+        repoUrl
       });
     } catch (error) {
       console.error('Failed to deploy to Vercel:', error);

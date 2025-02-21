@@ -83,9 +83,9 @@ export async function getRepositories(
 export async function createPortfolioRepository(
   accessToken: string,
   username: string,
+  repoName: string = "foliolab-vercel"
 ): Promise<{ repoUrl: string; wasCreated: boolean }> {
   const octokit = new Octokit({ auth: accessToken });
-  const repoName = "foliolab-vercel";
 
   try {
     // Check if repository exists
@@ -139,9 +139,9 @@ export async function commitPortfolioFiles(
   accessToken: string,
   username: string,
   files: Array<{ path: string; content: string }>,
+  repoName: string = "foliolab-vercel"
 ): Promise<void> {
   const octokit = new Octokit({ auth: accessToken });
-  const repoName = "foliolab-vercel";
 
   try {
     // Get the default branch reference
