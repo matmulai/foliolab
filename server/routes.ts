@@ -295,7 +295,7 @@ export async function registerRoutes(app: Express) {
         }
       ], repoName);
 
-      // Check if Vercel project exists and create if it doesn't
+      // First, get or create the Vercel project
       const getProjectResponse = await fetch(`https://api.vercel.com/v9/projects/${repoName}`, {
         headers: {
           "Authorization": `Bearer ${accessToken}`,
@@ -334,10 +334,25 @@ export async function registerRoutes(app: Express) {
         projectData = await getProjectResponse.json();
       }
 
-      // Get the repository ID from the project data
-      const repoId = projectData.gitRepository?.id;
-      if (!repoId) {
-        throw new Error("Could not find repository ID in project data");
+      // Get all connected repositories for this project
+      const reposResponse = await fetch(`https://api.vercel.com/v1/projects/${repoName}/connected-repositories`, {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          ...(teamId ? { "X-Vercel-Team-Id": teamId } : {})
+        }
+      });
+
+      if (!reposResponse.ok) {
+        throw new Error('Failed to get connected repositories');
+      }
+
+      const reposData = await reposResponse.json();
+      const connectedRepo = reposData.repositories?.find(
+        (repo: any) => repo.url === `https://github.com/${username}/${repoName}`
+      );
+
+      if (!connectedRepo?.id) {
+        throw new Error('Repository not properly connected to Vercel project');
       }
 
       // Trigger a new deployment with the repository ID
@@ -355,7 +370,7 @@ export async function registerRoutes(app: Express) {
             type: "github",
             repo: `${username}/${repoName}`,
             ref: "main",
-            repoId: repoId
+            repoId: connectedRepo.id
           }
         })
       });
