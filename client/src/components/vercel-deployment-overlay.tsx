@@ -26,46 +26,54 @@ export function VercelDeploymentOverlay({
 
     const checkDeployment = async () => {
       try {
-        // Get the deployment URL from localStorage (set during deployment initiation)
+        // Get the deployment URL and ID from localStorage
         const url = localStorage.getItem('vercel_deployment_url');
-        if (url) {
+        const deploymentId = localStorage.getItem('vercel_deployment_id');
+        const vercelToken = localStorage.getItem('vercel_access_token');
+
+        if (url && deploymentId && vercelToken) {
           setDeploymentUrl(url);
           setDeploymentStatus('deploying');
-          setDeploymentProgress(30); // Initial progress after URL is set
-        }
+          setDeploymentProgress(30);
 
-        // Start polling GitHub repository status
-        let retries = 0;
-        const maxRetries = 30; // 5 minutes maximum
-        const interval = setInterval(async () => {
-          try {
-            if (retries >= maxRetries) {
-              clearInterval(interval);
-              throw new Error("Deployment timed out");
-            }
+          // Start polling deployment status
+          let retries = 0;
+          const maxRetries = 30; // 5 minutes maximum
+          const interval = setInterval(async () => {
+            try {
+              if (retries >= maxRetries) {
+                clearInterval(interval);
+                throw new Error("Deployment timed out");
+              }
 
-            // Check if the site is accessible
-            const response = await fetch(url!, { method: 'HEAD' });
-            if (response.ok) {
-              setDeploymentStatus('complete');
-              setDeploymentProgress(100);
-              clearInterval(interval);
-              toast({
-                title: "Deployment Complete",
-                description: "Your portfolio has been successfully deployed to Vercel!",
-              });
-            } else {
+              const statusResponse = await fetch(`/api/deploy/vercel/status/${deploymentId}?accessToken=${vercelToken}`);
+              if (!statusResponse.ok) {
+                throw new Error("Failed to check deployment status");
+              }
+
+              const statusData = await statusResponse.json();
+
+              if (statusData.ready) {
+                setDeploymentStatus('complete');
+                setDeploymentProgress(100);
+                clearInterval(interval);
+                toast({
+                  title: "Deployment Complete",
+                  description: "Your portfolio has been successfully deployed to Vercel!",
+                });
+              } else {
+                retries++;
+                setDeploymentProgress(Math.min(90, 30 + (retries * 2)));
+              }
+            } catch (error) {
+              console.error('Status check error:', error);
               retries++;
-              setDeploymentProgress(Math.min(90, 30 + (retries * 2))); // Gradually increase progress
+              setDeploymentProgress(Math.min(90, 30 + (retries * 2)));
             }
-          } catch (error) {
-            // If we can't access the site yet, it's still deploying
-            retries++;
-            setDeploymentProgress(Math.min(90, 30 + (retries * 2))); // Gradually increase progress
-          }
-        }, 10000); // Check every 10 seconds
+          }, 10000);
 
-        return () => clearInterval(interval);
+          return () => clearInterval(interval);
+        }
       } catch (error) {
         console.error('Deployment check error:', error);
         setDeploymentStatus('error');

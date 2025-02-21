@@ -193,6 +193,9 @@ export function DeploymentActions({
           if (!savedRepos) throw new Error("No pending repositories found");
           const repositories = JSON.parse(savedRepos);
 
+          // Store the Vercel access token
+          localStorage.setItem('vercel_access_token', event.data.token);
+
           // Deploy to Vercel with the received token
           const deployResponse = await apiRequest("POST", "/api/deploy/vercel", {
             accessToken: event.data.token,
@@ -207,8 +210,9 @@ export function DeploymentActions({
 
           const deployData = await deployResponse.json();
 
-          // Store deployment URL for the overlay
+          // Store deployment info
           localStorage.setItem('vercel_deployment_url', deployData.url);
+          localStorage.setItem('vercel_deployment_id', deployData.deploymentId);
 
           setShowVercelDeployment(true);
 

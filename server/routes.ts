@@ -295,51 +295,72 @@ export async function registerRoutes(app: Express) {
         }
       ], repoName);
 
-      // Instead of creating a new Vercel project, we'll check if it exists first
-      const projectUrl = `https://${repoName}.vercel.app`;
-
-      // Check if the project exists by trying to access it
-      try {
-        const response = await fetch(projectUrl, { method: 'HEAD' });
-        if (!response.ok && response.status !== 404) {
-          // Only create a new project if we get a 404
-          // Create Vercel project
-          const deploymentResponse = await fetch("https://api.vercel.com/v9/projects", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-              ...(teamId ? { "X-Vercel-Team-Id": teamId } : {})
-            },
-            body: JSON.stringify({
-              name: repoName,
-              gitRepository: {
-                repo: `${username}/${repoName}`,
-                type: "github",
-              },
-              framework: null,
-              buildCommand: null,
-              outputDirectory: ".",
-            })
-          });
-
-          if (!deploymentResponse.ok) {
-            const error = await deploymentResponse.json();
-            // If project exists, that's fine - we'll just use it
-            if (!error.error?.message?.includes("already exists")) {
-              throw new Error(`Vercel Project error: ${error.error?.message || 'Unknown error'}`);
-            }
-          }
+      // Check if Vercel project exists and create if it doesn't
+      const getProjectResponse = await fetch(`https://api.vercel.com/v9/projects/${repoName}`, {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          ...(teamId ? { "X-Vercel-Team-Id": teamId } : {})
         }
-      } catch (error) {
-        // If there's an error checking the project, but it's not about existence,
-        // we should still proceed since the project might exist
-        console.warn('Error checking Vercel project:', error);
+      });
+
+      if (!getProjectResponse.ok) {
+        // Project doesn't exist, create it
+        const createProjectResponse = await fetch("https://api.vercel.com/v9/projects", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+            ...(teamId ? { "X-Vercel-Team-Id": teamId } : {})
+          },
+          body: JSON.stringify({
+            name: repoName,
+            gitRepository: {
+              repo: `${username}/${repoName}`,
+              type: "github",
+            },
+            framework: null,
+            buildCommand: null,
+            outputDirectory: ".",
+          })
+        });
+
+        if (!createProjectResponse.ok) {
+          const error = await createProjectResponse.json();
+          throw new Error(`Vercel Project error: ${error.error?.message || 'Unknown error'}`);
+        }
       }
+
+      // Trigger a new deployment
+      const deploymentResponse = await fetch("https://api.vercel.com/v13/deployments", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+          ...(teamId ? { "X-Vercel-Team-Id": teamId } : {})
+        },
+        body: JSON.stringify({
+          name: repoName,
+          project: repoName,
+          target: 'production',
+          gitSource: {
+            type: "github",
+            repo: `${username}/${repoName}`,
+            ref: "main"
+          }
+        })
+      });
+
+      if (!deploymentResponse.ok) {
+        const error = await deploymentResponse.json();
+        throw new Error(`Vercel Deployment error: ${error.error?.message || 'Unknown error'}`);
+      }
+
+      const deploymentData = await deploymentResponse.json();
 
       res.json({
         projectId: repoName,
-        url: projectUrl,
+        deploymentId: deploymentData.id,
+        url: `https://${repoName}.vercel.app`,
         repoUrl
       });
     } catch (error) {
