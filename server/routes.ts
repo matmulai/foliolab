@@ -303,6 +303,7 @@ export async function registerRoutes(app: Express) {
         }
       });
 
+      let projectData;
       if (!getProjectResponse.ok) {
         // Project doesn't exist, create it
         const createProjectResponse = await fetch("https://api.vercel.com/v9/projects", {
@@ -328,9 +329,18 @@ export async function registerRoutes(app: Express) {
           const error = await createProjectResponse.json();
           throw new Error(`Vercel Project error: ${error.error?.message || 'Unknown error'}`);
         }
+        projectData = await createProjectResponse.json();
+      } else {
+        projectData = await getProjectResponse.json();
       }
 
-      // Trigger a new deployment
+      // Get the repository ID from the project data
+      const repoId = projectData.gitRepository?.id;
+      if (!repoId) {
+        throw new Error("Could not find repository ID in project data");
+      }
+
+      // Trigger a new deployment with the repository ID
       const deploymentResponse = await fetch("https://api.vercel.com/v13/deployments", {
         method: "POST",
         headers: {
@@ -341,11 +351,11 @@ export async function registerRoutes(app: Express) {
         body: JSON.stringify({
           name: repoName,
           project: repoName,
-          target: 'production',
           gitSource: {
             type: "github",
             repo: `${username}/${repoName}`,
-            ref: "main"
+            ref: "main",
+            repoId: repoId
           }
         })
       });
