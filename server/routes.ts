@@ -274,7 +274,7 @@ export async function registerRoutes(app: Express) {
           files: [
             {
               file: "index.html",
-              content: html
+              data: Buffer.from(html).toString('base64')
             }
           ],
           projectSettings: {
