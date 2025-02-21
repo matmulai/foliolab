@@ -264,10 +264,31 @@ export async function registerRoutes(app: Express) {
 
       // Create or update the GitHub repository
       const repoName = `${username}-foliolab`;
-      const { repoUrl, wasCreated } = await createPortfolioRepository(accessToken, username, repoName);
+      const githubToken = req.headers.authorization?.replace('Bearer ', '');
+
+      if (!githubToken) {
+        return res.status(401).json({ error: "GitHub token is required" });
+      }
+
+      try {
+        // Verify GitHub token is valid
+        const githubUser = await getGithubUser(githubToken);
+        if (githubUser.username !== username) {
+          throw new Error("GitHub token does not match the provided username");
+        }
+      } catch (error) {
+        console.error('GitHub token validation error:', error);
+        return res.status(401).json({
+          error: "Invalid GitHub token",
+          details: "Please reconnect your GitHub account"
+        });
+      }
+
+      // Create or update the GitHub repository
+      const { repoUrl, wasCreated } = await createPortfolioRepository(githubToken, username, repoName);
 
       // Commit portfolio files
-      await commitPortfolioFiles(accessToken, username, [
+      await commitPortfolioFiles(githubToken, username, [
         {
           path: "index.html",
           content: html

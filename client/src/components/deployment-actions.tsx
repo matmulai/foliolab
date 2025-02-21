@@ -188,6 +188,12 @@ export function DeploymentActions({
     try {
       setIsCreatingRepo(true);
 
+      // Verify GitHub token exists
+      const githubToken = localStorage.getItem("github_token");
+      if (!githubToken) {
+        throw new Error("GitHub token not found. Please reconnect your GitHub account.");
+      }
+
       // Get Vercel integration configuration
       const configRes = await fetch('/api/deploy/vercel/config');
       if (!configRes.ok) {
@@ -229,7 +235,7 @@ export function DeploymentActions({
       setIsCreatingRepo(false);
       toast({
         title: "Error",
-        description: "Failed to initiate Vercel deployment. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to initiate Vercel deployment. Please try again.",
         variant: "destructive",
       });
     }
