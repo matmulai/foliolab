@@ -35,69 +35,6 @@ export function DeploymentActions({
   } | null>(null);
   const { toast } = useToast();
 
-  // Handle Vercel OAuth messages
-  useEffect(() => {
-    const handleMessage = async (event: MessageEvent) => {
-      // Verify the message origin
-      if (event.origin !== window.location.origin) return;
-
-      if (event.data.type === 'vercel-oauth-success') {
-        try {
-          const username = localStorage.getItem("github_username");
-          if (!username) throw new Error("GitHub username not found");
-
-          const savedRepos = localStorage.getItem("pending_repositories");
-          if (!savedRepos) throw new Error("No pending repositories found");
-          const repositories = JSON.parse(savedRepos);
-
-          // Deploy to Vercel with the received token
-          const deployResponse = await apiRequest("POST", "/api/deploy/vercel", {
-            accessToken: event.data.token,
-            teamId: event.data.teamId,
-            username,
-            repositories,
-          });
-
-          if (!deployResponse.ok) {
-            throw new Error("Failed to deploy to Vercel");
-          }
-
-          const deployData = await deployResponse.json();
-          setShowVercelDeployment(true);
-
-          toast({
-            title: "Deployment Started",
-            description: "Your portfolio is being deployed to Vercel.",
-          });
-
-          // Clean up stored data
-          localStorage.removeItem("pending_repositories");
-          localStorage.removeItem("vercel_csrf_token");
-
-        } catch (error) {
-          console.error('Deployment error:', error);
-          toast({
-            title: "Deployment Error",
-            description: error instanceof Error ? error.message : "Failed to deploy to Vercel",
-            variant: "destructive",
-          });
-        } finally {
-          setIsCreatingRepo(false);
-        }
-      } else if (event.data.type === 'vercel-oauth-error') {
-        toast({
-          title: "Authorization Failed",
-          description: event.data.error,
-          variant: "destructive",
-        });
-        setIsCreatingRepo(false);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [toast]);
-
   const handleDownload = async () => {
     try {
       setIsDownloading(true);
@@ -240,6 +177,73 @@ export function DeploymentActions({
       });
     }
   };
+
+  // Handle Vercel OAuth messages
+  useEffect(() => {
+    const handleMessage = async (event: MessageEvent) => {
+      // Verify the message origin
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data.type === 'vercel-oauth-success') {
+        try {
+          const username = localStorage.getItem("github_username");
+          if (!username) throw new Error("GitHub username not found");
+
+          const savedRepos = localStorage.getItem("pending_repositories");
+          if (!savedRepos) throw new Error("No pending repositories found");
+          const repositories = JSON.parse(savedRepos);
+
+          // Deploy to Vercel with the received token
+          const deployResponse = await apiRequest("POST", "/api/deploy/vercel", {
+            accessToken: event.data.token,
+            teamId: event.data.teamId,
+            username,
+            repositories,
+          });
+
+          if (!deployResponse.ok) {
+            throw new Error("Failed to deploy to Vercel");
+          }
+
+          const deployData = await deployResponse.json();
+
+          // Store deployment URL for the overlay
+          localStorage.setItem('vercel_deployment_url', deployData.url);
+
+          setShowVercelDeployment(true);
+
+          toast({
+            title: "Deployment Started",
+            description: "Your portfolio is being deployed to Vercel.",
+          });
+
+          // Clean up stored data
+          localStorage.removeItem("pending_repositories");
+          localStorage.removeItem("vercel_csrf_token");
+
+        } catch (error) {
+          console.error('Deployment error:', error);
+          toast({
+            title: "Deployment Error",
+            description: error instanceof Error ? error.message : "Failed to deploy to Vercel",
+            variant: "destructive",
+          });
+        } finally {
+          setIsCreatingRepo(false);
+        }
+      } else if (event.data.type === 'vercel-oauth-error') {
+        toast({
+          title: "Authorization Failed",
+          description: event.data.error,
+          variant: "destructive",
+        });
+        setIsCreatingRepo(false);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [toast]);
 
   return (
     <div className="mt-12 flex flex-wrap justify-center gap-4">
