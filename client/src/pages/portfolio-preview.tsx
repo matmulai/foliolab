@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Repository } from "@shared/schema";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,64 +8,74 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { DeploymentActions } from "@/components/deployment-actions";
 import { useLocation } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+
+interface UserIntroduction {
+  introduction: string;
+  skills: string[];
+  interests: string[];
+}
+
+interface UserInfo {
+  username: string;
+  avatarUrl: string | null;
+}
 
 export default function PortfolioPreview() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [selectedRepos, setSelectedRepos] = useState<Repository[]>([]);
+  const [userIntro, setUserIntro] = useState<UserIntroduction | null>(null);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
   // Get repository data from client-side cache
   const { data, isLoading, error } = useQuery<{ repositories: Repository[] }>({
     queryKey: ["/api/repositories"],
-    // Data remains fresh until explicitly cleared
-    retry: 2,
+    retry: 2
+  });
+
+  // Generate user introduction
+  const { mutate: generateIntro, isPending: isGenerating } = useMutation({
+    mutationFn: async (repositories: Repository[]) => {
+      const res = await apiRequest("POST", "/api/user/introduction", {
+        repositories,
+        openaiKey: localStorage.getItem("openai_api_key"), // Optional
+      });
+      const data = await res.json();
+      return data;
+    },
+    onSuccess: (data) => {
+      setUserIntro(data.introduction);
+      setUserInfo(data.user);
+    },
     onError: (err) => {
-      console.error('Error fetching repositories:', err);
+      console.error('Error generating introduction:', err);
       toast({
-        title: "Error",
-        description: "Failed to load repositories. Please try again.",
+        title: "Warning",
+        description: "Could not generate personalized introduction. Proceeding with basic preview.",
         variant: "destructive",
       });
     }
   });
 
-  // Update selected repositories when data changes
+  // Update selected repositories and generate intro when data changes
   useEffect(() => {
     if (data?.repositories && !isLoading) {
       const filtered = data.repositories.filter((repo) => repo.selected);
-      console.log('Repository data loaded:', {
-        total: data.repositories.length,
-        selected: filtered.length,
-        selectedIds: filtered.map(r => r.id)
-      });
-
       setSelectedRepos(filtered);
 
-      if (filtered.length === 0) {
-        console.warn('No selected repositories found');
+      if (filtered.length > 0) {
+        generateIntro(filtered);
+      } else {
         toast({
           title: "No Repositories Selected",
           description: "Please go back and select repositories to include in your portfolio.",
           variant: "destructive",
         });
-        return;
-      }
-
-      const allHaveSummaries = filtered.every((repo) => repo.summary);
-      console.log('Summaries status:', {
-        total: filtered.length,
-        withSummaries: filtered.filter(r => r.summary).length,
-        allComplete: allHaveSummaries
-      });
-
-      if (allHaveSummaries) {
-        toast({
-          title: "Summaries Generated",
-          description: "All repository summaries have been generated successfully!",
-        });
       }
     }
-  }, [data, isLoading, toast]);
+  }, [data, isLoading, toast, generateIntro]);
 
   if (error) {
     return (
@@ -83,12 +93,13 @@ export default function PortfolioPreview() {
     );
   }
 
-  if (isLoading) {
+  if (isLoading || isGenerating) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
         <div className="container mx-auto px-4 py-20">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-16">
+              <Skeleton className="h-32 w-32 rounded-full mx-auto mb-6" />
               <Skeleton className="h-12 w-64 mx-auto mb-4" />
               <Skeleton className="h-6 w-96 mx-auto" />
             </div>
@@ -134,17 +145,46 @@ export default function PortfolioPreview() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
       <div className="container mx-auto px-4 py-20">
         <div className="max-w-4xl mx-auto">
-          <header className="flex items-center justify-between mb-16">
+          <header className="flex flex-col items-center mb-16">
             <Button 
               variant="outline" 
               size="sm" 
               onClick={() => setLocation("/repos")}
-              className="flex items-center gap-2"
+              className="self-start mb-8 flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Repositories
             </Button>
-            <h1 className="text-4xl font-bold">My Portfolio</h1>
+
+            {userInfo && (
+              <>
+                <Avatar className="w-32 h-32 mb-6">
+                  <AvatarImage src={userInfo.avatarUrl || undefined} alt={userInfo.username} />
+                  <AvatarFallback>{userInfo.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <h1 className="text-4xl font-bold mb-6">{userInfo.username}'s Portfolio</h1>
+              </>
+            )}
+
+            {userIntro && (
+              <div className="text-center max-w-2xl">
+                <p className="text-gray-600 mb-6">{userIntro.introduction}</p>
+                <div className="flex flex-wrap justify-center gap-2 mb-4">
+                  {userIntro.skills.map((skill, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-primary/10 rounded-full text-sm font-medium"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-sm text-gray-500">
+                  <span className="font-medium">Interests:</span>{" "}
+                  {userIntro.interests.join(", ")}
+                </p>
+              </div>
+            )}
           </header>
 
           <div className="grid gap-8">
@@ -206,8 +246,11 @@ export default function PortfolioPreview() {
             ))}
           </div>
 
-          {/* Add deployment actions with selected repositories */}
-          <DeploymentActions repositories={selectedRepos} />
+          <DeploymentActions
+            repositories={selectedRepos}
+            userInfo={userInfo}
+            introduction={userIntro}
+          />
         </div>
       </div>
     </div>

@@ -16,7 +16,7 @@ interface Repository {
     stars: number;
     language: string | null;
     topics: string[];
-    updatedAt: string;
+    updatedAt: string; 
     url?: string | null;
   };
 }
@@ -63,7 +63,8 @@ export async function getRepositories(
 
   const filteredRepos = data.filter((repo) => {
     return !repo.name.toLowerCase().includes("-folio") && 
-           !repo.name.toLowerCase().includes("github.io")
+           !repo.name.toLowerCase().includes("github.io") &&
+           repo.name !== "foliolab-vercel";
   });
 
   return filteredRepos.map((repo) => ({
@@ -76,7 +77,7 @@ export async function getRepositories(
       stars: repo.stargazers_count,
       language: repo.language,
       topics: repo.topics || [],
-      updatedAt: repo.updated_at,
+      updatedAt: repo.updated_at, 
       url: repo.homepage || null,
     },
   }));

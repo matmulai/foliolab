@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer } from "http";
 import { getRepositories, getReadmeContent, getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages } from "./lib/github.js";
-import { generateRepoSummary } from "./lib/openai.js";
+import { generateRepoSummary, generateUserIntroduction } from "./lib/openai.js";
 import { Repository } from "@shared/schema";
 
 export async function registerRoutes(app: Express) {
@@ -142,7 +142,9 @@ export async function registerRoutes(app: Express) {
 
     try {
       const user = await getGithubUser(accessToken);
-      const html = generatePortfolioHtml(user.username, repositories);
+      const openaiKey = req.body.openaiKey; // Added to pass to generatePortfolioHtml
+      const introduction = await generateUserIntroduction(repositories, openaiKey); // Added to get introduction
+      const html = generatePortfolioHtml(user.username, repositories, introduction, user.avatarUrl);
 
       if (downloadOnly) {
         return res.json({ html });
@@ -175,6 +177,7 @@ export async function registerRoutes(app: Express) {
 
   app.post("/api/deploy/github-pages", async (req, res) => {
     const { accessToken, repositories } = req.body;
+    const openaiKey = req.body.openaiKey; // Added to pass to generatePortfolioHtml
 
     if (!accessToken) {
       return res.status(400).json({ error: "GitHub access token is required" });
@@ -186,7 +189,8 @@ export async function registerRoutes(app: Express) {
 
     try {
       const user = await getGithubUser(accessToken);
-      const html = generatePortfolioHtml(user.username, repositories);
+      const introduction = await generateUserIntroduction(repositories, openaiKey); // Added to get introduction
+      const html = generatePortfolioHtml(user.username, repositories, introduction, user.avatarUrl);
 
       const { url, wasCreated } = await deployToGitHubPages(accessToken, user.username, html);
 
@@ -202,6 +206,34 @@ export async function registerRoutes(app: Express) {
       console.error('Failed to deploy to GitHub Pages:', error);
       res.status(500).json({
         error: "Failed to deploy to GitHub Pages",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.post("/api/user/introduction", async (req, res) => {
+    const { repositories, openaiKey } = req.body;
+    const accessToken = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!accessToken) {
+      return res.status(401).json({ error: "No access token provided" });
+    }
+
+    try {
+      const user = await getGithubUser(accessToken);
+      const introduction = await generateUserIntroduction(repositories, openaiKey);
+
+      res.json({
+        introduction,
+        user: {
+          username: user.username,
+          avatarUrl: user.avatarUrl
+        }
+      });
+    } catch (error) {
+      console.error('Failed to generate user introduction:', error);
+      res.status(500).json({
+        error: "Failed to generate user introduction",
         details: error instanceof Error ? error.message : String(error)
       });
     }
@@ -503,16 +535,19 @@ export async function registerRoutes(app: Express) {
   });
 
   // Helper function to generate portfolio HTML
-  function generatePortfolioHtml(username: string, repositories: Repository[]): string {
+  function generatePortfolioHtml(
+    username: string,
+    repositories: Repository[],
+    introduction?: {
+      introduction: string;
+      skills: string[];
+      interests: string[];
+    },
+    avatarUrl?: string | null
+  ): string {
     if (!repositories || repositories.length === 0) {
       throw new Error("No repositories provided for portfolio generation");
     }
-
-    console.log('Generating portfolio HTML for:', {
-      username,
-      repositoryCount: repositories.length,
-      repositoryIds: repositories.map(r => r.id)
-    });
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -525,8 +560,25 @@ export async function registerRoutes(app: Express) {
 <body class="bg-gray-50">
     <div class="container mx-auto px-4 py-20">
         <header class="text-center mb-16">
-            <h1 class="text-4xl font-bold mb-4">My Projects</h1>
-            <p class="text-gray-600">A showcase of my work</p>
+            ${avatarUrl ? `
+            <div class="mb-6">
+                <img src="${avatarUrl}" alt="${username}" class="w-32 h-32 rounded-full mx-auto border-4 border-primary/10">
+            </div>
+            ` : ''}
+            <h1 class="text-4xl font-bold mb-4">${username}'s Portfolio</h1>
+            ${introduction ? `
+            <div class="max-w-2xl mx-auto">
+                <p class="text-gray-600 mb-6">${introduction.introduction}</p>
+                <div class="flex flex-wrap justify-center gap-4 mb-6">
+                    ${introduction.skills.map(skill =>
+                        `<span class="px-3 py-1 bg-primary/10 rounded-full text-sm font-medium">${skill}</span>`
+                    ).join('')}
+                </div>
+                <div class="text-sm text-gray-500">
+                    Interests: ${introduction.interests.join(', ')}
+                </div>
+            </div>
+            ` : ''}
         </header>
         <div class="grid gap-8 max-w-4xl mx-auto">
             ${repositories.map(repo => {

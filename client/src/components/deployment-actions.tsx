@@ -17,11 +17,22 @@ import { Repository } from "@shared/schema";
 interface DeploymentActionsProps {
   onSuccess?: () => void;
   repositories: Repository[];
+  userInfo?: {
+    username: string;
+    avatarUrl: string | null;
+  } | null;
+  introduction?: {
+    introduction: string;
+    skills: string[];
+    interests: string[];
+  } | null;
 }
 
 export function DeploymentActions({
   onSuccess,
   repositories,
+  userInfo,
+  introduction
 }: DeploymentActionsProps) {
   const [isCreatingRepo, setIsCreatingRepo] = useState(false);
   const [isDeployingToPages, setIsDeployingToPages] = useState(false);
@@ -42,6 +53,8 @@ export function DeploymentActions({
         accessToken: localStorage.getItem("github_token"),
         downloadOnly: true,
         repositories,
+        userInfo,
+        introduction
       });
 
       if (!res.ok) {
@@ -50,18 +63,15 @@ export function DeploymentActions({
 
       const data = await res.json();
 
-      // Create a blob from the HTML content
       const blob = new Blob([data.html], { type: "text/html" });
       const url = window.URL.createObjectURL(blob);
 
-      // Create a temporary link and trigger download
       const a = document.createElement("a");
       a.href = url;
       a.download = "portfolio.html";
       document.body.appendChild(a);
       a.click();
 
-      // Cleanup
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
@@ -86,6 +96,8 @@ export function DeploymentActions({
       const res = await apiRequest("POST", "/api/deploy/github-pages", {
         accessToken: localStorage.getItem("github_token"),
         repositories,
+        userInfo,
+        introduction
       });
 
       if (!res.ok) {
@@ -125,29 +137,24 @@ export function DeploymentActions({
     try {
       setIsCreatingRepo(true);
 
-      // Verify GitHub token exists
       const githubToken = localStorage.getItem("github_token");
       if (!githubToken) {
         throw new Error("GitHub token not found. Please reconnect your GitHub account.");
       }
 
-      // Get Vercel integration configuration
       const configRes = await fetch('/api/deploy/vercel/config');
       if (!configRes.ok) {
         throw new Error('Failed to get Vercel configuration');
       }
       const config = await configRes.json();
 
-      // Generate CSRF token
       const state = Array.from(crypto.getRandomValues(new Uint8Array(16)))
         .map(b => b.toString(16).padStart(2, '0'))
         .join('');
 
-      // Store data for use after installation
       localStorage.setItem("vercel_csrf_token", state);
       localStorage.setItem("pending_repositories", JSON.stringify(repositories));
 
-      // Construct integration URL
       const params = new URLSearchParams({
         source: 'marketplace',
         state,
@@ -156,7 +163,6 @@ export function DeploymentActions({
 
       const integrationUrl = `https://vercel.com/integrations/${config.integrationSlug}/new?${params.toString()}`;
 
-      // Open in a popup window
       const width = 600;
       const height = 800;
       const left = window.screenX + (window.outerWidth - width) / 2;
@@ -178,10 +184,8 @@ export function DeploymentActions({
     }
   };
 
-  // Handle Vercel OAuth messages
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
-      // Verify the message origin
       if (event.origin !== window.location.origin) return;
 
       if (event.data.type === 'vercel-oauth-success') {
@@ -193,10 +197,8 @@ export function DeploymentActions({
           if (!savedRepos) throw new Error("No pending repositories found");
           const repositories = JSON.parse(savedRepos);
 
-          // Store the Vercel access token
           localStorage.setItem('vercel_access_token', event.data.token);
 
-          // Deploy to Vercel with the received token
           const deployResponse = await apiRequest("POST", "/api/deploy/vercel", {
             accessToken: event.data.token,
             teamId: event.data.teamId,
@@ -210,7 +212,6 @@ export function DeploymentActions({
 
           const deployData = await deployResponse.json();
 
-          // Store deployment info
           localStorage.setItem('vercel_deployment_url', deployData.url);
           localStorage.setItem('vercel_deployment_id', deployData.deploymentId);
 
@@ -221,7 +222,6 @@ export function DeploymentActions({
             description: "Your portfolio is being deployed to Vercel.",
           });
 
-          // Clean up stored data
           localStorage.removeItem("pending_repositories");
           localStorage.removeItem("vercel_csrf_token");
 
