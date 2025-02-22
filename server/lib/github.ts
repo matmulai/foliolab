@@ -7,12 +7,12 @@ interface GithubUser {
 }
 
 interface Repository {
-  id: number; // Added ID field to match GitHub API response
+  id: number;
   name: string;
   description: string | null;
   url: string;
   metadata: {
-    id: number; // Added ID field in metadata
+    id: number;
     stars: number;
     language: string | null;
     topics: string[];
@@ -61,16 +61,18 @@ export async function getRepositories(
     per_page: 100,
   });
 
-  // Filter out the foliolab-vercel repository
-  const filteredRepos = data.filter((repo) => repo.name !== "foliolab-vercel");
+  const filteredRepos = data.filter((repo) => {
+    return !repo.name.toLowerCase().includes("-folio") && 
+           !repo.name.toLowerCase().includes("github.io")
+  });
 
   return filteredRepos.map((repo) => ({
-    id: repo.id, // Include the GitHub repository ID
+    id: repo.id,
     name: repo.name,
     description: repo.description || null,
     url: repo.html_url,
     metadata: {
-      id: repo.id, // Include the ID in metadata as well
+      id: repo.id,
       stars: repo.stargazers_count,
       language: repo.language,
       topics: repo.topics || [],
@@ -88,11 +90,9 @@ export async function createPortfolioRepository(
   const octokit = new Octokit({ auth: accessToken });
 
   try {
-    // Check if repository exists
     const exists = await checkRepositoryExists(accessToken, username, repoName);
 
     if (!exists) {
-      // Create a new repository if it doesn't exist
       const { data: repo } = await octokit.repos.createForAuthenticatedUser({
         name: repoName,
         description: "My automatically generated portfolio showcase",
@@ -102,7 +102,6 @@ export async function createPortfolioRepository(
 
       return { repoUrl: repo.html_url, wasCreated: true };
     } else {
-      // Repository already exists, return its URL
       const { data: repo } = await octokit.repos.get({
         owner: username,
         repo: repoName,
@@ -144,14 +143,12 @@ export async function commitPortfolioFiles(
   const octokit = new Octokit({ auth: accessToken });
 
   try {
-    // Get the default branch reference
     const { data: ref } = await octokit.git.getRef({
       owner: username,
       repo: repoName,
       ref: "heads/main",
     });
 
-    // Create a new tree with the files
     const { data: tree } = await octokit.git.createTree({
       owner: username,
       repo: repoName,
@@ -164,7 +161,6 @@ export async function commitPortfolioFiles(
       })),
     });
 
-    // Create a commit
     const { data: commit } = await octokit.git.createCommit({
       owner: username,
       repo: repoName,
@@ -173,7 +169,6 @@ export async function commitPortfolioFiles(
       parents: [ref.object.sha],
     });
 
-    // Update the reference
     await octokit.git.updateRef({
       owner: username,
       repo: repoName,
@@ -195,12 +190,10 @@ export async function deployToGitHubPages(
   const repoName = `${username}.github.io`;
 
   try {
-    // Check if the GitHub Pages repository exists
     const exists = await checkRepositoryExists(accessToken, username, repoName);
     let wasCreated = false;
 
     if (!exists) {
-      // Create the GitHub Pages repository if it doesn't exist
       await octokit.repos.createForAuthenticatedUser({
         name: repoName,
         description: "My GitHub Pages website",
@@ -210,14 +203,12 @@ export async function deployToGitHubPages(
       wasCreated = true;
     }
 
-    // Get the default branch reference
     const { data: ref } = await octokit.git.getRef({
       owner: username,
       repo: repoName,
       ref: "heads/main",
     });
 
-    // Create a new tree with the portfolio.html
     const { data: tree } = await octokit.git.createTree({
       owner: username,
       repo: repoName,
@@ -232,7 +223,6 @@ export async function deployToGitHubPages(
       ],
     });
 
-    // Create a commit
     const { data: commit } = await octokit.git.createCommit({
       owner: username,
       repo: repoName,
@@ -243,7 +233,6 @@ export async function deployToGitHubPages(
       parents: [ref.object.sha],
     });
 
-    // Update the reference
     await octokit.git.updateRef({
       owner: username,
       repo: repoName,
