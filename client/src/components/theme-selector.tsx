@@ -96,27 +96,27 @@ interface ThemeSelectorProps {
 export function ThemeSelector({ value, onValueChange }: ThemeSelectorProps) {
   return (
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger className="w-[200px]">
+      <SelectTrigger className="w-[180px]">
         <SelectValue placeholder="Select theme" />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="w-[320px]">
         {themes.map((theme) => (
           <SelectItem 
             key={theme.id} 
             value={theme.id}
-            className="relative"
+            className="relative flex items-center py-3"
           >
-            <div className="flex items-center gap-3">
-              <div className={cn("w-8 h-8 rounded-md overflow-hidden", theme.preview.background)}>
+            <div className="flex items-center gap-3 w-full">
+              <div className={cn("w-8 h-8 rounded-md overflow-hidden flex-shrink-0", theme.preview.background)}>
                 <div className="h-4 w-full" style={{ background: 'linear-gradient(45deg, var(--primary) 0%, var(--primary-foreground) 100%)' }} />
                 <div className={cn("h-4 w-full", theme.preview.card)} />
               </div>
-              <div className="flex-1">
-                <p className="font-medium">{theme.name}</p>
-                <p className="text-xs text-muted-foreground">{theme.description}</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{theme.name}</p>
+                <p className="text-xs text-muted-foreground line-clamp-2">{theme.description}</p>
               </div>
               {value === theme.id && (
-                <Check className="h-4 w-4 text-primary" />
+                <Check className="h-4 w-4 text-primary flex-shrink-0 ml-2" />
               )}
             </div>
           </SelectItem>

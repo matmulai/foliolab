@@ -7,16 +7,20 @@ import Home from "@/pages/home";
 import GithubAuth from "@/pages/github-auth";
 import RepoSelect from "@/pages/repo-select";
 import PortfolioPreview from "@/pages/portfolio-preview";
+import { Header } from "@/components/header";
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/auth/github" component={GithubAuth} />
-      <Route path="/repos" component={RepoSelect} />
-      <Route path="/preview" component={PortfolioPreview} />
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <Header />
+      <Switch>
+        <Route path="/" component={Home} />
+        <Route path="/auth/github" component={GithubAuth} />
+        <Route path="/repos" component={RepoSelect} />
+        <Route path="/preview" component={PortfolioPreview} />
+        <Route component={NotFound} />
+      </Switch>
+    </>
   );
 }
 
