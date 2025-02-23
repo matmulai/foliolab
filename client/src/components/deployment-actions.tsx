@@ -13,6 +13,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { DeploymentOverlay } from "./deployment-overlay";
 import { VercelDeploymentOverlay } from "./vercel-deployment-overlay";
 import { Repository } from "@shared/schema";
+import { Theme } from "./theme-selector";
 
 interface DeploymentActionsProps {
   onSuccess?: () => void;
@@ -26,13 +27,15 @@ interface DeploymentActionsProps {
     skills: string[];
     interests: string[];
   } | null;
+  theme?: Theme;
 }
 
 export function DeploymentActions({
   onSuccess,
   repositories,
   userInfo,
-  introduction
+  introduction,
+  theme
 }: DeploymentActionsProps) {
   const [isCreatingRepo, setIsCreatingRepo] = useState(false);
   const [isDeployingToPages, setIsDeployingToPages] = useState(false);
@@ -54,7 +57,8 @@ export function DeploymentActions({
         downloadOnly: true,
         repositories,
         userInfo,
-        introduction
+        introduction,
+        themeId: theme?.id 
       });
 
       if (!res.ok) {
@@ -97,7 +101,8 @@ export function DeploymentActions({
         accessToken: localStorage.getItem("github_token"),
         repositories,
         userInfo,
-        introduction
+        introduction,
+        themeId: theme?.id 
       });
 
       if (!res.ok) {
@@ -204,6 +209,7 @@ export function DeploymentActions({
             teamId: event.data.teamId,
             username,
             repositories,
+            themeId: theme?.id 
           });
 
           if (!deployResponse.ok) {
@@ -247,7 +253,7 @@ export function DeploymentActions({
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [toast]);
+  }, [toast, theme]); 
 
   return (
     <div className="mt-12 flex flex-wrap justify-center gap-4">

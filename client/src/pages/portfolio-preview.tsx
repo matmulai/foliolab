@@ -261,6 +261,7 @@ export default function PortfolioPreview() {
             repositories={selectedRepos}
             userInfo={userInfo}
             introduction={userIntro}
+            theme={theme}
           />
         </div>
       </div>

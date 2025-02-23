@@ -4,6 +4,12 @@ import { getRepositories, getReadmeContent, getGithubUser, createPortfolioReposi
 import { generateRepoSummary, generateUserIntroduction } from "./lib/openai.js";
 import { Repository } from "@shared/schema";
 
+// Assuming themes array is defined elsewhere
+const themes = [
+  // ... theme definitions ...
+];
+
+
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
@@ -134,7 +140,7 @@ export async function registerRoutes(app: Express) {
   });
 
   app.post("/api/deploy/github", async (req, res) => {
-    const { accessToken, downloadOnly, repositories } = req.body;
+    const { accessToken, downloadOnly, repositories, themeId } = req.body; // Added themeId
 
     if (!accessToken) {
       return res.status(400).json({ error: "GitHub access token is required" });
@@ -144,7 +150,8 @@ export async function registerRoutes(app: Express) {
       const user = await getGithubUser(accessToken);
       const openaiKey = req.body.openaiKey; // Added to pass to generatePortfolioHtml
       const introduction = await generateUserIntroduction(repositories, openaiKey); // Added to get introduction
-      const html = generatePortfolioHtml(user.username, repositories, introduction, user.avatarUrl);
+      const theme = themes.find(t => t.id === themeId) || themes[1]; // Find theme or default to modern
+      const html = generatePortfolioHtml(user.username, repositories, introduction, user.avatarUrl, theme);
 
       if (downloadOnly) {
         return res.json({ html });
@@ -176,7 +183,7 @@ export async function registerRoutes(app: Express) {
   });
 
   app.post("/api/deploy/github-pages", async (req, res) => {
-    const { accessToken, repositories } = req.body;
+    const { accessToken, repositories, themeId } = req.body; // Added themeId
     const openaiKey = req.body.openaiKey; // Added to pass to generatePortfolioHtml
 
     if (!accessToken) {
@@ -190,7 +197,8 @@ export async function registerRoutes(app: Express) {
     try {
       const user = await getGithubUser(accessToken);
       const introduction = await generateUserIntroduction(repositories, openaiKey); // Added to get introduction
-      const html = generatePortfolioHtml(user.username, repositories, introduction, user.avatarUrl);
+      const theme = themes.find(t => t.id === themeId) || themes[1]; // Find theme or default to modern
+      const html = generatePortfolioHtml(user.username, repositories, introduction, user.avatarUrl, theme);
 
       const { url, wasCreated } = await deployToGitHubPages(accessToken, user.username, html);
 
@@ -543,7 +551,23 @@ export async function registerRoutes(app: Express) {
       skills: string[];
       interests: string[];
     },
-    avatarUrl?: string | null
+    avatarUrl?: string | null,
+    theme: {
+      id: string;
+      preview: {
+        background: string;
+        text: string;
+        accent: string;
+        card: string;
+        border: string;
+      };
+      layout: {
+        container: string;
+        header: string;
+        content: string;
+        profile: string;
+      };
+    } = themes[1] // Default to modern theme
   ): string {
     if (!repositories || repositories.length === 0) {
       throw new Error("No repositories provided for portfolio generation");
@@ -557,57 +581,62 @@ export async function registerRoutes(app: Express) {
     <title>${username}'s Portfolio</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50">
+<body class="${theme.preview.background}">
     <div class="container mx-auto px-4 py-20">
-        <header class="text-center mb-16">
-            ${avatarUrl ? `
-            <div class="mb-6">
-                <img src="${avatarUrl}" alt="${username}" class="w-32 h-32 rounded-full mx-auto border-4 border-primary/10">
-            </div>
-            ` : ''}
-            <h1 class="text-4xl font-bold mb-4">${username}'s Portfolio</h1>
-            ${introduction ? `
-            <div class="max-w-2xl mx-auto">
-                <p class="text-gray-600 mb-6">${introduction.introduction}</p>
-                <div class="flex flex-wrap justify-center gap-4 mb-6">
-                    ${introduction.skills.map(skill =>
-                        `<span class="px-3 py-1 bg-primary/10 rounded-full text-sm font-medium">${skill}</span>`
-                    ).join('')}
-                </div>
-                <div class="text-sm text-gray-500">
-                    Interests: ${introduction.interests.join(', ')}
-                </div>
-            </div>
-            ` : ''}
-        </header>
-        <div class="grid gap-8 max-w-4xl mx-auto">
-            ${repositories.map(repo => {
-              if (!repo || typeof repo !== 'object') {
-                console.error('Invalid repository object:', repo);
-                return '';
-              }
-
-              const topics = Array.isArray(repo.metadata?.topics) ? repo.metadata.topics : [];
-              const description = repo.summary || repo.description || '';
-
-              return `
-                <article class="bg-white rounded-lg shadow-md p-6">
-                    <h2 class="text-2xl font-semibold mb-2">${repo.name || 'Untitled Project'}</h2>
-                    <p class="text-gray-600 mb-4">${description}</p>
-                    <div class="flex gap-2 flex-wrap">
-                        ${topics.map(topic =>
-                            `<span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">${topic}</span>`
-                        ).join('')}
+        <div class="${theme.layout.container}">
+            <header class="${theme.layout.header}">
+                <div class="${theme.layout.profile}">
+                    ${avatarUrl ? `
+                    <div class="mb-6">
+                        <img src="${avatarUrl}" alt="${username}" class="w-32 h-32 rounded-full mx-auto border-4 border-primary/10">
                     </div>
-                    <div class="mt-4 flex gap-4">
-                        <a href="${repo.url}" class="text-blue-600 hover:underline" target="_blank">View on GitHub</a>
-                        ${repo.metadata?.url ?
-                            `<a href="${repo.metadata.url}" class="text-blue-600 hover:underline" target="_blank">Live Demo</a>`
-                            : ''}
+                    ` : ''}
+                    <h1 class="text-4xl font-bold mb-4 ${theme.preview.text}">${username}'s Portfolio</h1>
+                    ${introduction ? `
+                    <div class="max-w-2xl">
+                        <p class="${theme.preview.text} mb-6">${introduction.introduction}</p>
+                        <div class="flex flex-wrap gap-2 justify-center mb-6">
+                            ${introduction.skills.map(skill =>
+                              `<span class="${theme.preview.accent} px-3 py-1 rounded-full text-sm font-medium">${skill}</span>`
+                            ).join('')}
+                        </div>
+                        <p class="${theme.preview.text} text-sm">
+                            <span class="font-medium">Interests:</span> ${introduction.interests.join(', ')}
+                        </p>
                     </div>
-                </article>
-              `;
-            }).join('')}
+                    ` : ''}
+                </div>
+            </header>
+
+            <div class="${theme.layout.content}">
+                ${repositories.map(repo => {
+                  if (!repo || typeof repo !== 'object') {
+                    console.error('Invalid repository object:', repo);
+                    return '';
+                  }
+
+                  const topics = Array.isArray(repo.metadata?.topics) ? repo.metadata.topics : [];
+                  const description = repo.summary || repo.description || '';
+
+                  return `
+                    <article class="${theme.preview.card} p-6">
+                        <h2 class="text-2xl font-semibold mb-2 ${theme.preview.text}">${repo.name || 'Untitled Project'}</h2>
+                        <p class="${theme.preview.text} mb-4">${description}</p>
+                        <div class="flex gap-2 flex-wrap">
+                            ${topics.map(topic =>
+                                `<span class="${theme.preview.accent} px-2 py-1 rounded-full text-sm">${topic}</span>`
+                            ).join('')}
+                        </div>
+                        <div class="mt-4 flex gap-4">
+                            <a href="${repo.url}" class="${theme.preview.accent} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">View on GitHub</a>
+                            ${repo.metadata?.url ?
+                                `<a href="${repo.metadata.url}" class="${theme.preview.accent} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">Live Demo</a>`
+                                : ''}
+                        </div>
+                    </article>
+                  `;
+                }).join('')}
+            </div>
         </div>
     </div>
 </body>
