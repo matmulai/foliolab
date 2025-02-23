@@ -63,7 +63,6 @@ export default function PortfolioPreview() {
     }
   });
 
-  // Update selected repositories and generate intro when data changes
   useEffect(() => {
     if (data?.repositories && !isLoading) {
       const filtered = data.repositories.filter((repo) => repo.selected);
@@ -129,39 +128,125 @@ export default function PortfolioPreview() {
     );
   }
 
-  if (selectedRepos.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
-        <div className="container mx-auto px-4 py-20">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-2xl font-bold mb-4">No Repositories Selected</h1>
-            <p className="text-gray-600 mb-6">Please select repositories to include in your portfolio.</p>
-            <Button onClick={() => setLocation("/repos")}>
-              Select Repositories
-            </Button>
+  const renderPortfolioContent = () => (
+    <div className={theme.layout.content}>
+      {selectedRepos.map((repo) => (
+        <Card key={repo.id} className={theme.preview.card}>
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <h2 className={cn("text-2xl font-semibold", theme.preview.text)}>
+                {repo.name}
+              </h2>
+              <div className="flex gap-2">
+                <Button variant="outline" size="icon" asChild>
+                  <a
+                    href={repo.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Github className="h-4 w-4" />
+                  </a>
+                </Button>
+                {repo.metadata.url && (
+                  <Button variant="outline" size="icon" asChild>
+                    <a
+                      href={repo.metadata.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {repo.summary ? (
+              <>
+                <p className={cn("mb-4", theme.preview.text)}>
+                  {repo.summary}
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {repo.metadata.topics.map((topic) => (
+                    <span
+                      key={topic}
+                      className={cn("px-2 py-1 rounded-full text-sm", theme.preview.accent)}
+                    >
+                      {topic}
+                    </span>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4">
+                <Skeleton className="h-24" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-6 w-20" />
+                  <Skeleton className="h-6 w-20" />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  const renderProfile = () => (
+    <div className={cn(theme.layout.header, "flex flex-col")}>
+      <div className={theme.layout.profile}>
+        {userInfo && (
+          <>
+            <Avatar className="w-32 h-32 mb-6">
+              <AvatarImage src={userInfo.avatarUrl || undefined} alt={userInfo.username} />
+              <AvatarFallback>{userInfo.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <h1 className={cn("text-4xl font-bold mb-6", theme.preview.text)}>
+              {userInfo.username}'s Portfolio
+            </h1>
+          </>
+        )}
+
+        {userIntro && (
+          <div className={cn("space-y-6", selectedTheme === "minimal" ? "text-left" : "text-center")}>
+            <p className={cn("leading-relaxed", theme.preview.text)}>{userIntro.introduction}</p>
+            <div className={cn("flex flex-wrap gap-2", selectedTheme === "minimal" ? "" : "justify-center")}>
+              {userIntro.skills.map((skill, index) => (
+                <span
+                  key={index}
+                  className={cn("px-3 py-1 rounded-full text-sm font-medium", theme.preview.accent)}
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+            <p className={cn("text-sm", theme.preview.text)}>
+              <span className="font-medium">Interests:</span>{" "}
+              {userIntro.interests.join(", ")}
+            </p>
           </div>
-        </div>
+        )}
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div className={cn("min-h-screen transition-colors", theme.preview.background)}>
       <div className="container mx-auto px-4 py-20">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex flex-col gap-8 mb-12">
+        <div className="flex flex-col gap-8">
+          <div className="flex items-center justify-between">
             <Button 
               variant="outline" 
               size="sm" 
               onClick={() => setLocation("/repos")}
-              className="self-start flex items-center gap-2"
+              className="flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Repositories
             </Button>
 
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold">Choose Theme</h2>
+            <div className="w-[200px]">
               <ThemeSelector
                 value={selectedTheme}
                 onValueChange={setSelectedTheme}
@@ -169,101 +254,9 @@ export default function PortfolioPreview() {
             </div>
           </div>
 
-          <header className="flex flex-col items-center mb-16">
-            {userInfo && (
-              <>
-                <Avatar className="w-32 h-32 mb-6">
-                  <AvatarImage src={userInfo.avatarUrl || undefined} alt={userInfo.username} />
-                  <AvatarFallback>{userInfo.username.slice(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <h1 className={cn("text-4xl font-bold mb-6", theme.preview.text)}>
-                  {userInfo.username}'s Portfolio
-                </h1>
-              </>
-            )}
-
-            {userIntro && (
-              <div className="text-center max-w-2xl">
-                <p className={cn("mb-6", theme.preview.text)}>{userIntro.introduction}</p>
-                <div className="flex flex-wrap justify-center gap-2 mb-4">
-                  {userIntro.skills.map((skill, index) => (
-                    <span
-                      key={index}
-                      className={cn("px-3 py-1 rounded-full text-sm font-medium", theme.preview.accent)}
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-                <p className={cn("text-sm", theme.preview.text)}>
-                  <span className="font-medium">Interests:</span>{" "}
-                  {userIntro.interests.join(", ")}
-                </p>
-              </div>
-            )}
-          </header>
-
-          <div className="grid gap-8">
-            {selectedRepos.map((repo) => (
-              <Card key={repo.id} className={theme.preview.card}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <h2 className={cn("text-2xl font-semibold", theme.preview.text)}>
-                      {repo.name}
-                    </h2>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="icon" asChild>
-                        <a
-                          href={repo.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Github className="h-4 w-4" />
-                        </a>
-                      </Button>
-                      {repo.metadata.url && (
-                        <Button variant="outline" size="icon" asChild>
-                          <a
-                            href={repo.metadata.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {repo.summary ? (
-                    <>
-                      <p className={cn("mb-4", theme.preview.text)}>
-                        {repo.summary}
-                      </p>
-                      <div className="flex gap-2 flex-wrap">
-                        {repo.metadata.topics.map((topic) => (
-                          <span
-                            key={topic}
-                            className={cn("px-2 py-1 rounded-full text-sm", theme.preview.accent)}
-                          >
-                            {topic}
-                          </span>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="space-y-4">
-                      <Skeleton className="h-24" />
-                      <div className="flex gap-2">
-                        <Skeleton className="h-6 w-20" />
-                        <Skeleton className="h-6 w-20" />
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+          <div className={theme.layout.container}>
+            {renderProfile()}
+            {renderPortfolioContent()}
           </div>
 
           <DeploymentActions
