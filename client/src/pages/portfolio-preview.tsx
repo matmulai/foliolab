@@ -10,6 +10,8 @@ import { DeploymentActions } from "@/components/deployment-actions";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ThemeSelector, themes } from "@/components/theme-selector";
+import { cn } from "@/lib/utils";
 
 interface UserIntroduction {
   introduction: string;
@@ -28,6 +30,8 @@ export default function PortfolioPreview() {
   const [selectedRepos, setSelectedRepos] = useState<Repository[]>([]);
   const [userIntro, setUserIntro] = useState<UserIntroduction | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [selectedTheme, setSelectedTheme] = useState("modern");
+  const theme = themes.find((t) => t.id === selectedTheme) || themes[0];
 
   // Get repository data from client-side cache
   const { data, isLoading, error } = useQuery<{ repositories: Repository[] }>({
@@ -142,44 +146,56 @@ export default function PortfolioPreview() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
+    <div className={cn("min-h-screen transition-colors", theme.preview.background)}>
       <div className="container mx-auto px-4 py-20">
         <div className="max-w-4xl mx-auto">
-          <header className="flex flex-col items-center mb-16">
+          <div className="flex flex-col gap-8 mb-12">
             <Button 
               variant="outline" 
               size="sm" 
               onClick={() => setLocation("/repos")}
-              className="self-start mb-8 flex items-center gap-2"
+              className="self-start flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Repositories
             </Button>
 
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold">Choose Theme</h2>
+              <ThemeSelector
+                value={selectedTheme}
+                onValueChange={setSelectedTheme}
+              />
+            </div>
+          </div>
+
+          <header className="flex flex-col items-center mb-16">
             {userInfo && (
               <>
                 <Avatar className="w-32 h-32 mb-6">
                   <AvatarImage src={userInfo.avatarUrl || undefined} alt={userInfo.username} />
                   <AvatarFallback>{userInfo.username.slice(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <h1 className="text-4xl font-bold mb-6">{userInfo.username}'s Portfolio</h1>
+                <h1 className={cn("text-4xl font-bold mb-6", theme.preview.text)}>
+                  {userInfo.username}'s Portfolio
+                </h1>
               </>
             )}
 
             {userIntro && (
               <div className="text-center max-w-2xl">
-                <p className="text-gray-600 mb-6">{userIntro.introduction}</p>
+                <p className={cn("mb-6", theme.preview.text)}>{userIntro.introduction}</p>
                 <div className="flex flex-wrap justify-center gap-2 mb-4">
                   {userIntro.skills.map((skill, index) => (
                     <span
                       key={index}
-                      className="px-3 py-1 bg-primary/10 rounded-full text-sm font-medium"
+                      className={cn("px-3 py-1 rounded-full text-sm font-medium", theme.preview.accent)}
                     >
                       {skill}
                     </span>
                   ))}
                 </div>
-                <p className="text-sm text-gray-500">
+                <p className={cn("text-sm", theme.preview.text)}>
                   <span className="font-medium">Interests:</span>{" "}
                   {userIntro.interests.join(", ")}
                 </p>
@@ -189,10 +205,12 @@ export default function PortfolioPreview() {
 
           <div className="grid gap-8">
             {selectedRepos.map((repo) => (
-              <Card key={repo.id}>
+              <Card key={repo.id} className={theme.preview.card}>
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <h2 className="text-2xl font-semibold">{repo.name}</h2>
+                    <h2 className={cn("text-2xl font-semibold", theme.preview.text)}>
+                      {repo.name}
+                    </h2>
                     <div className="flex gap-2">
                       <Button variant="outline" size="icon" asChild>
                         <a
@@ -220,12 +238,14 @@ export default function PortfolioPreview() {
                 <CardContent>
                   {repo.summary ? (
                     <>
-                      <p className="text-muted-foreground mb-4">{repo.summary}</p>
+                      <p className={cn("mb-4", theme.preview.text)}>
+                        {repo.summary}
+                      </p>
                       <div className="flex gap-2 flex-wrap">
                         {repo.metadata.topics.map((topic) => (
                           <span
                             key={topic}
-                            className="px-2 py-1 bg-primary/10 rounded-full text-sm"
+                            className={cn("px-2 py-1 rounded-full text-sm", theme.preview.accent)}
                           >
                             {topic}
                           </span>
