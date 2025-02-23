@@ -32,7 +32,7 @@ export const themes: Theme[] = [
   {
     id: "minimal",
     name: "Minimal",
-    description: "Clean and minimal design with left-aligned profile",
+    description: "Clean and minimal design with centered profile",
     className: "theme-minimal",
     preview: {
       background: "bg-white",
@@ -43,9 +43,9 @@ export const themes: Theme[] = [
     },
     layout: {
       container: "grid grid-cols-1 lg:grid-cols-12 gap-8",
-      header: "lg:col-span-4",
+      header: "lg:col-span-4 flex justify-center",
       content: "lg:col-span-8",
-      profile: "sticky top-8",
+      profile: "sticky top-8 flex flex-col items-center",
     },
   },
   {
@@ -62,9 +62,9 @@ export const themes: Theme[] = [
     },
     layout: {
       container: "max-w-4xl mx-auto",
-      header: "text-center mb-16",
+      header: "mb-16 flex flex-col items-center",
       content: "grid gap-8",
-      profile: "",
+      profile: "flex flex-col items-center",
     },
   },
   {
@@ -81,9 +81,9 @@ export const themes: Theme[] = [
     },
     layout: {
       container: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12",
-      header: "col-span-full",
+      header: "col-span-full flex justify-center",
       content: "col-span-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8",
-      profile: "flex flex-col items-start",
+      profile: "flex flex-col items-center",
     },
   },
 ];
@@ -99,24 +99,24 @@ export function ThemeSelector({ value, onValueChange }: ThemeSelectorProps) {
       <SelectTrigger className="w-[180px]">
         <SelectValue placeholder="Select theme" />
       </SelectTrigger>
-      <SelectContent className="w-[320px]">
+      <SelectContent className="w-[320px] max-h-[400px]">
         {themes.map((theme) => (
           <SelectItem 
             key={theme.id} 
             value={theme.id}
-            className="relative flex items-center py-3"
+            className="relative flex items-center py-4"
           >
-            <div className="flex items-center gap-3 w-full">
-              <div className={cn("w-8 h-8 rounded-md overflow-hidden flex-shrink-0", theme.preview.background)}>
-                <div className="h-4 w-full" style={{ background: 'linear-gradient(45deg, var(--primary) 0%, var(--primary-foreground) 100%)' }} />
-                <div className={cn("h-4 w-full", theme.preview.card)} />
+            <div className="flex items-center gap-4 w-full">
+              <div className={cn("w-10 h-10 rounded-md overflow-hidden flex-shrink-0", theme.preview.background)}>
+                <div className="h-5 w-full" style={{ background: 'linear-gradient(45deg, var(--primary) 0%, var(--primary-foreground) 100%)' }} />
+                <div className={cn("h-5 w-full", theme.preview.card)} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{theme.name}</p>
-                <p className="text-xs text-muted-foreground line-clamp-2">{theme.description}</p>
+                <p className="font-medium truncate text-base">{theme.name}</p>
+                <p className="text-sm text-muted-foreground line-clamp-2">{theme.description}</p>
               </div>
               {value === theme.id && (
-                <Check className="h-4 w-4 text-primary flex-shrink-0 ml-2" />
+                <Check className="h-5 w-5 text-primary flex-shrink-0 ml-2" />
               )}
             </div>
           </SelectItem>
