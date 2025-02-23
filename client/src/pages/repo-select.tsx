@@ -179,9 +179,9 @@ export default function RepoSelect() {
     <div className="container mx-auto p-4 md:p-6">
       <div className="flex flex-col gap-6">
         {/* Header and search section */}
-        <div className="flex flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h1 className="text-2xl md:text-3xl font-bold">Select Repositories</h1>
-          <div className="w-full md:w-auto flex items-center gap-4">
+          <div className="w-full md:w-auto flex flex-col md:flex-row items-stretch md:items-center gap-4">
             <div className="relative flex-1 md:w-64">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
@@ -194,16 +194,26 @@ export default function RepoSelect() {
                 className="pl-9"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="select-all"
-                checked={allSelected}
-                onCheckedChange={handleSelectAll}
-                disabled={isToggling || paginatedRepos.length === 0}
-              />
-              <label htmlFor="select-all" className="text-sm font-medium whitespace-nowrap">
-                Select All
-              </label>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="select-all"
+                  checked={allSelected}
+                  onCheckedChange={handleSelectAll}
+                  disabled={isToggling || paginatedRepos.length === 0}
+                />
+                <label htmlFor="select-all" className="text-sm font-medium whitespace-nowrap">
+                  Select All
+                </label>
+              </div>
+              {selectedCount > 0 && (
+                <Button
+                  onClick={() => setShowApiKeyDialog(true)}
+                  disabled={isToggling}
+                >
+                  Generate Portfolio ({selectedCount} selected)
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -279,18 +289,9 @@ export default function RepoSelect() {
           </div>
         )}
 
-        {/* Generate Portfolio button */}
-        {selectedCount > 0 && (
-          <div className="mt-6 flex justify-end">
-            <Button
-              onClick={() => setShowApiKeyDialog(true)}
-              disabled={isToggling}
-              className="w-full md:w-auto"
-            >
-              Generate Portfolio ({selectedCount} selected)
-            </Button>
-          </div>
-        )}
+
+        {/* Generate Portfolio button - This part is removed as per instruction */}
+        
       </div>
 
       <ApiKeyDialog
