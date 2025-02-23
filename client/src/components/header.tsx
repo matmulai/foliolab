@@ -1,4 +1,6 @@
 import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Github } from "lucide-react";
 
 export function Header() {
   return (
@@ -9,6 +11,21 @@ export function Header() {
             FolioLab
           </a>
         </Link>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2"
+          asChild
+        >
+          <a
+            href="https://github.com/replit/FolioLab"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Github className="h-4 w-4" />
+            View on GitHub
+          </a>
+        </Button>
       </div>
     </header>
   );

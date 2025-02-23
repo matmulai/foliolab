@@ -21,27 +21,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/5 to-primary/10">
-      {/* Header */}
-      <header className="border-b bg-white/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src="/logo.svg" alt="FolioLab Logo" className="h-8 w-8" />
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              FolioLab
-            </span>
-          </div>
-          <a
-            href="https://github.com/matmulai/foliolab"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Github className="h-4 w-4" />
-            View on GitHub
-          </a>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="flex-1">
         <div className="container mx-auto px-4 py-20">
