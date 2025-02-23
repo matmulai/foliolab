@@ -96,7 +96,7 @@ interface ThemeSelectorProps {
 export function ThemeSelector({ value, onValueChange }: ThemeSelectorProps) {
   return (
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger className="w-[180px]">
+      <SelectTrigger className="w-[320px]">
         <SelectValue placeholder="Select theme" />
       </SelectTrigger>
       <SelectContent className="w-[320px] max-h-[400px]">
@@ -107,7 +107,7 @@ export function ThemeSelector({ value, onValueChange }: ThemeSelectorProps) {
             className="relative flex items-center py-4"
           >
             <div className="flex items-center gap-4 w-full">
-              <div className={cn("w-10 h-10 rounded-md overflow-hidden flex-shrink-0", theme.preview.background)}>
+              <div className={cn("w-10 h-15 rounded-md overflow-hidden flex-shrink-0", theme.preview.background)}>
                 <div className="h-5 w-full" style={{ background: 'linear-gradient(45deg, var(--primary) 0%, var(--primary-foreground) 100%)' }} />
                 <div className={cn("h-5 w-full", theme.preview.card)} />
               </div>
