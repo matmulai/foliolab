@@ -235,7 +235,7 @@ export default function PortfolioPreview() {
     <div className={cn("min-h-screen transition-colors", theme.preview.background)}>
       <div className="container mx-auto px-4 py-20">
         <div className="flex flex-col gap-8">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-8">
             <Button 
               variant="outline" 
               size="sm" 
@@ -246,12 +246,10 @@ export default function PortfolioPreview() {
               Back to Repositories
             </Button>
 
-            <div className="w-[200px]">
-              <ThemeSelector
-                value={selectedTheme}
-                onValueChange={setSelectedTheme}
-              />
-            </div>
+            <ThemeSelector
+              value={selectedTheme}
+              onValueChange={setSelectedTheme}
+            />
           </div>
 
           <div className={theme.layout.container}>

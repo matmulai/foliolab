@@ -95,49 +95,33 @@ interface ThemeSelectorProps {
 
 export function ThemeSelector({ value, onValueChange }: ThemeSelectorProps) {
   return (
-    <div className="flex flex-col gap-4">
-      <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger className="w-[200px]">
-          <SelectValue placeholder="Select theme" />
-        </SelectTrigger>
-        <SelectContent>
-          {themes.map((theme) => (
-            <SelectItem key={theme.id} value={theme.id}>
-              <span className="flex items-center gap-2">
-                {theme.name}
-                {value === theme.id && <Check className="h-4 w-4" />}
-              </span>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger className="w-[200px]">
+        <SelectValue placeholder="Select theme" />
+      </SelectTrigger>
+      <SelectContent>
         {themes.map((theme) => (
-          <button
-            key={theme.id}
-            className={cn(
-              "p-4 rounded-lg border-2 transition-all",
-              value === theme.id
-                ? "border-primary"
-                : "border-transparent hover:border-primary/50"
-            )}
-            onClick={() => onValueChange(theme.id)}
+          <SelectItem 
+            key={theme.id} 
+            value={theme.id}
+            className="relative"
           >
-            <div className={cn("rounded-md p-3", theme.preview.background)}>
-              <div className="space-y-2">
-                <div className={cn("h-2 w-16 rounded", theme.preview.accent)} />
-                <div className={cn("h-2 w-12 rounded bg-current", theme.preview.text)} />
-                <div className={cn("h-8 w-full rounded", theme.preview.card)} />
+            <div className="flex items-center gap-3">
+              <div className={cn("w-8 h-8 rounded-md overflow-hidden", theme.preview.background)}>
+                <div className="h-4 w-full" style={{ background: 'linear-gradient(45deg, var(--primary) 0%, var(--primary-foreground) 100%)' }} />
+                <div className={cn("h-4 w-full", theme.preview.card)} />
               </div>
+              <div className="flex-1">
+                <p className="font-medium">{theme.name}</p>
+                <p className="text-xs text-muted-foreground">{theme.description}</p>
+              </div>
+              {value === theme.id && (
+                <Check className="h-4 w-4 text-primary" />
+              )}
             </div>
-            <div className="mt-2 text-sm font-medium">{theme.name}</div>
-            <div className="text-xs text-muted-foreground">
-              {theme.description}
-            </div>
-          </button>
+          </SelectItem>
         ))}
-      </div>
-    </div>
+      </SelectContent>
+    </Select>
   );
 }
