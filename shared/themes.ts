@@ -18,6 +18,7 @@ export interface Theme {
   };
 }
 
+// These are the same theme objects, but declared statically to ensure Tailwind processes the classes
 export const themes: Theme[] = [
   {
     id: "minimal",

@@ -3,11 +3,62 @@
 @tailwind utilities;
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+    * {
+        @apply border-border;
+    }
 
-  body {
-    @apply font-sans antialiased bg-background text-foreground;
-  }
+    body {
+        @apply font-sans antialiased bg-background text-foreground;
+    }
+}
+
+/* Safe-list for theme classes */
+.bg-white {
+    background-color: white;
+}
+.bg-stone-50 {
+    background-color: #fafaf9;
+}
+.text-slate-800 {
+    color: #1e293b;
+}
+.text-gray-900 {
+    color: #111827;
+}
+.text-stone-900 {
+    color: #1c1917;
+}
+.text-white {
+    color: white;
+}
+.text-stone-50 {
+    color: #fafaf9;
+}
+.bg-slate-800 {
+    background-color: #1e293b;
+}
+.bg-stone-900 {
+    background-color: #1c1917;
+}
+
+/* Theme previews in selector */
+.theme-preview-minimal {
+    @apply bg-white border-2 border-gray-100 text-slate-800;
+}
+.theme-preview-minimal .accent {
+    @apply bg-slate-800 text-white;
+}
+
+.theme-preview-modern {
+    @apply bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900;
+}
+.theme-preview-modern .accent {
+    @apply bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-sm;
+}
+
+.theme-preview-elegant {
+    @apply bg-stone-50 text-stone-900;
+}
+.theme-preview-elegant .accent {
+    @apply bg-stone-900 text-stone-50;
 }

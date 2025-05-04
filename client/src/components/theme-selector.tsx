@@ -15,6 +15,13 @@ interface ThemeSelectorProps {
 }
 
 export function ThemeSelector({ value, onValueChange }: ThemeSelectorProps) {
+  const selectedTheme = themes.find((t) => t.id === value) || themes[1]; // Default to modern if not found
+
+  // Helper function to get theme preview class
+  const getThemePreviewClass = (themeId: string) => {
+    return `theme-preview-${themeId}`;
+  };
+
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger className="w-[320px] h-[80px] p-2">
@@ -24,7 +31,7 @@ export function ThemeSelector({ value, onValueChange }: ThemeSelectorProps) {
               <div
                 className={cn(
                   "w-10 h-10 rounded-md overflow-hidden flex-shrink-0",
-                  themes.find((t) => t.id === value)?.preview.background,
+                  getThemePreviewClass(selectedTheme.id),
                 )}
               >
                 <div
@@ -34,19 +41,14 @@ export function ThemeSelector({ value, onValueChange }: ThemeSelectorProps) {
                       "linear-gradient(45deg, var(--primary) 0%, var(--primary-foreground) 100%)",
                   }}
                 />
-                <div
-                  className={cn(
-                    "h-5 w-full",
-                    themes.find((t) => t.id === value)?.preview.card,
-                  )}
-                />
+                <div className="h-5 w-full accent" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate text-base">
-                  {themes.find((t) => t.id === value)?.name}
+                  {selectedTheme.name}
                 </p>
                 <p className="text-sm text-muted-foreground line-clamp-2">
-                  {themes.find((t) => t.id === value)?.description}
+                  {selectedTheme.description}
                 </p>
               </div>
             </div>
@@ -64,7 +66,7 @@ export function ThemeSelector({ value, onValueChange }: ThemeSelectorProps) {
               <div
                 className={cn(
                   "w-10 h-10 rounded-md overflow-hidden flex-shrink-0",
-                  theme.preview.background,
+                  getThemePreviewClass(theme.id),
                 )}
               >
                 <div
@@ -74,7 +76,7 @@ export function ThemeSelector({ value, onValueChange }: ThemeSelectorProps) {
                       "linear-gradient(45deg, var(--primary) 0%, var(--primary-foreground) 100%)",
                   }}
                 />
-                <div className={cn("h-5 w-full", theme.preview.card)} />
+                <div className="h-5 w-full accent" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate text-base">{theme.name}</p>
