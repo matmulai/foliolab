@@ -9,8 +9,8 @@ import {
   deployToGitHubPages,
 } from "./lib/github.js";
 import { generateRepoSummary, generateUserIntroduction } from "./lib/openai.js";
-import { Repository } from "@shared/schema";
-import { themes } from "@shared/themes";
+import { Repository } from "../shared/schema.js";
+import { themes } from "../shared/themes.js";
 
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
