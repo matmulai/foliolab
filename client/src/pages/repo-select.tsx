@@ -167,19 +167,14 @@ export default function RepoSelect() {
     openaiKey: string | undefined,
     customPrompt?: string,
   ) => {
-    if (!openaiKey) {
-      toast({
-        title: "Error",
-        description: "OpenAI key is required to analyze repositories",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    // No need to check for openaiKey if it's undefined (means using OpenRouter)
     analyzeRepos(openaiKey, customPrompt);
   };
 
-  const analyzeRepos = async (openaiKey: string, customPrompt?: string) => {
+  const analyzeRepos = async (
+    openaiKey: string | undefined,
+    customPrompt?: string,
+  ) => {
     try {
       setAnalysisProgress({
         isAnalyzing: true,
