@@ -704,10 +704,12 @@ export async function registerRoutes(app: Express) {
                         <p class="${theme.preview.text} mb-6">${introduction.introduction}</p>
                         <div class="flex flex-wrap gap-2 justify-center mb-6">
                             ${introduction.skills
-                              .map(
-                                (skill) =>
-                                  `<span class="${theme.preview.accent} px-3 py-1 rounded-full text-sm font-medium">${skill}</span>`,
-                              )
+                              .map((skill) => {
+                                // Explicitly add text-white class for Modern theme to ensure skills are visible
+                                const textColorClass =
+                                  theme.id === "modern" ? "text-white" : "";
+                                return `<span class="${theme.preview.accent} ${textColorClass} px-3 py-1 rounded-full text-sm font-medium">${skill}</span>`;
+                              })
                               .join("")}
                         </div>
                         <p class="${theme.preview.text} text-sm">
@@ -739,19 +741,28 @@ export async function registerRoutes(app: Express) {
                         <p class="${theme.preview.text} mb-4">${description}</p>
                         <div class="flex gap-2 flex-wrap">
                             ${topics
-                              .map(
-                                (topic) =>
-                                  `<span class="${theme.preview.accent} px-2 py-1 rounded-full text-sm">${topic}</span>`,
-                              )
+                              .map((topic) => {
+                                // Explicitly add text-white class for Modern theme to ensure topics are visible
+                                const textColorClass =
+                                  theme.id === "modern" ? "text-white" : "";
+                                return `<span class="${theme.preview.accent} ${textColorClass} px-2 py-1 rounded-full text-sm">${topic}</span>`;
+                              })
                               .join("")}
                         </div>
                         <div class="mt-4 flex gap-4">
-                            <a href="${repo.url}" class="${theme.preview.accent} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">View on GitHub</a>
-                            ${
-                              repo.metadata?.url
-                                ? `<a href="${repo.metadata.url}" class="${theme.preview.accent} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">Live Demo</a>`
-                                : ""
-                            }
+                            ${(() => {
+                              // Explicitly add text-white class for Modern theme
+                              const textColorClass =
+                                theme.id === "modern" ? "text-white" : "";
+                              return `
+                                <a href="${repo.url}" class="${theme.preview.accent} ${textColorClass} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">View on GitHub</a>
+                                ${
+                                  repo.metadata?.url
+                                    ? `<a href="${repo.metadata.url}" class="${theme.preview.accent} ${textColorClass} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">Live Demo</a>`
+                                    : ""
+                                }
+                                `;
+                            })()}
                         </div>
                     </article>
                   `;
