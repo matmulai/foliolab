@@ -47,8 +47,7 @@ export const themes: Theme[] = [
     preview: {
       background: "bg-gradient-to-br from-indigo-50 via-white to-purple-50",
       text: "text-gray-900",
-      accent:
-        "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-sm",
+      accent: "bg-gradient-to-r from-indigo-500 to-purple-500 text-white",
       card: "bg-white/80 backdrop-blur-sm shadow-xl rounded-xl border border-white/20 hover:shadow-2xl transition-all",
       border: "border-white/20",
     },

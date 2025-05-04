@@ -681,30 +681,6 @@ export async function registerRoutes(app: Express) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${username}'s Portfolio</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Custom styles for Modern theme */
-        .modern-gradient-badge {
-            background: linear-gradient(to right, #6366f1, #a855f7);
-            color: white;
-            border-radius: 9999px;
-            padding: 0.25rem 0.75rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            display: inline-block;
-        }
-        .modern-gradient-button {
-            background: linear-gradient(to right, #6366f1, #a855f7);
-            color: white;
-            border-radius: 0.375rem;
-            padding: 0.25rem 0.75rem;
-            transition: opacity 0.2s;
-            display: inline-block;
-            text-decoration: none;
-        }
-        .modern-gradient-button:hover {
-            opacity: 0.8;
-        }
-    </style>
 </head>
 <body class="${theme.preview.background}">
     <div class="container mx-auto px-4 py-20">
@@ -728,13 +704,10 @@ export async function registerRoutes(app: Express) {
                         <p class="${theme.preview.text} mb-6">${introduction.introduction}</p>
                         <div class="flex flex-wrap gap-2 justify-center mb-6">
                             ${introduction.skills
-                              .map((skill) => {
-                                // For Modern theme, explicitly use the custom CSS class
-                                if (theme.id === "modern") {
-                                  return `<span class="modern-gradient-badge">${skill}</span>`;
-                                }
-                                return `<span class="${theme.preview.accent} px-3 py-1 rounded-full text-sm font-medium">${skill}</span>`;
-                              })
+                              .map(
+                                (skill) =>
+                                  `<span class="${theme.preview.accent} px-3 py-1 rounded-full text-sm font-medium">${skill}</span>`,
+                              )
                               .join("")}
                         </div>
                         <p class="${theme.preview.text} text-sm">
@@ -766,37 +739,19 @@ export async function registerRoutes(app: Express) {
                         <p class="${theme.preview.text} mb-4">${description}</p>
                         <div class="flex gap-2 flex-wrap">
                             ${topics
-                              .map((topic) => {
-                                // For Modern theme, explicitly use the custom CSS class
-                                if (theme.id === "modern") {
-                                  return `<span class="modern-gradient-badge">${topic}</span>`;
-                                }
-                                return `<span class="${theme.preview.accent} px-2 py-1 rounded-full text-sm">${topic}</span>`;
-                              })
+                              .map(
+                                (topic) =>
+                                  `<span class="${theme.preview.accent} px-2 py-1 rounded-full text-sm">${topic}</span>`,
+                              )
                               .join("")}
                         </div>
                         <div class="mt-4 flex gap-4">
-                            ${(() => {
-                              // For Modern theme, explicitly use the custom CSS class
-                              if (theme.id === "modern") {
-                                return `
-                                  <a href="${repo.url}" class="modern-gradient-button" target="_blank">View on GitHub</a>
-                                  ${
-                                    repo.metadata?.url
-                                      ? `<a href="${repo.metadata.url}" class="modern-gradient-button" target="_blank">Live Demo</a>`
-                                      : ""
-                                  }
-                                  `;
-                              }
-                              return `
-                                <a href="${repo.url}" class="${theme.preview.accent} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">View on GitHub</a>
-                                ${
-                                  repo.metadata?.url
-                                    ? `<a href="${repo.metadata.url}" class="${theme.preview.accent} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">Live Demo</a>`
-                                    : ""
-                                }
-                                `;
-                            })()}
+                            <a href="${repo.url}" class="${theme.preview.accent} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">View on GitHub</a>
+                            ${
+                              repo.metadata?.url
+                                ? `<a href="${repo.metadata.url}" class="${theme.preview.accent} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">Live Demo</a>`
+                                : ""
+                            }
                         </div>
                     </article>
                   `;
