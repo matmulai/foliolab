@@ -705,10 +705,11 @@ export async function registerRoutes(app: Express) {
                         <div class="flex flex-wrap gap-2 justify-center mb-6">
                             ${introduction.skills
                               .map((skill) => {
-                                // Explicitly add text-white class for Modern theme to ensure skills are visible
-                                const textColorClass =
-                                  theme.id === "modern" ? "text-white" : "";
-                                return `<span class="${theme.preview.accent} ${textColorClass} px-3 py-1 rounded-full text-sm font-medium">${skill}</span>`;
+                                // For Modern theme, explicitly use the purple gradient background
+                                if (theme.id === "modern") {
+                                  return `<span class="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-3 py-1 rounded-full text-sm font-medium">${skill}</span>`;
+                                }
+                                return `<span class="${theme.preview.accent} px-3 py-1 rounded-full text-sm font-medium">${skill}</span>`;
                               })
                               .join("")}
                         </div>
@@ -742,23 +743,32 @@ export async function registerRoutes(app: Express) {
                         <div class="flex gap-2 flex-wrap">
                             ${topics
                               .map((topic) => {
-                                // Explicitly add text-white class for Modern theme to ensure topics are visible
-                                const textColorClass =
-                                  theme.id === "modern" ? "text-white" : "";
-                                return `<span class="${theme.preview.accent} ${textColorClass} px-2 py-1 rounded-full text-sm">${topic}</span>`;
+                                // For Modern theme, explicitly use the purple gradient background
+                                if (theme.id === "modern") {
+                                  return `<span class="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-2 py-1 rounded-full text-sm">${topic}</span>`;
+                                }
+                                return `<span class="${theme.preview.accent} px-2 py-1 rounded-full text-sm">${topic}</span>`;
                               })
                               .join("")}
                         </div>
                         <div class="mt-4 flex gap-4">
                             ${(() => {
-                              // Explicitly add text-white class for Modern theme
-                              const textColorClass =
-                                theme.id === "modern" ? "text-white" : "";
+                              // For Modern theme, explicitly use the purple gradient background
+                              if (theme.id === "modern") {
+                                return `
+                                  <a href="${repo.url}" class="bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">View on GitHub</a>
+                                  ${
+                                    repo.metadata?.url
+                                      ? `<a href="${repo.metadata.url}" class="bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">Live Demo</a>`
+                                      : ""
+                                  }
+                                  `;
+                              }
                               return `
-                                <a href="${repo.url}" class="${theme.preview.accent} ${textColorClass} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">View on GitHub</a>
+                                <a href="${repo.url}" class="${theme.preview.accent} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">View on GitHub</a>
                                 ${
                                   repo.metadata?.url
-                                    ? `<a href="${repo.metadata.url}" class="${theme.preview.accent} ${textColorClass} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">Live Demo</a>`
+                                    ? `<a href="${repo.metadata.url}" class="${theme.preview.accent} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">Live Demo</a>`
                                     : ""
                                 }
                                 `;
