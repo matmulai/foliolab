@@ -76,28 +76,39 @@ async function getUserRepositories(
       );
     });
 
-    return filteredRepos.map((repo) => ({
-      id: repo.id,
-      name: repo.name,
-      description: repo.description || null,
-      url: repo.html_url,
-      summary: null,
-      selected: false,
-      owner: {
-        login: user.login,
-        type: "User",
-        avatarUrl: user.avatarUrl,
-      },
-      metadata: {
+    return filteredRepos.map((repo) => {
+      // Extract the actual owner from the repository URL
+      const urlParts = repo.html_url.split("/");
+      const repoOwner = urlParts[3]; // GitHub URLs follow the pattern: https://github.com/owner/repo
+
+      // Determine if this is a user or organization based on the actual repo owner
+      const isUserRepo = repoOwner === user.login;
+
+      return {
         id: repo.id,
-        stars:
-          typeof repo.stargazers_count === "number" ? repo.stargazers_count : 0,
-        language: repo.language || null,
-        topics: repo.topics || [],
-        updatedAt: repo.updated_at || "",
-        url: repo.homepage || null,
-      },
-    }));
+        name: repo.name,
+        description: repo.description || null,
+        url: repo.html_url,
+        summary: null,
+        selected: false,
+        owner: {
+          login: repoOwner,
+          type: isUserRepo ? "User" : "Organization",
+          avatarUrl: isUserRepo ? user.avatarUrl : null, // We might not have org avatar here
+        },
+        metadata: {
+          id: repo.id,
+          stars:
+            typeof repo.stargazers_count === "number"
+              ? repo.stargazers_count
+              : 0,
+          language: repo.language || null,
+          topics: repo.topics || [],
+          updatedAt: repo.updated_at || "",
+          url: repo.homepage || null,
+        },
+      };
+    });
   } catch (error) {
     console.error(
       `Failed to fetch repositories for user ${user.login}:`,
@@ -127,28 +138,36 @@ async function getOrganizationRepositories(
       );
     });
 
-    return filteredRepos.map((repo) => ({
-      id: repo.id,
-      name: repo.name,
-      description: repo.description || null,
-      url: repo.html_url,
-      summary: null,
-      selected: false,
-      owner: {
-        login: org.login,
-        type: "Organization",
-        avatarUrl: org.avatarUrl,
-      },
-      metadata: {
+    return filteredRepos.map((repo) => {
+      // Extract the actual owner from the repository URL
+      const urlParts = repo.html_url.split("/");
+      const repoOwner = urlParts[3]; // GitHub URLs follow the pattern: https://github.com/owner/repo
+
+      return {
         id: repo.id,
-        stars:
-          typeof repo.stargazers_count === "number" ? repo.stargazers_count : 0,
-        language: repo.language || null,
-        topics: repo.topics || [],
-        updatedAt: repo.updated_at || "",
-        url: repo.homepage || null,
-      },
-    }));
+        name: repo.name,
+        description: repo.description || null,
+        url: repo.html_url,
+        summary: null,
+        selected: false,
+        owner: {
+          login: repoOwner,
+          type: "Organization", // This should always be an organization
+          avatarUrl: org.avatarUrl,
+        },
+        metadata: {
+          id: repo.id,
+          stars:
+            typeof repo.stargazers_count === "number"
+              ? repo.stargazers_count
+              : 0,
+          language: repo.language || null,
+          topics: repo.topics || [],
+          updatedAt: repo.updated_at || "",
+          url: repo.homepage || null,
+        },
+      };
+    });
   } catch (error) {
     console.error(`Failed to fetch repositories for org ${org.login}:`, error);
     return [];

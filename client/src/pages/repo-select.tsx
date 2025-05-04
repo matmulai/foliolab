@@ -101,6 +101,7 @@ export default function RepoSelect() {
     >();
 
     data.repositories.forEach((repo) => {
+      // Use the actual owner information from the repository
       if (repo.owner && !ownerMap.has(repo.owner.login)) {
         ownerMap.set(repo.owner.login, {
           login: repo.owner.login,
@@ -110,7 +111,16 @@ export default function RepoSelect() {
       }
     });
 
-    return Array.from(ownerMap.values());
+    // Sort owners: current user first, then organizations alphabetically
+    const sortedOwners = Array.from(ownerMap.values()).sort((a, b) => {
+      // User type comes first
+      if (a.type === "User" && b.type === "Organization") return -1;
+      if (a.type === "Organization" && b.type === "User") return 1;
+      // Then sort alphabetically by login
+      return a.login.localeCompare(b.login);
+    });
+
+    return sortedOwners;
   }, [data?.repositories]);
 
   const filteredRepos = useMemo(() => {
