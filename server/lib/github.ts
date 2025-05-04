@@ -1,24 +1,10 @@
 import { Octokit } from "@octokit/rest";
+import { Repository, Organization } from "@shared/schema";
 
 interface GithubUser {
   githubId: string;
   username: string;
   avatarUrl: string | null;
-}
-
-interface Repository {
-  id: number;
-  name: string;
-  description: string | null;
-  url: string;
-  metadata: {
-    id: number;
-    stars: number;
-    language: string | null;
-    topics: string[];
-    updatedAt: string; 
-    url?: string | null;
-  };
 }
 
 export async function getGithubUser(accessToken: string): Promise<GithubUser> {
@@ -51,42 +37,167 @@ export async function checkRepositoryExists(
   }
 }
 
+export async function getUserOrganizations(
+  accessToken: string,
+): Promise<Organization[]> {
+  const octokit = new Octokit({ auth: accessToken });
+
+  try {
+    const { data } = await octokit.orgs.listForAuthenticatedUser();
+
+    return data.map((org) => ({
+      id: org.id,
+      login: org.login,
+      name: org.description || null, // Org API response doesn't have 'name' but has 'description'
+      avatarUrl: org.avatar_url || null,
+    }));
+  } catch (error) {
+    console.error("Failed to fetch user organizations:", error);
+    return [];
+  }
+}
+
+async function getUserRepositories(
+  octokit: Octokit,
+  user: { login: string; type: "User"; avatarUrl: string | null },
+): Promise<Repository[]> {
+  try {
+    const { data } = await octokit.repos.listForAuthenticatedUser({
+      visibility: "public",
+      sort: "updated",
+      per_page: 100,
+    });
+
+    const filteredRepos = data.filter((repo) => {
+      return (
+        !repo.name.toLowerCase().includes("-folio") &&
+        !repo.name.toLowerCase().includes("github.io") &&
+        repo.name !== "foliolab-vercel"
+      );
+    });
+
+    return filteredRepos.map((repo) => ({
+      id: repo.id,
+      name: repo.name,
+      description: repo.description || null,
+      url: repo.html_url,
+      summary: null,
+      selected: false,
+      owner: {
+        login: user.login,
+        type: "User",
+        avatarUrl: user.avatarUrl,
+      },
+      metadata: {
+        id: repo.id,
+        stars:
+          typeof repo.stargazers_count === "number" ? repo.stargazers_count : 0,
+        language: repo.language || null,
+        topics: repo.topics || [],
+        updatedAt: repo.updated_at || "",
+        url: repo.homepage || null,
+      },
+    }));
+  } catch (error) {
+    console.error(
+      `Failed to fetch repositories for user ${user.login}:`,
+      error,
+    );
+    return [];
+  }
+}
+
+async function getOrganizationRepositories(
+  octokit: Octokit,
+  org: { login: string; avatarUrl: string | null },
+): Promise<Repository[]> {
+  try {
+    const { data } = await octokit.repos.listForOrg({
+      org: org.login,
+      type: "public",
+      sort: "updated",
+      per_page: 100,
+    });
+
+    const filteredRepos = data.filter((repo) => {
+      return (
+        !repo.name.toLowerCase().includes("-folio") &&
+        !repo.name.toLowerCase().includes("github.io") &&
+        repo.name !== "foliolab-vercel"
+      );
+    });
+
+    return filteredRepos.map((repo) => ({
+      id: repo.id,
+      name: repo.name,
+      description: repo.description || null,
+      url: repo.html_url,
+      summary: null,
+      selected: false,
+      owner: {
+        login: org.login,
+        type: "Organization",
+        avatarUrl: org.avatarUrl,
+      },
+      metadata: {
+        id: repo.id,
+        stars:
+          typeof repo.stargazers_count === "number" ? repo.stargazers_count : 0,
+        language: repo.language || null,
+        topics: repo.topics || [],
+        updatedAt: repo.updated_at || "",
+        url: repo.homepage || null,
+      },
+    }));
+  } catch (error) {
+    console.error(`Failed to fetch repositories for org ${org.login}:`, error);
+    return [];
+  }
+}
+
 export async function getRepositories(
   accessToken: string,
 ): Promise<Repository[]> {
   const octokit = new Octokit({ auth: accessToken });
-  const { data } = await octokit.repos.listForAuthenticatedUser({
-    visibility: "public",
-    sort: "updated",
-    per_page: 100,
-  });
 
-  const filteredRepos = data.filter((repo) => {
-    return !repo.name.toLowerCase().includes("-folio") && 
-           !repo.name.toLowerCase().includes("github.io") &&
-           repo.name !== "foliolab-vercel";
-  });
+  try {
+    // Get authenticated user info
+    const { data: userData } = await octokit.users.getAuthenticated();
+    const userInfo = {
+      login: userData.login,
+      type: "User" as const,
+      avatarUrl: userData.avatar_url || null,
+    };
 
-  return filteredRepos.map((repo) => ({
-    id: repo.id,
-    name: repo.name,
-    description: repo.description || null,
-    url: repo.html_url,
-    metadata: {
-      id: repo.id,
-      stars: repo.stargazers_count,
-      language: repo.language,
-      topics: repo.topics || [],
-      updatedAt: repo.updated_at, 
-      url: repo.homepage || null,
-    },
-  }));
+    // Get user repositories
+    const userRepos = await getUserRepositories(octokit, userInfo);
+
+    // Get user organizations
+    const orgs = await getUserOrganizations(accessToken);
+
+    // Get repositories for each organization
+    const orgReposPromises = orgs.map((org) =>
+      getOrganizationRepositories(octokit, {
+        login: org.login,
+        avatarUrl: org.avatarUrl,
+      }),
+    );
+
+    const orgReposArrays = await Promise.all(orgReposPromises);
+    const orgRepos = orgReposArrays.flat();
+
+    // Combine user and organization repositories
+    return [...userRepos, ...orgRepos];
+  } catch (error) {
+    console.error("Failed to fetch repositories:", error);
+    throw error;
+  }
 }
 
 export async function createPortfolioRepository(
   accessToken: string,
   username: string,
-  repoName: string = "foliolab-vercel"
+  repoName: string = "foliolab-vercel",
 ): Promise<{ repoUrl: string; wasCreated: boolean }> {
   const octokit = new Octokit({ auth: accessToken });
 
@@ -139,7 +250,7 @@ export async function commitPortfolioFiles(
   accessToken: string,
   username: string,
   files: Array<{ path: string; content: string }>,
-  repoName: string = "foliolab-vercel"
+  repoName: string = "foliolab-vercel",
 ): Promise<void> {
   const octokit = new Octokit({ auth: accessToken });
 
