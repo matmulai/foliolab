@@ -1,22 +1,16 @@
 import type { Express } from "express";
 import { createServer } from "http";
-import {
-  getRepositories,
-  getReadmeContent,
-  getGithubUser,
-  createPortfolioRepository,
-  commitPortfolioFiles,
-  deployToGitHubPages,
-} from "./lib/github.js";
+import { getRepositories, getReadmeContent, getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages } from "./lib/github.js";
 import { generateRepoSummary, generateUserIntroduction } from "./lib/openai.js";
 import { Repository } from "../shared/schema.js";
 import { themes } from "../shared/themes.js";
+
 
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
   app.get("/api/repositories", async (req, res) => {
-    const accessToken = req.headers.authorization?.replace("Bearer ", "");
+    const accessToken = req.headers.authorization?.replace('Bearer ', '');
     if (!accessToken) {
       return res.status(401).json({ error: "No access token provided" });
     }
@@ -26,10 +20,10 @@ export async function registerRoutes(app: Express) {
       const repos = await getRepositories(accessToken);
       res.json({ repositories: repos });
     } catch (error) {
-      console.error("Failed to fetch repositories:", error);
+      console.error('Failed to fetch repositories:', error);
       res.status(500).json({
         error: "Failed to fetch repositories",
-        details: error instanceof Error ? error.message : String(error),
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -38,36 +32,29 @@ export async function registerRoutes(app: Express) {
     const { code } = req.body;
     try {
       if (!code) {
-        return res
-          .status(400)
-          .json({ error: "Authorization code is required" });
+        return res.status(400).json({ error: "Authorization code is required" });
       }
 
       const params = new URLSearchParams();
-      params.append("client_id", process.env.GITHUB_CLIENT_ID!);
-      params.append("client_secret", process.env.GITHUB_CLIENT_SECRET!);
-      params.append("code", code);
+      params.append('client_id', process.env.GITHUB_CLIENT_ID!);
+      params.append('client_secret', process.env.GITHUB_CLIENT_SECRET!);
+      params.append('code', code);
 
-      const tokenResponse = await fetch(
-        "https://github.com/login/oauth/access_token",
-        {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": "FolioLab/1.0.0",
-            "X-GitHub-Api-Version": "2022-11-28",
-          },
-          body: params.toString(),
+      const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "FolioLab/1.0.0",
+          "X-GitHub-Api-Version": "2022-11-28"
         },
-      );
+        body: params.toString()
+      });
 
       const tokenData = await tokenResponse.json();
 
       if (tokenData.error) {
-        throw new Error(
-          `GitHub OAuth error: ${tokenData.error_description || tokenData.error}`,
-        );
+        throw new Error(`GitHub OAuth error: ${tokenData.error_description || tokenData.error}`);
       }
 
       if (!tokenData.access_token) {
@@ -81,13 +68,13 @@ export async function registerRoutes(app: Express) {
       res.json({
         repositories: repos,
         accessToken: tokenData.access_token,
-        username: githubUser.username,
+        username: githubUser.username
       });
     } catch (error) {
-      console.error("Failed to fetch repositories:", error);
+      console.error('Failed to fetch repositories:', error);
       res.status(500).json({
         error: "Failed to fetch repositories",
-        details: error instanceof Error ? error.message : String(error),
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -98,51 +85,52 @@ export async function registerRoutes(app: Express) {
     const repoId = parseInt(id);
 
     if (!accessToken || !username) {
-      return res
-        .status(400)
-        .json({ error: "Access token and username are required" });
+      return res.status(400).json({ error: "Access token and username are required" });
     }
 
     // Only check for OpenAI key if explicitly provided (user chose OpenAI option)
-    if (openaiKey && !openaiKey.startsWith("sk-")) {
+    if (openaiKey && !openaiKey.startsWith('sk-')) {
       return res.status(400).json({ error: "Invalid OpenAI API key format" });
     }
 
     try {
       // Get fresh repository data from GitHub
       const repos = await getRepositories(accessToken);
-      const repo = repos.find((r) => r.id === repoId);
+      const repo = repos.find(r => r.id === repoId);
 
       if (!repo) {
         return res.status(404).json({
           error: "Repository not found",
-          details: `No repository found with ID ${repoId}`,
+          details: `No repository found with ID ${repoId}`
         });
       }
 
-      const readme =
-        (await getReadmeContent(accessToken, username, repo.name)) || "";
+      const readme = await getReadmeContent(
+        accessToken,
+        username,
+        repo.name
+      ) || '';
 
       const summary = await generateRepoSummary(
         repo.name,
-        repo.description || "",
+        repo.description || '',
         readme,
         openaiKey,
-        customPrompt,
+        customPrompt
       );
 
       // Return the repository with the new summary
       res.json({
         repository: {
           ...repo,
-          summary: summary.summary,
-        },
+          summary: summary.summary
+        }
       });
     } catch (error) {
-      console.error("Failed to analyze repository:", error);
+      console.error('Failed to analyze repository:', error);
       res.status(500).json({
         error: "Failed to analyze repository",
-        details: error instanceof Error ? error.message : String(error),
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -157,32 +145,20 @@ export async function registerRoutes(app: Express) {
     try {
       const user = await getGithubUser(accessToken);
       const openaiKey = req.body.openaiKey; // Added to pass to generatePortfolioHtml
-      const introduction = await generateUserIntroduction(
-        repositories,
-        openaiKey,
-      ); // Added to get introduction
-      const theme = themes.find((t) => t.id === themeId) || themes[1]; // Find theme or default to modern
-      const html = generatePortfolioHtml(
-        user.username,
-        repositories,
-        introduction,
-        user.avatarUrl,
-        theme,
-      );
+      const introduction = await generateUserIntroduction(repositories, openaiKey); // Added to get introduction
+      const theme = themes.find(t => t.id === themeId) || themes[1]; // Find theme or default to modern
+      const html = generatePortfolioHtml(user.username, repositories, introduction, user.avatarUrl, theme);
 
       if (downloadOnly) {
         return res.json({ html });
       }
 
-      const { repoUrl, wasCreated } = await createPortfolioRepository(
-        accessToken,
-        user.username,
-      );
+      const { repoUrl, wasCreated } = await createPortfolioRepository(accessToken, user.username);
       await commitPortfolioFiles(accessToken, user.username, [
         {
           path: "index.html",
-          content: html,
-        },
+          content: html
+        }
       ]);
 
       res.json({
@@ -191,13 +167,13 @@ export async function registerRoutes(app: Express) {
         wasCreated,
         message: wasCreated
           ? "Repository created and portfolio files added successfully"
-          : "Portfolio repository updated successfully",
+          : "Portfolio repository updated successfully"
       });
     } catch (error) {
-      console.error("Failed to deploy to GitHub:", error);
+      console.error('Failed to deploy to GitHub:', error);
       res.status(500).json({
         error: "Failed to deploy to GitHub",
-        details: error instanceof Error ? error.message : String(error),
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -211,31 +187,16 @@ export async function registerRoutes(app: Express) {
     }
 
     if (!Array.isArray(repositories) || repositories.length === 0) {
-      return res
-        .status(400)
-        .json({ error: "No repositories provided for deployment" });
+      return res.status(400).json({ error: "No repositories provided for deployment" });
     }
 
     try {
       const user = await getGithubUser(accessToken);
-      const introduction = await generateUserIntroduction(
-        repositories,
-        openaiKey,
-      ); // Added to get introduction
-      const theme = themes.find((t) => t.id === themeId) || themes[1]; // Find theme or default to modern
-      const html = generatePortfolioHtml(
-        user.username,
-        repositories,
-        introduction,
-        user.avatarUrl,
-        theme,
-      );
+      const introduction = await generateUserIntroduction(repositories, openaiKey); // Added to get introduction
+      const theme = themes.find(t => t.id === themeId) || themes[1]; // Find theme or default to modern
+      const html = generatePortfolioHtml(user.username, repositories, introduction, user.avatarUrl, theme);
 
-      const { url, wasCreated } = await deployToGitHubPages(
-        accessToken,
-        user.username,
-        html,
-      );
+      const { url, wasCreated } = await deployToGitHubPages(accessToken, user.username, html);
 
       res.json({
         success: true,
@@ -243,20 +204,20 @@ export async function registerRoutes(app: Express) {
         wasCreated,
         message: wasCreated
           ? "GitHub Pages repository created and portfolio deployed successfully"
-          : "Portfolio deployed to GitHub Pages successfully",
+          : "Portfolio deployed to GitHub Pages successfully"
       });
     } catch (error) {
-      console.error("Failed to deploy to GitHub Pages:", error);
+      console.error('Failed to deploy to GitHub Pages:', error);
       res.status(500).json({
         error: "Failed to deploy to GitHub Pages",
-        details: error instanceof Error ? error.message : String(error),
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
 
   app.post("/api/user/introduction", async (req, res) => {
     const { repositories, openaiKey } = req.body;
-    const accessToken = req.headers.authorization?.replace("Bearer ", "");
+    const accessToken = req.headers.authorization?.replace('Bearer ', '');
 
     if (!accessToken) {
       return res.status(401).json({ error: "No access token provided" });
@@ -264,23 +225,20 @@ export async function registerRoutes(app: Express) {
 
     try {
       const user = await getGithubUser(accessToken);
-      const introduction = await generateUserIntroduction(
-        repositories,
-        openaiKey,
-      );
+      const introduction = await generateUserIntroduction(repositories, openaiKey);
 
       res.json({
         introduction,
         user: {
           username: user.username,
-          avatarUrl: user.avatarUrl,
-        },
+          avatarUrl: user.avatarUrl
+        }
       });
     } catch (error) {
-      console.error("Failed to generate user introduction:", error);
+      console.error('Failed to generate user introduction:', error);
       res.status(500).json({
         error: "Failed to generate user introduction",
-        details: error instanceof Error ? error.message : String(error),
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -297,76 +255,53 @@ export async function registerRoutes(app: Express) {
 
     try {
       const params = new URLSearchParams();
-      params.append("client_id", process.env.VERCEL_CLIENT_ID!);
-      params.append("client_secret", process.env.VERCEL_CLIENT_SECRET!);
-      params.append("code", code);
-      params.append(
-        "redirect_uri",
-        `${process.env.APP_URL}/api/deploy/vercel/callback`,
-      );
+      params.append('client_id', process.env.VERCEL_CLIENT_ID!);
+      params.append('client_secret', process.env.VERCEL_CLIENT_SECRET!);
+      params.append('code', code);
+      params.append('redirect_uri', `${process.env.APP_URL}/api/deploy/vercel/callback`);
 
-      const tokenResponse = await fetch(
-        "https://api.vercel.com/v2/oauth/access_token",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: params.toString(),
+      const tokenResponse = await fetch("https://api.vercel.com/v2/oauth/access_token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
         },
-      );
+        body: params.toString()
+      });
 
       const tokenData = await tokenResponse.json();
 
       if (tokenData.error) {
-        throw new Error(
-          `Vercel OAuth error: ${tokenData.error_description || tokenData.error}`,
-        );
+        throw new Error(`Vercel OAuth error: ${tokenData.error_description || tokenData.error}`);
       }
 
       res.json({
         accessToken: tokenData.access_token,
-        teamId: tokenData.team_id, // might be null for personal account
+        teamId: tokenData.team_id // might be null for personal account
       });
     } catch (error) {
-      console.error("Vercel OAuth error:", error);
+      console.error('Vercel OAuth error:', error);
       res.status(500).json({
         error: "Failed to authenticate with Vercel",
-        details: error instanceof Error ? error.message : String(error),
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
 
   app.post("/api/deploy/vercel", async (req, res) => {
-    const {
-      accessToken,
-      teamId,
-      username,
-      repositories,
-      themeId,
-      introduction,
-    } = req.body;
+    const { accessToken, teamId, username, repositories, themeId, introduction } = req.body;
 
     if (!accessToken || !username) {
-      return res
-        .status(400)
-        .json({ error: "Vercel access token and username are required" });
+      return res.status(400).json({ error: "Vercel access token and username are required" });
     }
 
     try {
       // First, generate the portfolio HTML
-      const theme = themes.find((t) => t.id === themeId) || themes[1]; // Find theme or default to modern
-      const html = generatePortfolioHtml(
-        username,
-        repositories,
-        introduction,
-        null,
-        theme,
-      );
+      const theme = themes.find(t => t.id === themeId) || themes[1]; // Find theme or default to modern
+      const html = generatePortfolioHtml(username, repositories, introduction, null, theme);
 
       // Create or update the GitHub repository
       const repoName = `${username}-foliolab`;
-      const githubToken = req.headers.authorization?.replace("Bearer ", "");
+      const githubToken = req.headers.authorization?.replace('Bearer ', '');
 
       if (!githubToken) {
         return res.status(401).json({ error: "GitHub token is required" });
@@ -379,74 +314,57 @@ export async function registerRoutes(app: Express) {
           throw new Error("GitHub token does not match the provided username");
         }
       } catch (error) {
-        console.error("GitHub token validation error:", error);
+        console.error('GitHub token validation error:', error);
         return res.status(401).json({
           error: "Invalid GitHub token",
-          details: "Please reconnect your GitHub account",
+          details: "Please reconnect your GitHub account"
         });
       }
 
       // Create or update the GitHub repository
-      const { repoUrl, wasCreated } = await createPortfolioRepository(
-        githubToken,
-        username,
-        repoName,
-      );
+      const { repoUrl, wasCreated } = await createPortfolioRepository(githubToken, username, repoName);
 
       // Commit portfolio files
-      await commitPortfolioFiles(
-        githubToken,
-        username,
-        [
-          {
-            path: "index.html",
-            content: html,
-          },
-        ],
-        repoName,
-      );
+      await commitPortfolioFiles(githubToken, username, [
+        {
+          path: "index.html",
+          content: html
+        }
+      ], repoName);
 
       // First, get or create the Vercel project
-      const getProjectResponse = await fetch(
-        `https://api.vercel.com/v9/projects/${repoName}`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            ...(teamId ? { "X-Vercel-Team-Id": teamId } : {}),
-          },
-        },
-      );
+      const getProjectResponse = await fetch(`https://api.vercel.com/v9/projects/${repoName}`, {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          ...(teamId ? { "X-Vercel-Team-Id": teamId } : {})
+        }
+      });
 
       let projectData;
       if (!getProjectResponse.ok) {
         // Project doesn't exist, create it
-        const createProjectResponse = await fetch(
-          "https://api.vercel.com/v9/projects",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-              ...(teamId ? { "X-Vercel-Team-Id": teamId } : {}),
-            },
-            body: JSON.stringify({
-              name: repoName,
-              gitRepository: {
-                repo: `${username}/${repoName}`,
-                type: "github",
-              },
-              framework: null,
-              buildCommand: null,
-              outputDirectory: ".",
-            }),
+        const createProjectResponse = await fetch("https://api.vercel.com/v9/projects", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+            ...(teamId ? { "X-Vercel-Team-Id": teamId } : {})
           },
-        );
+          body: JSON.stringify({
+            name: repoName,
+            gitRepository: {
+              repo: `${username}/${repoName}`,
+              type: "github",
+            },
+            framework: null,
+            buildCommand: null,
+            outputDirectory: ".",
+          })
+        });
 
         if (!createProjectResponse.ok) {
           const error = await createProjectResponse.json();
-          throw new Error(
-            `Vercel Project error: ${error.error?.message || "Unknown error"}`,
-          );
+          throw new Error(`Vercel Project error: ${error.error?.message || 'Unknown error'}`);
         }
         projectData = await createProjectResponse.json();
       } else {
@@ -454,58 +372,49 @@ export async function registerRoutes(app: Express) {
       }
 
       // Get all connected repositories for this project
-      const reposResponse = await fetch(
-        `https://api.vercel.com/v1/projects/${repoName}/connected-repositories`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            ...(teamId ? { "X-Vercel-Team-Id": teamId } : {}),
-          },
-        },
-      );
+      const reposResponse = await fetch(`https://api.vercel.com/v1/projects/${repoName}/connected-repositories`, {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          ...(teamId ? { "X-Vercel-Team-Id": teamId } : {})
+        }
+      });
 
       if (!reposResponse.ok) {
-        throw new Error("Failed to get connected repositories");
+        throw new Error('Failed to get connected repositories');
       }
 
       const reposData = await reposResponse.json();
       const connectedRepo = reposData.repositories?.find(
-        (repo: any) =>
-          repo.url === `https://github.com/${username}/${repoName}`,
+        (repo: any) => repo.url === `https://github.com/${username}/${repoName}`
       );
 
       if (!connectedRepo?.id) {
-        throw new Error("Repository not properly connected to Vercel project");
+        throw new Error('Repository not properly connected to Vercel project');
       }
 
       // Trigger a new deployment with the repository ID
-      const deploymentResponse = await fetch(
-        "https://api.vercel.com/v13/deployments",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-            ...(teamId ? { "X-Vercel-Team-Id": teamId } : {}),
-          },
-          body: JSON.stringify({
-            name: repoName,
-            project: repoName,
-            gitSource: {
-              type: "github",
-              repo: `${username}/${repoName}`,
-              ref: "main",
-              repoId: connectedRepo.id,
-            },
-          }),
+      const deploymentResponse = await fetch("https://api.vercel.com/v13/deployments", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+          ...(teamId ? { "X-Vercel-Team-Id": teamId } : {})
         },
-      );
+        body: JSON.stringify({
+          name: repoName,
+          project: repoName,
+          gitSource: {
+            type: "github",
+            repo: `${username}/${repoName}`,
+            ref: "main",
+            repoId: connectedRepo.id
+          }
+        })
+      });
 
       if (!deploymentResponse.ok) {
         const error = await deploymentResponse.json();
-        throw new Error(
-          `Vercel Deployment error: ${error.error?.message || "Unknown error"}`,
-        );
+        throw new Error(`Vercel Deployment error: ${error.error?.message || 'Unknown error'}`);
       }
 
       const deploymentData = await deploymentResponse.json();
@@ -514,13 +423,13 @@ export async function registerRoutes(app: Express) {
         projectId: repoName,
         deploymentId: deploymentData.id,
         url: `https://${repoName}.vercel.app`,
-        repoUrl,
+        repoUrl
       });
     } catch (error) {
-      console.error("Failed to deploy to Vercel:", error);
+      console.error('Failed to deploy to Vercel:', error);
       res.status(500).json({
         error: "Failed to deploy to Vercel",
-        details: error instanceof Error ? error.message : String(error),
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -534,33 +443,28 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
-      const statusResponse = await fetch(
-        `https://api.vercel.com/v13/deployments/${deploymentId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        },
-      );
+      const statusResponse = await fetch(`https://api.vercel.com/v13/deployments/${deploymentId}`, {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+        }
+      });
 
       const statusData = await statusResponse.json();
 
       if (statusData.error) {
-        throw new Error(
-          `Vercel Status error: ${statusData.error.message || "Unknown error"}`,
-        );
+        throw new Error(`Vercel Status error: ${statusData.error.message || 'Unknown error'}`);
       }
 
       res.json({
         ready: statusData.ready,
         state: statusData.state,
-        url: statusData.url,
+        url: statusData.url
       });
     } catch (error) {
-      console.error("Failed to check Vercel deployment status:", error);
+      console.error('Failed to check Vercel deployment status:', error);
       res.status(500).json({
         error: "Failed to check deployment status",
-        details: error instanceof Error ? error.message : String(error),
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -575,31 +479,23 @@ export async function registerRoutes(app: Express) {
     try {
       // Exchange the configuration code for an access token
       const params = new URLSearchParams();
-      params.append("client_id", process.env.VERCEL_CLIENT_ID!);
-      params.append("client_secret", process.env.VERCEL_CLIENT_SECRET!);
-      params.append("code", code as string);
-      params.append(
-        "redirect_uri",
-        `${process.env.APP_URL}/api/deploy/vercel/callback`,
-      );
+      params.append('client_id', process.env.VERCEL_CLIENT_ID!);
+      params.append('client_secret', process.env.VERCEL_CLIENT_SECRET!);
+      params.append('code', code as string);
+      params.append('redirect_uri', `${process.env.APP_URL}/api/deploy/vercel/callback`);
 
-      const tokenResponse = await fetch(
-        "https://api.vercel.com/v2/oauth/access_token",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: params.toString(),
+      const tokenResponse = await fetch("https://api.vercel.com/v2/oauth/access_token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
         },
-      );
+        body: params.toString()
+      });
 
       const tokenData = await tokenResponse.json();
 
       if (tokenData.error) {
-        throw new Error(
-          `Vercel OAuth error: ${tokenData.error_description || tokenData.error}`,
-        );
+        throw new Error(`Vercel OAuth error: ${tokenData.error_description || tokenData.error}`);
       }
 
       // Return success page with script to send token back to main window
@@ -609,10 +505,10 @@ export async function registerRoutes(app: Express) {
         <body>
           <script>
             window.opener.postMessage(
-              {
-                type: 'vercel-oauth-success',
-                token: '${tokenData.access_token}',
-                teamId: '${teamId || ""}',
+              { 
+                type: 'vercel-oauth-success', 
+                token: '${tokenData.access_token}', 
+                teamId: '${teamId || ''}',
                 configurationId: '${configurationId}'
               },
               window.location.origin
@@ -624,14 +520,14 @@ export async function registerRoutes(app: Express) {
         </html>
       `);
     } catch (error) {
-      console.error("Vercel integration callback error:", error);
+      console.error('Vercel integration callback error:', error);
       res.status(500).send(`
         <!DOCTYPE html>
         <html>
         <body>
           <script>
             window.opener.postMessage(
-              { type: 'vercel-oauth-error', error: '${error instanceof Error ? error.message : "Unknown error"}' },
+              { type: 'vercel-oauth-error', error: '${error instanceof Error ? error.message : 'Unknown error'}' },
               window.location.origin
             );
             window.close();
@@ -668,7 +564,7 @@ export async function registerRoutes(app: Express) {
         content: string;
         profile: string;
       };
-    } = themes[1], // Default to modern theme
+    } = themes[1] // Default to modern theme
   ): string {
     if (!repositories || repositories.length === 0) {
       throw new Error("No repositories provided for portfolio generation");
@@ -681,82 +577,76 @@ export async function registerRoutes(app: Express) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${username}'s Portfolio</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+    /* Define gradient backgrounds for themes */
+    .bg-gradient-to-br.from-indigo-50.via-white.to-purple-50 {
+      background: linear-gradient(to bottom right, #eef2ff, #ffffff, #faf5ff);
+    }
+    .bg-gradient-to-r.from-indigo-500.to-purple-500 {
+      background: linear-gradient(to right, #6366f1, #a855f7);
+      color: white; /* Ensure text is white on gradient background */
+    }
+    /* Add any other custom styles needed here */
+    </style>
 </head>
 <body class="${theme.preview.background}">
     <div class="container mx-auto px-4 py-20">
         <div class="${theme.layout.container}">
             <header class="${theme.layout.header}">
                 <div class="${theme.layout.profile}">
-                    ${
-                      avatarUrl
-                        ? `
+                    ${avatarUrl ? `
                     <div class="mb-6">
                         <img src="${avatarUrl}" alt="${username}" class="w-32 h-32 rounded-full mx-auto border-4 border-primary/10">
                     </div>
-                    `
-                        : ""
-                    }
+                    ` : ''}
                     <h1 class="text-4xl font-bold mb-4 ${theme.preview.text}">${username}'s Portfolio</h1>
-                    ${
-                      introduction
-                        ? `
+                    ${introduction ? `
                     <div class="max-w-2xl">
                         <p class="${theme.preview.text} mb-6">${introduction.introduction}</p>
                         <div class="flex flex-wrap gap-2 justify-center mb-6">
-                            ${introduction.skills
-                              .map(
-                                (skill) =>
-                                  `<span class="${theme.preview.accent} px-3 py-1 rounded-full text-sm font-medium">${skill}</span>`,
-                              )
-                              .join("")}
+                            ${introduction.skills.map(skill => {
+                              // For Modern theme with gradient background, use explicit classes
+                              return theme.id === 'modern' 
+                                ? `<span class="px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 text-white">${skill}</span>`
+                                : `<span class="${theme.preview.accent} px-3 py-1 rounded-full text-sm font-medium">${skill}</span>`;
+                            }).join('')}
                         </div>
                         <p class="${theme.preview.text} text-sm">
-                            <span class="font-medium">Interests:</span> ${introduction.interests.join(", ")}
+                            <span class="font-medium">Interests:</span> ${introduction.interests.join(', ')}
                         </p>
                     </div>
-                    `
-                        : ""
-                    }
+                    ` : ''}
                 </div>
             </header>
 
             <div class="${theme.layout.content}">
-                ${repositories
-                  .map((repo) => {
-                    if (!repo || typeof repo !== "object") {
-                      console.error("Invalid repository object:", repo);
-                      return "";
-                    }
+                ${repositories.map(repo => {
+                  if (!repo || typeof repo !== 'object') {
+                    console.error('Invalid repository object:', repo);
+                    return '';
+                  }
 
-                    const topics = Array.isArray(repo.metadata?.topics)
-                      ? repo.metadata.topics
-                      : [];
-                    const description = repo.summary || repo.description || "";
+                  const topics = Array.isArray(repo.metadata?.topics) ? repo.metadata.topics : [];
+                  const description = repo.summary || repo.description || '';
 
-                    return `
+                  return `
                     <article class="${theme.preview.card} p-6">
-                        <h2 class="text-2xl font-semibold mb-2 ${theme.preview.text}">${repo.name || "Untitled Project"}</h2>
+                        <h2 class="text-2xl font-semibold mb-2 ${theme.preview.text}">${repo.name || 'Untitled Project'}</h2>
                         <p class="${theme.preview.text} mb-4">${description}</p>
                         <div class="flex gap-2 flex-wrap">
-                            ${topics
-                              .map(
-                                (topic) =>
-                                  `<span class="${theme.preview.accent} px-2 py-1 rounded-full text-sm">${topic}</span>`,
-                              )
-                              .join("")}
+                            ${topics.map(topic =>
+                                `<span class="${theme.preview.accent} px-2 py-1 rounded-full text-sm">${topic}</span>`
+                            ).join('')}
                         </div>
                         <div class="mt-4 flex gap-4">
                             <a href="${repo.url}" class="${theme.preview.accent} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">View on GitHub</a>
-                            ${
-                              repo.metadata?.url
-                                ? `<a href="${repo.metadata.url}" class="${theme.preview.accent} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">Live Demo</a>`
-                                : ""
-                            }
+                            ${repo.metadata?.url ?
+                                `<a href="${repo.metadata.url}" class="${theme.preview.accent} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">Live Demo</a>`
+                                : ''}
                         </div>
                     </article>
                   `;
-                  })
-                  .join("")}
+                }).join('')}
             </div>
         </div>
     </div>
