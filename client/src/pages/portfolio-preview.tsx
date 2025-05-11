@@ -190,7 +190,7 @@ export default function PortfolioPreview() {
                         className={
                           isModern
                             ? "px-2 py-1 rounded-full text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
-                            : cn("px-2 py-1 rounded-full text-sm", theme.preview.accent)
+                            : "px-2 py-1 rounded-full text-sm bg-slate-800 text-white" // Explicit styling for Minimal theme
                         }
                       >
                         {topic}
@@ -247,7 +247,7 @@ export default function PortfolioPreview() {
                   className={
                     selectedTheme === "modern"
                       ? "px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
-                      : cn("px-3 py-1 rounded-full text-sm font-medium", theme.preview.accent)
+                      : "px-3 py-1 rounded-full text-sm font-medium bg-slate-800 text-white" // Explicit styling for Minimal theme
                   }
                 >
                   {skill}
