@@ -130,9 +130,17 @@ export default function PortfolioPreview() {
   }
 
   const renderPortfolioContent = () => (
-    <div className={theme.layout.content}>
+    <div className={selectedTheme === "minimal" 
+      ? theme.layout.content // For Minimal theme, use the theme's content layout class
+      : cn(theme.layout.content, "grid grid-cols-1 gap-6") // For others, add additional grid styling
+    }>
       {selectedRepos.map((repo) => (
-        <Card key={repo.id} className={theme.preview.card}>
+        <Card key={repo.id} className={cn(
+          theme.preview.card,
+          // Add additional styling for different themes
+          selectedTheme === "minimal" ? "mb-6" : "",
+          selectedTheme === "modern" ? "shadow-lg hover:shadow-xl transition-shadow" : ""
+        )}>
           <CardHeader>
             <div className="flex justify-between items-start">
               <h2 className={cn("text-2xl font-semibold", theme.preview.text)}>
@@ -199,8 +207,14 @@ export default function PortfolioPreview() {
   );
 
   const renderProfile = () => (
-    <div className={cn(theme.layout.header, "flex flex-col")}>
-      <div className={theme.layout.profile}>
+    <div className={selectedTheme === "minimal" 
+      ? cn(theme.layout.header, "")  // Use theme's header class only for Minimal theme
+      : cn(theme.layout.header, "flex flex-col") // Add flex-col for other themes
+    }>
+      <div className={cn(
+        theme.layout.profile,
+        selectedTheme === "minimal" ? "sticky top-8" : "" // Add sticky positioning for Minimal theme
+      )}>
         {userInfo && (
           <>
             <Avatar className="w-32 h-32 mb-6">
