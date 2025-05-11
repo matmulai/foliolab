@@ -3,6 +3,7 @@ import { Repository } from "@shared/schema";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Github, ExternalLink, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
@@ -134,10 +135,16 @@ export default function PortfolioPreview() {
     const isModern = selectedTheme === "modern";
     const isElegant = selectedTheme === "elegant";
     
+    // Skip rendering for Elegant theme as we handle it directly in the layout
+    if (isElegant) {
+      return null;
+    }
+    
+    // For other themes
     return (
       <div className={
-        isMinimal || isElegant
-          ? "" // For Minimal and Elegant, we'll apply the grid layout at the parent level
+        isMinimal
+          ? "" // For Minimal, we'll apply the grid layout at the parent level
           : cn(theme.layout.content, "grid grid-cols-1 gap-6") // For others, use theme styling plus grid
       }>
         {selectedRepos.map((repo) => (
@@ -146,7 +153,6 @@ export default function PortfolioPreview() {
             className={cn(
               theme.preview.card,
               isMinimal ? "mb-2" : "mb-6", // Reduce spacing for Minimal theme
-              isElegant ? "border-l-4 border-stone-900 rounded-none shadow-[0_2px_40px_-12px_rgba(0,0,0,0.1)] h-full bg-white" : "", // Enhanced styling for Elegant theme
               isModern ? "shadow-lg hover:shadow-xl transition-shadow" : ""
             )}
           >
@@ -318,8 +324,51 @@ export default function PortfolioPreview() {
               <div className="flex flex-col items-center text-center mb-16 max-w-3xl">
                 {renderProfile()}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full px-4 max-w-6xl mx-auto">
-                {renderPortfolioContent()}
+              <div className="w-full max-w-6xl mx-auto px-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {selectedRepos.map((repo) => (
+                    <Card 
+                      key={repo.id} 
+                      className="border-l-4 border-stone-900 rounded-none shadow-[0_2px_40px_-12px_rgba(0,0,0,0.1)] bg-white h-full"
+                    >
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <h2 className={cn("text-2xl font-semibold", theme.preview.text)}>
+                            {repo.name}
+                          </h2>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="icon" asChild>
+                              <a href={repo.url} target="_blank" rel="noopener noreferrer">
+                                <Github className="h-4 w-4" />
+                              </a>
+                            </Button>
+                            {repo.metadata.url && (
+                              <Button variant="outline" size="icon" asChild>
+                                <a href={repo.metadata.url} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="h-4 w-4" />
+                                </a>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className={cn("mb-4", theme.preview.text)}>
+                          {repo.summary || repo.description}
+                        </p>
+                        {repo.metadata.topics && repo.metadata.topics.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {repo.metadata.topics.map((topic) => (
+                              <Badge key={topic} variant="outline" className="bg-stone-900 text-stone-50">
+                                {topic}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
             </div>
           ) : (
