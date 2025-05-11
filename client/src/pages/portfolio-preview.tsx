@@ -132,11 +132,12 @@ export default function PortfolioPreview() {
   const renderPortfolioContent = () => {
     const isMinimal = selectedTheme === "minimal";
     const isModern = selectedTheme === "modern";
+    const isElegant = selectedTheme === "elegant";
     
     return (
       <div className={
-        isMinimal
-          ? "" // For Minimal, we'll apply the grid cell at the parent level
+        isMinimal || isElegant
+          ? "" // For Minimal and Elegant, we'll apply the grid layout at the parent level
           : cn(theme.layout.content, "grid grid-cols-1 gap-6") // For others, use theme styling plus grid
       }>
         {selectedRepos.map((repo) => (
@@ -144,7 +145,8 @@ export default function PortfolioPreview() {
             key={repo.id} 
             className={cn(
               theme.preview.card,
-              isMinimal ? "mb-2" : "mb-6", // Reduce spacing for Minimal theme to match downloaded HTML
+              isMinimal ? "mb-2" : "mb-6", // Reduce spacing for Minimal theme
+              isElegant ? "border-l-4 border-stone-900 rounded-none" : "", // Special styling for Elegant theme
               isModern ? "shadow-lg hover:shadow-xl transition-shadow" : ""
             )}
           >
@@ -285,8 +287,9 @@ export default function PortfolioPreview() {
             />
           </div>
 
-          {/* For Minimal theme, use explicit grid layout */}
+          {/* For specific themes, use explicit grid layouts */}
           {selectedTheme === "minimal" ? (
+            // Minimal theme layout - 2 columns with left sidebar
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               <div className="lg:col-span-4 flex justify-center">
                 {renderProfile()}
@@ -295,7 +298,18 @@ export default function PortfolioPreview() {
                 {renderPortfolioContent()}
               </div>
             </div>
+          ) : selectedTheme === "elegant" ? (
+            // Elegant theme layout - grid layout with repos side by side
+            <>
+              <div className="flex justify-center mb-16">
+                {renderProfile()}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {renderPortfolioContent()}
+              </div>
+            </>
           ) : (
+            // Default layout for other themes
             <div className={theme.layout.container}>
               {renderProfile()}
               {renderPortfolioContent()}
