@@ -146,7 +146,7 @@ export default function PortfolioPreview() {
             className={cn(
               theme.preview.card,
               isMinimal ? "mb-2" : "mb-6", // Reduce spacing for Minimal theme
-              isElegant ? "border-l-4 border-stone-900 rounded-none shadow-[0_2px_40px_-12px_rgba(0,0,0,0.1)] h-full" : "", // Enhanced styling for Elegant theme
+              isElegant ? "border-l-4 border-stone-900 rounded-none shadow-[0_2px_40px_-12px_rgba(0,0,0,0.1)] h-full bg-white" : "", // Enhanced styling for Elegant theme
               isModern ? "shadow-lg hover:shadow-xl transition-shadow" : ""
             )}
           >
@@ -318,7 +318,7 @@ export default function PortfolioPreview() {
               <div className="flex flex-col items-center text-center mb-16 max-w-3xl">
                 {renderProfile()}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full px-4 max-w-6xl mx-auto">
                 {renderPortfolioContent()}
               </div>
             </div>
