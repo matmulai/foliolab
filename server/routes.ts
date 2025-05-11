@@ -667,7 +667,7 @@ export async function registerRoutes(app: Express) {
                   const description = repo.summary || repo.description || '';
                   
                   // Add margin-bottom for Minimal theme to match the spacing in the preview
-                  const marginClass = theme.id === 'minimal' ? 'mb-6' : '';
+                  const marginClass = theme.id === 'minimal' ? 'mb-2' : '';
 
                   return `
                     <article class="${theme.preview.card} p-6 relative card-shadow ${marginClass}">
