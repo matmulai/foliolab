@@ -129,92 +129,102 @@ export default function PortfolioPreview() {
     );
   }
 
-  const renderPortfolioContent = () => (
-    <div className={selectedTheme === "minimal" 
-      ? theme.layout.content // For Minimal theme, use the theme's content layout class
-      : cn(theme.layout.content, "grid grid-cols-1 gap-6") // For others, add additional grid styling
-    }>
-      {selectedRepos.map((repo) => (
-        <Card key={repo.id} className={cn(
-          theme.preview.card,
-          // Add additional styling for different themes
-          selectedTheme === "minimal" ? "mb-6" : "",
-          selectedTheme === "modern" ? "shadow-lg hover:shadow-xl transition-shadow" : ""
-        )}>
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <h2 className={cn("text-2xl font-semibold", theme.preview.text)}>
-                {repo.name}
-              </h2>
-              <div className="flex gap-2">
-                <Button variant="outline" size="icon" asChild>
-                  <a
-                    href={repo.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Github className="h-4 w-4" />
-                  </a>
-                </Button>
-                {repo.metadata.url && (
+  const renderPortfolioContent = () => {
+    const isMinimal = selectedTheme === "minimal";
+    const isModern = selectedTheme === "modern";
+    
+    return (
+      <div className={
+        isMinimal
+          ? "" // For Minimal, we'll apply the grid cell at the parent level
+          : cn(theme.layout.content, "grid grid-cols-1 gap-6") // For others, use theme styling plus grid
+      }>
+        {selectedRepos.map((repo) => (
+          <Card 
+            key={repo.id} 
+            className={cn(
+              theme.preview.card,
+              isMinimal ? "mb-6" : "",
+              isModern ? "shadow-lg hover:shadow-xl transition-shadow" : ""
+            )}
+          >
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <h2 className={cn("text-2xl font-semibold", theme.preview.text)}>
+                  {repo.name}
+                </h2>
+                <div className="flex gap-2">
                   <Button variant="outline" size="icon" asChild>
                     <a
-                      href={repo.metadata.url}
+                      href={repo.url}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      <ExternalLink className="h-4 w-4" />
+                      <Github className="h-4 w-4" />
                     </a>
                   </Button>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {repo.summary ? (
-              <>
-                <p className={cn("mb-4", theme.preview.text)}>
-                  {repo.summary}
-                </p>
-                <div className="flex gap-2 flex-wrap">
-                  {repo.metadata.topics.map((topic) => (
-                    <span
-                      key={topic}
-                      className={
-                        selectedTheme === "modern"
-                          ? "px-2 py-1 rounded-full text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
-                          : cn("px-2 py-1 rounded-full text-sm", theme.preview.accent)
-                      }
-                    >
-                      {topic}
-                    </span>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="space-y-4">
-                <Skeleton className="h-24" />
-                <div className="flex gap-2">
-                  <Skeleton className="h-6 w-20" />
-                  <Skeleton className="h-6 w-20" />
+                  {repo.metadata.url && (
+                    <Button variant="outline" size="icon" asChild>
+                      <a
+                        href={repo.metadata.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  )}
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
+            </CardHeader>
+            <CardContent>
+              {repo.summary ? (
+                <>
+                  <p className={cn("mb-4", theme.preview.text)}>
+                    {repo.summary}
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    {repo.metadata.topics.map((topic) => (
+                      <span
+                        key={topic}
+                        className={
+                          isModern
+                            ? "px-2 py-1 rounded-full text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
+                            : cn("px-2 py-1 rounded-full text-sm", theme.preview.accent)
+                        }
+                      >
+                        {topic}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-4">
+                  <Skeleton className="h-24" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-6 w-20" />
+                    <Skeleton className="h-6 w-20" />
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
 
-  const renderProfile = () => (
-    <div className={selectedTheme === "minimal" 
-      ? cn(theme.layout.header, "")  // Use theme's header class only for Minimal theme
-      : cn(theme.layout.header, "flex flex-col") // Add flex-col for other themes
-    }>
-      <div className={cn(
-        theme.layout.profile,
-        selectedTheme === "minimal" ? "sticky top-8" : "" // Add sticky positioning for Minimal theme
-      )}>
+  const renderProfile = () => {
+    // For Minimal theme, we're already setting the grid cell at the parent level
+    const isMinimal = selectedTheme === "minimal";
+    
+    // Create the profile content
+    return (
+      <div className={
+        isMinimal
+          ? "sticky top-8 flex flex-col items-center" // Simplified for Minimal, as we set the container above
+          : cn(theme.layout.header, "flex flex-col") // Use theme styling for other themes
+      }>
         {userInfo && (
           <>
             <Avatar className="w-32 h-32 mb-6">
@@ -228,9 +238,9 @@ export default function PortfolioPreview() {
         )}
 
         {userIntro && (
-          <div className={cn("space-y-6", selectedTheme === "minimal" ? "text-left" : "text-center")}>
+          <div className={cn("space-y-6", isMinimal ? "text-left" : "text-center")}>
             <p className={cn("leading-relaxed", theme.preview.text)}>{userIntro.introduction}</p>
-            <div className={cn("flex flex-wrap gap-2", selectedTheme === "minimal" ? "" : "justify-center")}>
+            <div className={cn("flex flex-wrap gap-2", isMinimal ? "" : "justify-center")}>
               {userIntro.skills.map((skill, index) => (
                 <span
                   key={index}
@@ -251,8 +261,8 @@ export default function PortfolioPreview() {
           </div>
         )}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className={cn("min-h-screen transition-colors", theme.preview.background)}>
@@ -275,10 +285,22 @@ export default function PortfolioPreview() {
             />
           </div>
 
-          <div className={theme.layout.container}>
-            {renderProfile()}
-            {renderPortfolioContent()}
-          </div>
+          {/* For Minimal theme, use explicit grid layout */}
+          {selectedTheme === "minimal" ? (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              <div className="lg:col-span-4 flex justify-center">
+                {renderProfile()}
+              </div>
+              <div className="lg:col-span-8">
+                {renderPortfolioContent()}
+              </div>
+            </div>
+          ) : (
+            <div className={theme.layout.container}>
+              {renderProfile()}
+              {renderPortfolioContent()}
+            </div>
+          )}
 
           <DeploymentActions
             repositories={selectedRepos}
