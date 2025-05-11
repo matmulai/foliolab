@@ -665,9 +665,12 @@ export async function registerRoutes(app: Express) {
 
                   const topics = Array.isArray(repo.metadata?.topics) ? repo.metadata.topics : [];
                   const description = repo.summary || repo.description || '';
+                  
+                  // Add margin-bottom for Minimal theme to match the spacing in the preview
+                  const marginClass = theme.id === 'minimal' ? 'mb-6' : '';
 
                   return `
-                    <article class="${theme.preview.card} p-6 relative card-shadow">
+                    <article class="${theme.preview.card} p-6 relative card-shadow ${marginClass}">
                         <div class="flex justify-between items-start">
                             <h2 class="text-2xl font-semibold mb-2 ${theme.preview.text}">${repo.name || 'Untitled Project'}</h2>
                             <div class="flex gap-2">
