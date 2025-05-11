@@ -37,7 +37,7 @@ export default function PortfolioPreview() {
   // Get repository data from client-side cache
   const { data, isLoading, error } = useQuery<{ repositories: Repository[] }>({
     queryKey: ["/api/repositories"],
-    retry: 2,
+    retry: 2
   });
 
   // Generate user introduction
@@ -55,14 +55,13 @@ export default function PortfolioPreview() {
       setUserInfo(data.user);
     },
     onError: (err) => {
-      console.error("Error generating introduction:", err);
+      console.error('Error generating introduction:', err);
       toast({
         title: "Warning",
-        description:
-          "Could not generate personalized introduction. Proceeding with basic preview.",
+        description: "Could not generate personalized introduction. Proceeding with basic preview.",
         variant: "destructive",
       });
-    },
+    }
   });
 
   useEffect(() => {
@@ -75,8 +74,7 @@ export default function PortfolioPreview() {
       } else {
         toast({
           title: "No Repositories Selected",
-          description:
-            "Please go back and select repositories to include in your portfolio.",
+          description: "Please go back and select repositories to include in your portfolio.",
           variant: "destructive",
         });
       }
@@ -88,12 +86,8 @@ export default function PortfolioPreview() {
       <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
         <div className="container mx-auto px-4 py-20">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">
-              Error Loading Portfolio
-            </h1>
-            <p className="text-gray-600 mb-6">
-              Failed to load repository data. Please try again.
-            </p>
+            <h1 className="text-2xl font-bold text-red-600 mb-4">Error Loading Portfolio</h1>
+            <p className="text-gray-600 mb-6">Failed to load repository data. Please try again.</p>
             <Button onClick={() => setLocation("/repos")}>
               Return to Repository Selection
             </Button>
@@ -146,7 +140,11 @@ export default function PortfolioPreview() {
               </h2>
               <div className="flex gap-2">
                 <Button variant="outline" size="icon" asChild>
-                  <a href={repo.url} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={repo.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <Github className="h-4 w-4" />
                   </a>
                 </Button>
@@ -167,15 +165,18 @@ export default function PortfolioPreview() {
           <CardContent>
             {repo.summary ? (
               <>
-                <p className={cn("mb-4", theme.preview.text)}>{repo.summary}</p>
+                <p className={cn("mb-4", theme.preview.text)}>
+                  {repo.summary}
+                </p>
                 <div className="flex gap-2 flex-wrap">
                   {repo.metadata.topics.map((topic) => (
                     <span
                       key={topic}
-                      className={cn(
-                        "px-2 py-1 rounded-full text-sm",
-                        theme.preview.accent,
-                      )}
+                      className={
+                        selectedTheme === "modern"
+                          ? "px-2 py-1 rounded-full text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
+                          : cn("px-2 py-1 rounded-full text-sm", theme.preview.accent)
+                      }
                     >
                       {topic}
                     </span>
@@ -203,13 +204,8 @@ export default function PortfolioPreview() {
         {userInfo && (
           <>
             <Avatar className="w-32 h-32 mb-6">
-              <AvatarImage
-                src={userInfo.avatarUrl || undefined}
-                alt={userInfo.username}
-              />
-              <AvatarFallback>
-                {userInfo.username.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
+              <AvatarImage src={userInfo.avatarUrl || undefined} alt={userInfo.username} />
+              <AvatarFallback>{userInfo.username.slice(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
             <h1 className={cn("text-4xl font-bold mb-6", theme.preview.text)}>
               {userInfo.username}'s Portfolio
@@ -218,28 +214,17 @@ export default function PortfolioPreview() {
         )}
 
         {userIntro && (
-          <div
-            className={cn(
-              "space-y-6",
-              selectedTheme === "minimal" ? "text-left" : "text-center",
-            )}
-          >
-            <p className={cn("leading-relaxed", theme.preview.text)}>
-              {userIntro.introduction}
-            </p>
-            <div
-              className={cn(
-                "flex flex-wrap gap-2",
-                selectedTheme === "minimal" ? "" : "justify-center",
-              )}
-            >
+          <div className={cn("space-y-6", selectedTheme === "minimal" ? "text-left" : "text-center")}>
+            <p className={cn("leading-relaxed", theme.preview.text)}>{userIntro.introduction}</p>
+            <div className={cn("flex flex-wrap gap-2", selectedTheme === "minimal" ? "" : "justify-center")}>
               {userIntro.skills.map((skill, index) => (
                 <span
                   key={index}
-                  className={cn(
-                    "px-3 py-1 rounded-full text-sm font-medium",
-                    theme.preview.accent,
-                  )}
+                  className={
+                    selectedTheme === "modern"
+                      ? "px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
+                      : cn("px-3 py-1 rounded-full text-sm font-medium", theme.preview.accent)
+                  }
                 >
                   {skill}
                 </span>
@@ -256,15 +241,13 @@ export default function PortfolioPreview() {
   );
 
   return (
-    <div
-      className={cn("min-h-screen transition-colors", theme.preview.background)}
-    >
+    <div className={cn("min-h-screen transition-colors", theme.preview.background)}>
       <div className="container mx-auto px-4 py-20">
         <div className="flex flex-col gap-8">
           <div className="flex items-center justify-between mb-8">
-            <Button
-              variant="outline"
-              size="sm"
+            <Button 
+              variant="outline" 
+              size="sm" 
               onClick={() => setLocation("/repos")}
               className="flex items-center gap-2"
             >
