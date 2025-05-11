@@ -146,7 +146,7 @@ export default function PortfolioPreview() {
             className={cn(
               theme.preview.card,
               isMinimal ? "mb-2" : "mb-6", // Reduce spacing for Minimal theme
-              isElegant ? "border-l-4 border-stone-900 rounded-none" : "", // Special styling for Elegant theme
+              isElegant ? "border-l-4 border-stone-900 rounded-none shadow-[0_2px_40px_-12px_rgba(0,0,0,0.1)] h-full" : "", // Enhanced styling for Elegant theme
               isModern ? "shadow-lg hover:shadow-xl transition-shadow" : ""
             )}
           >
@@ -217,15 +217,19 @@ export default function PortfolioPreview() {
   };
 
   const renderProfile = () => {
-    // For Minimal theme, we're already setting the grid cell at the parent level
+    // Track current theme for conditional styling
     const isMinimal = selectedTheme === "minimal";
+    const isElegant = selectedTheme === "elegant";
+    const isModern = selectedTheme === "modern";
     
     // Create the profile content
     return (
       <div className={
         isMinimal
           ? "sticky top-8 flex flex-col items-center" // Simplified for Minimal, as we set the container above
-          : cn(theme.layout.header, "flex flex-col") // Use theme styling for other themes
+          : isElegant
+            ? "flex flex-col items-center w-full" // Center everything for Elegant theme
+            : cn(theme.layout.header, "flex flex-col") // Use theme styling for other themes
       }>
         {userInfo && (
           <>
@@ -240,16 +244,22 @@ export default function PortfolioPreview() {
         )}
 
         {userIntro && (
-          <div className={cn("space-y-6", isMinimal ? "text-left" : "text-center")}>
+          <div className={cn(
+            "space-y-6", 
+            isMinimal ? "text-left" : "text-center",
+            isElegant ? "max-w-3xl mx-auto" : "" // Add max width for Elegant theme
+          )}>
             <p className={cn("leading-relaxed", theme.preview.text)}>{userIntro.introduction}</p>
             <div className={cn("flex flex-wrap gap-2", isMinimal ? "" : "justify-center")}>
               {userIntro.skills.map((skill, index) => (
                 <span
                   key={index}
                   className={
-                    selectedTheme === "modern"
+                    isModern
                       ? "px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
-                      : "px-3 py-1 rounded-full text-sm font-medium bg-slate-800 text-white" // Explicit styling for Minimal theme
+                      : isElegant
+                        ? "px-3 py-1 rounded-full text-sm font-medium bg-stone-900 text-stone-50" // Special styling for Elegant
+                        : "px-3 py-1 rounded-full text-sm font-medium bg-slate-800 text-white" // Default for Minimal
                   }
                 >
                   {skill}
@@ -267,7 +277,11 @@ export default function PortfolioPreview() {
   };
 
   return (
-    <div className={cn("min-h-screen transition-colors", theme.preview.background)}>
+    <div className={cn(
+      "min-h-screen transition-colors", 
+      theme.preview.background,
+      selectedTheme === "elegant" ? "bg-stone-50" : ""
+    )}>
       <div className="container mx-auto px-4 py-20">
         <div className="flex flex-col gap-8">
           <div className="flex items-center justify-between mb-8">
@@ -300,14 +314,14 @@ export default function PortfolioPreview() {
             </div>
           ) : selectedTheme === "elegant" ? (
             // Elegant theme layout - grid layout with repos side by side
-            <>
-              <div className="flex justify-center mb-16">
+            <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center text-center mb-16 max-w-3xl">
                 {renderProfile()}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
                 {renderPortfolioContent()}
               </div>
-            </>
+            </div>
           ) : (
             // Default layout for other themes
             <div className={theme.layout.container}>
