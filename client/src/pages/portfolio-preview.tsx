@@ -144,7 +144,7 @@ export default function PortfolioPreview() {
             key={repo.id} 
             className={cn(
               theme.preview.card,
-              isMinimal ? "mb-6" : "",
+              isMinimal ? "mb-2" : "mb-6", // Reduce spacing for Minimal theme to match downloaded HTML
               isModern ? "shadow-lg hover:shadow-xl transition-shadow" : ""
             )}
           >

@@ -136,7 +136,7 @@ export async function registerRoutes(app: Express) {
   });
 
   app.post("/api/deploy/github", async (req, res) => {
-    const { accessToken, downloadOnly, repositories, themeId } = req.body; // Added themeId
+    const { accessToken, downloadOnly, repositories, themeId, userInfo, introduction } = req.body;
 
     if (!accessToken) {
       return res.status(400).json({ error: "GitHub access token is required" });
@@ -144,10 +144,17 @@ export async function registerRoutes(app: Express) {
 
     try {
       const user = await getGithubUser(accessToken);
-      const openaiKey = req.body.openaiKey; // Added to pass to generatePortfolioHtml
-      const introduction = await generateUserIntroduction(repositories, openaiKey); // Added to get introduction
+      // Use the provided introduction if available, otherwise generate a new one
+      let userIntroduction = introduction;
+      
+      // Only generate a new introduction if one wasn't provided
+      if (!userIntroduction) {
+        const openaiKey = req.body.openaiKey;
+        userIntroduction = await generateUserIntroduction(repositories, openaiKey);
+      }
+      
       const theme = themes.find(t => t.id === themeId) || themes[1]; // Find theme or default to modern
-      const html = generatePortfolioHtml(user.username, repositories, introduction, user.avatarUrl, theme);
+      const html = generatePortfolioHtml(user.username, repositories, userIntroduction, user.avatarUrl, theme);
 
       if (downloadOnly) {
         return res.json({ html });
@@ -179,8 +186,8 @@ export async function registerRoutes(app: Express) {
   });
 
   app.post("/api/deploy/github-pages", async (req, res) => {
-    const { accessToken, repositories, themeId } = req.body; // Added themeId
-    const openaiKey = req.body.openaiKey; // Added to pass to generatePortfolioHtml
+    const { accessToken, repositories, themeId, userInfo, introduction } = req.body;
+    const openaiKey = req.body.openaiKey;
 
     if (!accessToken) {
       return res.status(400).json({ error: "GitHub access token is required" });
@@ -192,9 +199,17 @@ export async function registerRoutes(app: Express) {
 
     try {
       const user = await getGithubUser(accessToken);
-      const introduction = await generateUserIntroduction(repositories, openaiKey); // Added to get introduction
+      
+      // Use the provided introduction if available, otherwise generate a new one
+      let userIntroduction = introduction;
+      
+      // Only generate a new introduction if one wasn't provided
+      if (!userIntroduction) {
+        userIntroduction = await generateUserIntroduction(repositories, openaiKey);
+      }
+      
       const theme = themes.find(t => t.id === themeId) || themes[1]; // Find theme or default to modern
-      const html = generatePortfolioHtml(user.username, repositories, introduction, user.avatarUrl, theme);
+      const html = generatePortfolioHtml(user.username, repositories, userIntroduction, user.avatarUrl, theme);
 
       const { url, wasCreated } = await deployToGitHubPages(accessToken, user.username, html);
 
