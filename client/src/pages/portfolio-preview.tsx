@@ -325,7 +325,7 @@ export default function PortfolioPreview() {
                 {renderProfile()}
               </div>
               <div className="w-full max-w-6xl mx-auto px-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   {selectedRepos.map((repo) => (
                     <Card 
                       key={repo.id} 
