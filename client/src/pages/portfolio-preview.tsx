@@ -38,7 +38,7 @@ export default function PortfolioPreview() {
   // Get repository data from client-side cache
   const { data, isLoading, error } = useQuery<{ repositories: Repository[] }>({
     queryKey: ["/api/repositories"],
-    retry: 2
+    retry: 2,
   });
 
   // Generate user introduction
@@ -56,13 +56,14 @@ export default function PortfolioPreview() {
       setUserInfo(data.user);
     },
     onError: (err) => {
-      console.error('Error generating introduction:', err);
+      console.error("Error generating introduction:", err);
       toast({
         title: "Warning",
-        description: "Could not generate personalized introduction. Proceeding with basic preview.",
+        description:
+          "Could not generate personalized introduction. Proceeding with basic preview.",
         variant: "destructive",
       });
-    }
+    },
   });
 
   useEffect(() => {
@@ -75,7 +76,8 @@ export default function PortfolioPreview() {
       } else {
         toast({
           title: "No Repositories Selected",
-          description: "Please go back and select repositories to include in your portfolio.",
+          description:
+            "Please go back and select repositories to include in your portfolio.",
           variant: "destructive",
         });
       }
@@ -87,8 +89,12 @@ export default function PortfolioPreview() {
       <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
         <div className="container mx-auto px-4 py-20">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">Error Loading Portfolio</h1>
-            <p className="text-gray-600 mb-6">Failed to load repository data. Please try again.</p>
+            <h1 className="text-2xl font-bold text-red-600 mb-4">
+              Error Loading Portfolio
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Failed to load repository data. Please try again.
+            </p>
             <Button onClick={() => setLocation("/repos")}>
               Return to Repository Selection
             </Button>
@@ -134,33 +140,49 @@ export default function PortfolioPreview() {
     const isMinimal = selectedTheme === "minimal";
     const isModern = selectedTheme === "modern";
     const isElegant = selectedTheme === "elegant";
-    
+
     // Skip rendering for Elegant theme as we handle it directly in the layout
     if (isElegant) {
       return null;
     }
-    
+
     // For other themes
     return (
-      <div className={
-        isMinimal
-          ? "" // For Minimal, we'll apply the grid layout at the parent level
-          : cn(theme.layout.content, "grid grid-cols-1 gap-6") // For others, use theme styling plus grid
-      }>
+      <div
+        className={
+          isMinimal
+            ? "" // For Minimal, we'll apply the grid layout at the parent level
+            : cn(theme.layout.content, "grid grid-cols-1 gap-6") // For others, use theme styling plus grid
+        }
+      >
         {selectedRepos.map((repo) => (
-          <Card 
-            key={repo.id} 
+          <Card
+            key={repo.id}
             className={cn(
               theme.preview.card,
-              isMinimal ? "mb-2" : "mb-6", // Reduce spacing for Minimal theme
-              isModern ? "shadow-lg hover:shadow-xl transition-shadow" : ""
+              isMinimal ? "mb-2" : "mb-4", // Reduce spacing for Minimal theme
+              isModern ? "shadow-lg hover:shadow-xl transition-shadow" : "",
             )}
           >
             <CardHeader>
               <div className="flex justify-between items-start">
-                <h2 className={cn("text-2xl font-semibold", theme.preview.text)}>
-                  {repo.name}
-                </h2>
+                <div className="flex flex-col">
+                  <h2
+                    className={cn("text-2xl font-semibold", theme.preview.text)}
+                  >
+                    {repo.name}
+                  </h2>
+                  {repo.metadata.stars > 0 && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-yellow-500">
+                        <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-sm text-gray-600">
+                        {repo.metadata.stars}
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="icon" asChild>
                     <a
@@ -227,21 +249,28 @@ export default function PortfolioPreview() {
     const isMinimal = selectedTheme === "minimal";
     const isElegant = selectedTheme === "elegant";
     const isModern = selectedTheme === "modern";
-    
+
     // Create the profile content
     return (
-      <div className={
-        isMinimal
-          ? "sticky top-8 flex flex-col items-center" // Simplified for Minimal, as we set the container above
-          : isElegant
-            ? "flex flex-col items-center w-full" // Center everything for Elegant theme
-            : cn(theme.layout.header, "flex flex-col") // Use theme styling for other themes
-      }>
+      <div
+        className={
+          isMinimal
+            ? "sticky top-8 flex flex-col items-center" // Simplified for Minimal, as we set the container above
+            : isElegant
+              ? "flex flex-col items-center w-full" // Center everything for Elegant theme
+              : cn(theme.layout.header, "flex flex-col") // Use theme styling for other themes
+        }
+      >
         {userInfo && (
           <>
             <Avatar className="w-32 h-32 mb-6">
-              <AvatarImage src={userInfo.avatarUrl || undefined} alt={userInfo.username} />
-              <AvatarFallback>{userInfo.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+              <AvatarImage
+                src={userInfo.avatarUrl || undefined}
+                alt={userInfo.username}
+              />
+              <AvatarFallback>
+                {userInfo.username.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
             <h1 className={cn("text-4xl font-bold mb-6", theme.preview.text)}>
               {userInfo.username}'s Portfolio
@@ -250,13 +279,22 @@ export default function PortfolioPreview() {
         )}
 
         {userIntro && (
-          <div className={cn(
-            "space-y-6", 
-            isMinimal ? "text-left" : "text-center",
-            isElegant ? "max-w-3xl mx-auto" : "" // Add max width for Elegant theme
-          )}>
-            <p className={cn("leading-relaxed", theme.preview.text)}>{userIntro.introduction}</p>
-            <div className={cn("flex flex-wrap gap-2", isMinimal ? "" : "justify-center")}>
+          <div
+            className={cn(
+              "space-y-6",
+              isMinimal ? "text-left" : "text-center",
+              isElegant ? "max-w-3xl mx-auto" : "", // Add max width for Elegant theme
+            )}
+          >
+            <p className={cn("leading-relaxed", theme.preview.text)}>
+              {userIntro.introduction}
+            </p>
+            <div
+              className={cn(
+                "flex flex-wrap gap-2",
+                isMinimal ? "" : "justify-center",
+              )}
+            >
               {userIntro.skills.map((skill, index) => (
                 <span
                   key={index}
@@ -283,17 +321,19 @@ export default function PortfolioPreview() {
   };
 
   return (
-    <div className={cn(
-      "min-h-screen transition-colors", 
-      theme.preview.background,
-      selectedTheme === "elegant" ? "bg-stone-50" : ""
-    )}>
+    <div
+      className={cn(
+        "min-h-screen transition-colors",
+        theme.preview.background,
+        selectedTheme === "elegant" ? "bg-stone-50" : "",
+      )}
+    >
       <div className="container mx-auto px-4 py-20">
         <div className="flex flex-col gap-8">
           <div className="flex items-center justify-between mb-8">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setLocation("/repos")}
               className="flex items-center gap-2"
             >
@@ -314,9 +354,7 @@ export default function PortfolioPreview() {
               <div className="lg:col-span-4 flex justify-center">
                 {renderProfile()}
               </div>
-              <div className="lg:col-span-8">
-                {renderPortfolioContent()}
-              </div>
+              <div className="lg:col-span-8">{renderPortfolioContent()}</div>
             </div>
           ) : selectedTheme === "elegant" ? (
             // Elegant theme layout - grid layout with repos side by side
@@ -327,24 +365,49 @@ export default function PortfolioPreview() {
               <div className="w-full max-w-6xl mx-auto px-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   {selectedRepos.map((repo) => (
-                    <Card 
-                      key={repo.id} 
+                    <Card
+                      key={repo.id}
                       className="border-l-4 border-stone-900 rounded-none shadow-[0_2px_40px_-12px_rgba(0,0,0,0.1)] bg-white h-full"
                     >
                       <CardHeader>
                         <div className="flex justify-between items-start">
-                          <h2 className={cn("text-2xl font-semibold", theme.preview.text)}>
+                          <div className="flex flex-col">
+                          <h2
+                            className={cn(
+                              "text-2xl font-semibold",
+                              theme.preview.text,
+                            )}
+                          >
                             {repo.name}
                           </h2>
+                          {repo.metadata.stars > 0 && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-yellow-500">
+                                <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
+                              </svg>
+                              <span className="text-sm text-gray-600">
+                                {repo.metadata.stars}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                           <div className="flex gap-2">
                             <Button variant="outline" size="icon" asChild>
-                              <a href={repo.url} target="_blank" rel="noopener noreferrer">
+                              <a
+                                href={repo.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
                                 <Github className="h-4 w-4" />
                               </a>
                             </Button>
                             {repo.metadata.url && (
                               <Button variant="outline" size="icon" asChild>
-                                <a href={repo.metadata.url} target="_blank" rel="noopener noreferrer">
+                                <a
+                                  href={repo.metadata.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
                                   <ExternalLink className="h-4 w-4" />
                                 </a>
                               </Button>
@@ -356,15 +419,20 @@ export default function PortfolioPreview() {
                         <p className={cn("mb-4", theme.preview.text)}>
                           {repo.summary || repo.description}
                         </p>
-                        {repo.metadata.topics && repo.metadata.topics.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {repo.metadata.topics.map((topic) => (
-                              <Badge key={topic} variant="outline" className="bg-stone-900 text-stone-50">
-                                {topic}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
+                        {repo.metadata.topics &&
+                          repo.metadata.topics.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {repo.metadata.topics.map((topic) => (
+                                <Badge
+                                  key={topic}
+                                  variant="outline"
+                                  className="bg-stone-900 text-stone-50"
+                                >
+                                  {topic}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                       </CardContent>
                     </Card>
                   ))}
