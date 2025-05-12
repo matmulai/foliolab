@@ -1,9 +1,9 @@
 import type { Express } from "express";
 import { createServer } from "http";
-import { getRepositories, getReadmeContent, getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages } from "./lib/github.js";
-import { generateRepoSummary, generateUserIntroduction } from "./lib/openai.js";
-import { Repository } from "../shared/schema.js";
-import { themes } from "../shared/themes.js";
+import { getRepositories, getReadmeContent, getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages, extractTitleFromReadme } from "./lib/github";
+import { generateRepoSummary, generateUserIntroduction } from "./lib/openai";
+import { Repository } from "../shared/schema";
+import { themes } from "../shared/themes";
 
 
 export async function registerRoutes(app: Express) {
@@ -111,6 +111,9 @@ export async function registerRoutes(app: Express) {
         repo.name
       ) || '';
 
+      // Extract title from README if available
+      const displayName = extractTitleFromReadme(readme);
+      
       const summary = await generateRepoSummary(
         repo.name,
         repo.description || '',
@@ -119,11 +122,12 @@ export async function registerRoutes(app: Express) {
         customPrompt
       );
 
-      // Return the repository with the new summary
+      // Return the repository with the new summary and display name
       res.json({
         repository: {
           ...repo,
-          summary: summary.summary
+          summary: summary.summary,
+          displayName: displayName || repo.displayName
         }
       });
     } catch (error) {
@@ -672,7 +676,7 @@ export async function registerRoutes(app: Express) {
                   return `
                     <article class="${theme.preview.card} p-6 relative card-shadow ${marginClass}">
                         <div class="flex justify-between items-start">
-                            <h2 class="text-2xl font-semibold mb-2 ${theme.preview.text}">${repo.name || 'Untitled Project'}</h2>
+                            <h2 class="text-2xl font-semibold mb-2 ${theme.preview.text}">${repo.displayName || repo.name || 'Untitled Project'}</h2>
                             <div class="flex items-center gap-2">
                                 ${repo.metadata?.stars > 0 ? `
                                 <span class="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">

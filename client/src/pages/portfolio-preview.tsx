@@ -169,7 +169,7 @@ export default function PortfolioPreview() {
                 <h2
                   className={cn("text-2xl font-semibold", theme.preview.text)}
                 >
-                  {repo.name}
+                  {repo.displayName || repo.name}
                 </h2>
                 <div className="flex items-center gap-2">
                   {repo.metadata.stars > 0 && (
@@ -370,7 +370,7 @@ export default function PortfolioPreview() {
                               theme.preview.text,
                             )}
                           >
-                            {repo.name}
+                            {repo.displayName || repo.name}
                           </h2>
                           <div className="flex items-center gap-2">
                             {repo.metadata.stars > 0 && (

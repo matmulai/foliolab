@@ -204,7 +204,31 @@ export async function getRepositories(
       }
     }
     
-    return Array.from(uniqueReposMap.values());
+    const repositories = Array.from(uniqueReposMap.values());
+    
+    // Fetch READMEs and extract titles (in batches to avoid rate limiting)
+    const batchSize = 5;
+    for (let i = 0; i < repositories.length; i += batchSize) {
+      const batch = repositories.slice(i, i + batchSize);
+      await Promise.all(
+        batch.map(async (repo) => {
+          try {
+            const readme = await getReadmeContent(accessToken, repo.owner.login, repo.name);
+            const displayName = extractTitleFromReadme(readme);
+            
+            // Update the repository with the display name from README
+            if (displayName) {
+              repo.displayName = displayName;
+            }
+          } catch (error) {
+            console.warn(`Failed to process README for ${repo.owner.login}/${repo.name}:`, error);
+            // Continue with other repositories
+          }
+        })
+      );
+    }
+    
+    return repositories;
   } catch (error) {
     console.error("Failed to fetch repositories:", error);
     throw error;
@@ -242,6 +266,21 @@ export async function createPortfolioRepository(
     console.error("Failed to handle portfolio repository:", error);
     throw error;
   }
+}
+
+export function extractTitleFromReadme(readme: string | null): string | null {
+  if (!readme) return null;
+  
+  // Look for a line starting with # at the beginning of the file
+  const lines = readme.split('\n');
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    if (trimmedLine.startsWith('# ')) {
+      return trimmedLine.substring(2).trim(); // Remove the "# " prefix
+    }
+  }
+  
+  return null;
 }
 
 export async function getReadmeContent(
