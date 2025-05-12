@@ -313,7 +313,7 @@ export async function registerRoutes(app: Express) {
   });
 
   app.post("/api/deploy/vercel", async (req, res) => {
-    const { accessToken, teamId, username, repositories, themeId, introduction } = req.body;
+    const { accessToken, teamId, username, repositories, themeId, introduction, userInfo } = req.body;
 
     if (!accessToken || !username) {
       return res.status(400).json({ error: "Vercel access token and username are required" });
@@ -323,14 +323,19 @@ export async function registerRoutes(app: Express) {
       // First, get user details if not provided
       let userAvatar = null;
       try {
-        if (!introduction || !req.body.userInfo?.avatarUrl) {
+        // Try to get avatarUrl from userInfo in request body
+        if (userInfo && userInfo.avatarUrl) {
+          userAvatar = userInfo.avatarUrl;
+          console.log("Using avatarUrl from userInfo:", userAvatar);
+        } 
+        // Otherwise try to get it from GitHub
+        else {
           const githubToken = req.headers.authorization?.replace('Bearer ', '');
           if (githubToken) {
             const githubUser = await getGithubUser(githubToken);
             userAvatar = githubUser.avatarUrl;
+            console.log("Using avatarUrl from GitHub:", userAvatar);
           }
-        } else if (req.body.userInfo?.avatarUrl) {
-          userAvatar = req.body.userInfo.avatarUrl;
         }
       } catch (userError) {
         console.warn("Could not fetch user avatar:", userError);
