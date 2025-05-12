@@ -105,19 +105,23 @@ export async function registerRoutes(app: Express) {
         });
       }
 
-      const readme = await getReadmeContent(
-        accessToken,
-        username,
-        repo.name
-      ) || '';
-
-      // Extract title from README if available
-      const displayName = extractTitleFromReadme(readme);
+      let readme = '';
+      let displayName = null;
+      
+      try {
+        // Try to fetch README content
+        readme = await getReadmeContent(accessToken, username, repo.name) || '';
+        // Extract title from README if available
+        displayName = extractTitleFromReadme(readme);
+      } catch (error) {
+        console.warn(`Couldn't fetch README for ${repo.name}:`, error);
+        // Continue with empty README - don't interrupt the flow
+      }
       
       const summary = await generateRepoSummary(
         repo.name,
         repo.description || '',
-        readme,
+        readme, // Use empty string if README fetch failed
         openaiKey,
         customPrompt
       );

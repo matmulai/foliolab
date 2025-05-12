@@ -210,7 +210,7 @@ export async function getRepositories(
     const batchSize = 5;
     for (let i = 0; i < repositories.length; i += batchSize) {
       const batch = repositories.slice(i, i + batchSize);
-      await Promise.all(
+      await Promise.allSettled(
         batch.map(async (repo) => {
           try {
             const readme = await getReadmeContent(accessToken, repo.owner.login, repo.name);
@@ -222,7 +222,8 @@ export async function getRepositories(
             }
           } catch (error) {
             console.warn(`Failed to process README for ${repo.owner.login}/${repo.name}:`, error);
-            // Continue with other repositories
+            // Continue with other repositories, don't set displayName
+            repo.displayName = null;
           }
         })
       );
