@@ -1,9 +1,9 @@
 import type { Express } from "express";
 import { createServer } from "http";
-import { getRepositories, getReadmeContent, getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages, extractTitleFromReadme } from "./lib/github";
-import { generateRepoSummary, generateUserIntroduction } from "./lib/openai";
-import { Repository } from "../shared/schema";
-import { themes } from "../shared/themes";
+import { getRepositories, getReadmeContent, getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages, extractTitleFromReadme } from "./lib/github.js";
+import { generateRepoSummary, generateUserIntroduction } from "./lib/openai.js";
+import { Repository } from "../shared/schema.js";
+import { themes } from "../shared/themes.js";
 
 
 export async function registerRoutes(app: Express) {
