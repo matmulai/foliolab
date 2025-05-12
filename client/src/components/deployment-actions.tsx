@@ -13,7 +13,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { DeploymentOverlay } from "./deployment-overlay";
 import { VercelDeploymentOverlay } from "./vercel-deployment-overlay";
 import { Repository } from "@shared/schema";
-import { Theme } from "./theme-selector";
+import { Theme } from "@shared/themes";
 
 interface DeploymentActionsProps {
   onSuccess?: () => void;
@@ -209,7 +209,9 @@ export function DeploymentActions({
             teamId: event.data.teamId,
             username,
             repositories,
-            themeId: theme?.id 
+            themeId: theme?.id,
+            introduction,
+            userInfo
           });
 
           if (!deployResponse.ok) {
