@@ -320,9 +320,25 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
-      // First, generate the portfolio HTML
+      // First, get user details if not provided
+      let userAvatar = null;
+      try {
+        if (!introduction || !req.body.userInfo?.avatarUrl) {
+          const githubToken = req.headers.authorization?.replace('Bearer ', '');
+          if (githubToken) {
+            const githubUser = await getGithubUser(githubToken);
+            userAvatar = githubUser.avatarUrl;
+          }
+        } else if (req.body.userInfo?.avatarUrl) {
+          userAvatar = req.body.userInfo.avatarUrl;
+        }
+      } catch (userError) {
+        console.warn("Could not fetch user avatar:", userError);
+      }
+
+      // Generate the portfolio HTML
       const theme = themes.find(t => t.id === themeId) || themes[1]; // Find theme or default to modern
-      const html = generatePortfolioHtml(username, repositories, introduction, null, theme);
+      const html = generatePortfolioHtml(username, repositories, introduction, userAvatar, theme);
 
       // Create or update the GitHub repository
       const repoName = `${username}-foliolab`;
