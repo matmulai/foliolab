@@ -1,13 +1,9 @@
 import type { Express } from "express";
 import { createServer } from "http";
-import { getRepositories, getReadmeContent, getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages } from "./lib/github.js";
+import { getRepositories, getReadmeContent, getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages, extractTitleFromReadme } from "./lib/github.js";
 import { generateRepoSummary, generateUserIntroduction } from "./lib/openai.js";
-import { Repository } from "@shared/schema";
-
-// Assuming themes array is defined elsewhere
-const themes = [
-  // ... theme definitions ...
-];
+import { Repository } from "../shared/schema.js";
+import { themes } from "../shared/themes.js";
 
 
 export async function registerRoutes(app: Express) {
@@ -109,25 +105,33 @@ export async function registerRoutes(app: Express) {
         });
       }
 
-      const readme = await getReadmeContent(
-        accessToken,
-        username,
-        repo.name
-      ) || '';
-
+      let readme = '';
+      let displayName = null;
+      
+      try {
+        // Try to fetch README content
+        readme = await getReadmeContent(accessToken, username, repo.name) || '';
+        // Extract title from README if available
+        displayName = extractTitleFromReadme(readme);
+      } catch (error) {
+        console.warn(`Couldn't fetch README for ${repo.name}:`, error);
+        // Continue with empty README - don't interrupt the flow
+      }
+      
       const summary = await generateRepoSummary(
         repo.name,
         repo.description || '',
-        readme,
+        readme, // Use empty string if README fetch failed
         openaiKey,
         customPrompt
       );
 
-      // Return the repository with the new summary
+      // Return the repository with the new summary and display name
       res.json({
         repository: {
           ...repo,
-          summary: summary.summary
+          summary: summary.summary,
+          displayName: displayName || repo.displayName
         }
       });
     } catch (error) {
@@ -140,7 +144,7 @@ export async function registerRoutes(app: Express) {
   });
 
   app.post("/api/deploy/github", async (req, res) => {
-    const { accessToken, downloadOnly, repositories, themeId } = req.body; // Added themeId
+    const { accessToken, downloadOnly, repositories, themeId, userInfo, introduction } = req.body;
 
     if (!accessToken) {
       return res.status(400).json({ error: "GitHub access token is required" });
@@ -148,10 +152,17 @@ export async function registerRoutes(app: Express) {
 
     try {
       const user = await getGithubUser(accessToken);
-      const openaiKey = req.body.openaiKey; // Added to pass to generatePortfolioHtml
-      const introduction = await generateUserIntroduction(repositories, openaiKey); // Added to get introduction
+      // Use the provided introduction if available, otherwise generate a new one
+      let userIntroduction = introduction;
+      
+      // Only generate a new introduction if one wasn't provided
+      if (!userIntroduction) {
+        const openaiKey = req.body.openaiKey;
+        userIntroduction = await generateUserIntroduction(repositories, openaiKey);
+      }
+      
       const theme = themes.find(t => t.id === themeId) || themes[1]; // Find theme or default to modern
-      const html = generatePortfolioHtml(user.username, repositories, introduction, user.avatarUrl, theme);
+      const html = generatePortfolioHtml(user.username, repositories, userIntroduction, user.avatarUrl, theme);
 
       if (downloadOnly) {
         return res.json({ html });
@@ -183,8 +194,8 @@ export async function registerRoutes(app: Express) {
   });
 
   app.post("/api/deploy/github-pages", async (req, res) => {
-    const { accessToken, repositories, themeId } = req.body; // Added themeId
-    const openaiKey = req.body.openaiKey; // Added to pass to generatePortfolioHtml
+    const { accessToken, repositories, themeId, userInfo, introduction } = req.body;
+    const openaiKey = req.body.openaiKey;
 
     if (!accessToken) {
       return res.status(400).json({ error: "GitHub access token is required" });
@@ -196,9 +207,17 @@ export async function registerRoutes(app: Express) {
 
     try {
       const user = await getGithubUser(accessToken);
-      const introduction = await generateUserIntroduction(repositories, openaiKey); // Added to get introduction
+      
+      // Use the provided introduction if available, otherwise generate a new one
+      let userIntroduction = introduction;
+      
+      // Only generate a new introduction if one wasn't provided
+      if (!userIntroduction) {
+        userIntroduction = await generateUserIntroduction(repositories, openaiKey);
+      }
+      
       const theme = themes.find(t => t.id === themeId) || themes[1]; // Find theme or default to modern
-      const html = generatePortfolioHtml(user.username, repositories, introduction, user.avatarUrl, theme);
+      const html = generatePortfolioHtml(user.username, repositories, userIntroduction, user.avatarUrl, theme);
 
       const { url, wasCreated } = await deployToGitHubPages(accessToken, user.username, html);
 
@@ -292,7 +311,7 @@ export async function registerRoutes(app: Express) {
   });
 
   app.post("/api/deploy/vercel", async (req, res) => {
-    const { accessToken, teamId, username, repositories } = req.body;
+    const { accessToken, teamId, username, repositories, themeId, introduction } = req.body;
 
     if (!accessToken || !username) {
       return res.status(400).json({ error: "Vercel access token and username are required" });
@@ -300,7 +319,8 @@ export async function registerRoutes(app: Express) {
 
     try {
       // First, generate the portfolio HTML
-      const html = generatePortfolioHtml(username, repositories);
+      const theme = themes.find(t => t.id === themeId) || themes[1]; // Find theme or default to modern
+      const html = generatePortfolioHtml(username, repositories, introduction, null, theme);
 
       // Create or update the GitHub repository
       const repoName = `${username}-foliolab`;
@@ -580,6 +600,39 @@ export async function registerRoutes(app: Express) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${username}'s Portfolio</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+    /* Define gradient backgrounds for themes */
+    .bg-gradient-to-br.from-indigo-50.via-white.to-purple-50 {
+      background: linear-gradient(to bottom right, #eef2ff, #ffffff, #faf5ff);
+    }
+    .bg-gradient-to-r.from-indigo-500.to-purple-500 {
+      background: linear-gradient(to right, #6366f1, #a855f7);
+      color: white; /* Ensure text is white on gradient background */
+    }
+    /* Shadow styling for cards */
+    .card-shadow {
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      transition: box-shadow 0.3s ease, transform 0.3s ease;
+    }
+    .card-shadow:hover {
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+    /* Button styling */
+    .icon-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+    .icon-button:hover {
+      opacity: 0.8;
+    }
+    </style>
 </head>
 <body class="${theme.preview.background}">
     <div class="container mx-auto px-4 py-20">
@@ -588,19 +641,22 @@ export async function registerRoutes(app: Express) {
                 <div class="${theme.layout.profile}">
                     ${avatarUrl ? `
                     <div class="mb-6">
-                        <img src="${avatarUrl}" alt="${username}" class="w-32 h-32 rounded-full mx-auto border-4 border-primary/10">
+                        <img src="${avatarUrl}" alt="${username}" class="w-32 h-32 rounded-full mx-auto border-4 border-gray-200 shadow-lg">
                     </div>
                     ` : ''}
-                    <h1 class="text-4xl font-bold mb-4 ${theme.preview.text}">${username}'s Portfolio</h1>
+                    <h1 class="text-4xl font-bold mb-6 ${theme.preview.text}">${username}'s Portfolio</h1>
                     ${introduction ? `
-                    <div class="max-w-2xl">
-                        <p class="${theme.preview.text} mb-6">${introduction.introduction}</p>
-                        <div class="flex flex-wrap gap-2 justify-center mb-6">
-                            ${introduction.skills.map(skill =>
-                              `<span class="${theme.preview.accent} px-3 py-1 rounded-full text-sm font-medium">${skill}</span>`
-                            ).join('')}
+                    <div class="max-w-2xl ${theme.id === 'modern' ? 'text-center' : 'text-left'}">
+                        <p class="${theme.preview.text} mb-8 leading-relaxed">${introduction.introduction}</p>
+                        <div class="flex flex-wrap gap-3 ${theme.id === 'modern' ? 'justify-center' : ''} mb-8">
+                            ${introduction.skills.map(skill => {
+                              // For Modern theme with gradient background, use explicit classes
+                              return theme.id === 'modern' 
+                                ? `<span class="px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 text-white">${skill}</span>`
+                                : `<span class="${theme.preview.accent} px-3 py-1 rounded-full text-sm font-medium">${skill}</span>`;
+                            }).join('')}
                         </div>
-                        <p class="${theme.preview.text} text-sm">
+                        <p class="${theme.preview.text} text-sm mb-8">
                             <span class="font-medium">Interests:</span> ${introduction.interests.join(', ')}
                         </p>
                     </div>
@@ -617,21 +673,37 @@ export async function registerRoutes(app: Express) {
 
                   const topics = Array.isArray(repo.metadata?.topics) ? repo.metadata.topics : [];
                   const description = repo.summary || repo.description || '';
+                  
+                  // Add margin-bottom for Minimal theme to match the spacing in the preview
+                  const marginClass = theme.id === 'minimal' ? 'mb-6' : '';
 
                   return `
-                    <article class="${theme.preview.card} p-6">
-                        <h2 class="text-2xl font-semibold mb-2 ${theme.preview.text}">${repo.name || 'Untitled Project'}</h2>
+                    <article class="${theme.preview.card} p-6 relative card-shadow ${marginClass}">
+                        <div class="flex justify-between items-start">
+                            <h2 class="text-2xl font-semibold mb-2 ${theme.preview.text}">${repo.displayName || repo.name || 'Untitled Project'}</h2>
+                            <div class="flex items-center gap-2">
+                                ${repo.metadata?.stars > 0 ? `
+                                <span class="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">
+                                    ★ ${repo.metadata.stars}
+                                </span>
+                                ` : ''}
+                                <a href="${repo.url}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View on GitHub">
+                                    <i class="fab fa-github"></i>
+                                </a>
+                                ${repo.metadata?.url ?
+                                    `<a href="${repo.metadata.url}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View Live Demo">
+                                        <i class="fas fa-external-link-alt"></i>
+                                    </a>`
+                                    : ''}
+                            </div>
+                        </div>
                         <p class="${theme.preview.text} mb-4">${description}</p>
                         <div class="flex gap-2 flex-wrap">
-                            ${topics.map(topic =>
-                                `<span class="${theme.preview.accent} px-2 py-1 rounded-full text-sm">${topic}</span>`
-                            ).join('')}
-                        </div>
-                        <div class="mt-4 flex gap-4">
-                            <a href="${repo.url}" class="${theme.preview.accent} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">View on GitHub</a>
-                            ${repo.metadata?.url ?
-                                `<a href="${repo.metadata.url}" class="${theme.preview.accent} hover:opacity-80 transition-opacity rounded-md px-3 py-1" target="_blank">Live Demo</a>`
-                                : ''}
+                            ${topics.map(topic => {
+                                return theme.id === 'modern' 
+                                    ? `<span class="px-2 py-1 rounded-full text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white">${topic}</span>`
+                                    : `<span class="${theme.preview.accent} px-2 py-1 rounded-full text-sm">${topic}</span>`;
+                            }).join('')}
                         </div>
                     </article>
                   `;

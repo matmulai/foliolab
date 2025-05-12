@@ -3,11 +3,41 @@
 @tailwind utilities;
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+    * {
+        @apply border-border;
+    }
 
-  body {
-    @apply font-sans antialiased bg-background text-foreground;
-  }
+    body {
+        @apply font-sans antialiased bg-background text-foreground;
+    }
+}
+
+/* Theme-specific utility classes that must be preserved */
+.bg-gradient-to-r,
+.from-indigo-500,
+.to-purple-500,
+.text-white {
+    /* Ensure Tailwind doesn't purge these classes */
+}
+
+/* Theme preview classes */
+.theme-preview-minimal {
+    @apply bg-white border-2 border-gray-100 text-slate-800;
+}
+.theme-preview-minimal .accent {
+    @apply bg-slate-800 text-white;
+}
+
+.theme-preview-modern {
+    @apply bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900;
+}
+.theme-preview-modern .accent {
+    @apply bg-gradient-to-r from-indigo-500 to-purple-500 text-white;
+}
+
+.theme-preview-elegant {
+    @apply bg-stone-50 text-stone-900;
+}
+.theme-preview-elegant .accent {
+    @apply bg-stone-900 text-stone-50;
 }

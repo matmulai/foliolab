@@ -38,18 +38,18 @@ export async function checkRepositoryExists(
 }
 
 export async function getUserOrganizations(
-  accessToken: string,
+  accessToken: string
 ): Promise<Organization[]> {
   const octokit = new Octokit({ auth: accessToken });
-
+  
   try {
     const { data } = await octokit.orgs.listForAuthenticatedUser();
-
-    return data.map((org) => ({
+    
+    return data.map(org => ({
       id: org.id,
       login: org.login,
       name: org.description || null, // Org API response doesn't have 'name' but has 'description'
-      avatarUrl: org.avatar_url || null,
+      avatarUrl: org.avatar_url || null
     }));
   } catch (error) {
     console.error("Failed to fetch user organizations:", error);
@@ -59,7 +59,7 @@ export async function getUserOrganizations(
 
 async function getUserRepositories(
   octokit: Octokit,
-  user: { login: string; type: "User"; avatarUrl: string | null },
+  user: { login: string, type: "User", avatarUrl: string | null }
 ): Promise<Repository[]> {
   try {
     const { data } = await octokit.repos.listForAuthenticatedUser({
@@ -69,21 +69,19 @@ async function getUserRepositories(
     });
 
     const filteredRepos = data.filter((repo) => {
-      return (
-        !repo.name.toLowerCase().includes("-folio") &&
-        !repo.name.toLowerCase().includes("github.io") &&
-        repo.name !== "foliolab-vercel"
-      );
+      return !repo.name.toLowerCase().includes("-folio") && 
+             !repo.name.toLowerCase().includes("github.io") &&
+             repo.name !== "foliolab-vercel";
     });
 
     return filteredRepos.map((repo) => {
       // Extract the actual owner from the repository URL
-      const urlParts = repo.html_url.split("/");
+      const urlParts = repo.html_url.split('/');
       const repoOwner = urlParts[3]; // GitHub URLs follow the pattern: https://github.com/owner/repo
-
+      
       // Determine if this is a user or organization based on the actual repo owner
       const isUserRepo = repoOwner === user.login;
-
+      
       return {
         id: repo.id,
         name: repo.name,
@@ -94,33 +92,27 @@ async function getUserRepositories(
         owner: {
           login: repoOwner,
           type: isUserRepo ? "User" : "Organization",
-          avatarUrl: isUserRepo ? user.avatarUrl : null, // We might not have org avatar here
+          avatarUrl: isUserRepo ? user.avatarUrl : null // We might not have org avatar here
         },
         metadata: {
           id: repo.id,
-          stars:
-            typeof repo.stargazers_count === "number"
-              ? repo.stargazers_count
-              : 0,
+          stars: typeof repo.stargazers_count === 'number' ? repo.stargazers_count : 0,
           language: repo.language || null,
           topics: repo.topics || [],
-          updatedAt: repo.updated_at || "",
+          updatedAt: repo.updated_at || "", 
           url: repo.homepage || null,
         },
       };
     });
   } catch (error) {
-    console.error(
-      `Failed to fetch repositories for user ${user.login}:`,
-      error,
-    );
+    console.error(`Failed to fetch repositories for user ${user.login}:`, error);
     return [];
   }
 }
 
 async function getOrganizationRepositories(
   octokit: Octokit,
-  org: { login: string; avatarUrl: string | null },
+  org: { login: string, avatarUrl: string | null }
 ): Promise<Repository[]> {
   try {
     const { data } = await octokit.repos.listForOrg({
@@ -131,18 +123,16 @@ async function getOrganizationRepositories(
     });
 
     const filteredRepos = data.filter((repo) => {
-      return (
-        !repo.name.toLowerCase().includes("-folio") &&
-        !repo.name.toLowerCase().includes("github.io") &&
-        repo.name !== "foliolab-vercel"
-      );
+      return !repo.name.toLowerCase().includes("-folio") && 
+             !repo.name.toLowerCase().includes("github.io") &&
+             repo.name !== "foliolab-vercel";
     });
 
     return filteredRepos.map((repo) => {
       // Extract the actual owner from the repository URL
-      const urlParts = repo.html_url.split("/");
+      const urlParts = repo.html_url.split('/');
       const repoOwner = urlParts[3]; // GitHub URLs follow the pattern: https://github.com/owner/repo
-
+      
       return {
         id: repo.id,
         name: repo.name,
@@ -153,17 +143,14 @@ async function getOrganizationRepositories(
         owner: {
           login: repoOwner,
           type: "Organization", // This should always be an organization
-          avatarUrl: org.avatarUrl,
+          avatarUrl: org.avatarUrl
         },
         metadata: {
           id: repo.id,
-          stars:
-            typeof repo.stargazers_count === "number"
-              ? repo.stargazers_count
-              : 0,
+          stars: typeof repo.stargazers_count === 'number' ? repo.stargazers_count : 0,
           language: repo.language || null,
           topics: repo.topics || [],
-          updatedAt: repo.updated_at || "",
+          updatedAt: repo.updated_at || "", 
           url: repo.homepage || null,
         },
       };
@@ -178,35 +165,71 @@ export async function getRepositories(
   accessToken: string,
 ): Promise<Repository[]> {
   const octokit = new Octokit({ auth: accessToken });
-
+  
   try {
     // Get authenticated user info
     const { data: userData } = await octokit.users.getAuthenticated();
     const userInfo = {
       login: userData.login,
       type: "User" as const,
-      avatarUrl: userData.avatar_url || null,
+      avatarUrl: userData.avatar_url || null
     };
-
+    
     // Get user repositories
     const userRepos = await getUserRepositories(octokit, userInfo);
-
+    
     // Get user organizations
     const orgs = await getUserOrganizations(accessToken);
-
+    
     // Get repositories for each organization
-    const orgReposPromises = orgs.map((org) =>
+    const orgReposPromises = orgs.map(org => 
       getOrganizationRepositories(octokit, {
-        login: org.login,
-        avatarUrl: org.avatarUrl,
-      }),
+        login: org.login, 
+        avatarUrl: org.avatarUrl
+      })
     );
-
+    
     const orgReposArrays = await Promise.all(orgReposPromises);
     const orgRepos = orgReposArrays.flat();
-
-    // Combine user and organization repositories
-    return [...userRepos, ...orgRepos];
+    
+    // Combine user and organization repositories, but deduplicate based on repo ID
+    const allRepos = [...userRepos, ...orgRepos];
+    
+    // Use a Map to deduplicate repositories by ID
+    const uniqueReposMap = new Map<number, Repository>();
+    
+    for (const repo of allRepos) {
+      if (!uniqueReposMap.has(repo.id)) {
+        uniqueReposMap.set(repo.id, repo);
+      }
+    }
+    
+    const repositories = Array.from(uniqueReposMap.values());
+    
+    // Fetch READMEs and extract titles (in batches to avoid rate limiting)
+    const batchSize = 5;
+    for (let i = 0; i < repositories.length; i += batchSize) {
+      const batch = repositories.slice(i, i + batchSize);
+      await Promise.allSettled(
+        batch.map(async (repo) => {
+          try {
+            const readme = await getReadmeContent(accessToken, repo.owner.login, repo.name);
+            const displayName = extractTitleFromReadme(readme);
+            
+            // Update the repository with the display name from README
+            if (displayName) {
+              repo.displayName = displayName;
+            }
+          } catch (error) {
+            console.warn(`Failed to process README for ${repo.owner.login}/${repo.name}:`, error);
+            // Continue with other repositories, don't set displayName
+            repo.displayName = null;
+          }
+        })
+      );
+    }
+    
+    return repositories;
   } catch (error) {
     console.error("Failed to fetch repositories:", error);
     throw error;
@@ -216,7 +239,7 @@ export async function getRepositories(
 export async function createPortfolioRepository(
   accessToken: string,
   username: string,
-  repoName: string = "foliolab-vercel",
+  repoName: string = "foliolab-vercel"
 ): Promise<{ repoUrl: string; wasCreated: boolean }> {
   const octokit = new Octokit({ auth: accessToken });
 
@@ -246,6 +269,21 @@ export async function createPortfolioRepository(
   }
 }
 
+export function extractTitleFromReadme(readme: string | null): string | null {
+  if (!readme) return null;
+  
+  // Look for a line starting with # at the beginning of the file
+  const lines = readme.split('\n');
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    if (trimmedLine.startsWith('# ')) {
+      return trimmedLine.substring(2).trim(); // Remove the "# " prefix
+    }
+  }
+  
+  return null;
+}
+
 export async function getReadmeContent(
   accessToken: string,
   owner: string,
@@ -269,7 +307,7 @@ export async function commitPortfolioFiles(
   accessToken: string,
   username: string,
   files: Array<{ path: string; content: string }>,
-  repoName: string = "foliolab-vercel",
+  repoName: string = "foliolab-vercel"
 ): Promise<void> {
   const octokit = new Octokit({ auth: accessToken });
 
