@@ -27,11 +27,12 @@ async function generateWithOpenAI(
   userContent: string,
   apiKey: string,
 ): Promise<RepoSummary> {
+  console.log("using open ai base url", process.env.OPENAI_API_BASE_URL)
+  console.log("using open ai model", process.env.OPENAI_API_MODEL)
   const openai = new OpenAI({
     apiKey,
     ...(process.env.OPENAI_API_BASE_URL && { baseURL: process.env.OPENAI_API_BASE_URL })
   });
-
   const response = await openai.chat.completions.create({
     model: process.env.OPENAI_API_MODEL || "gpt-4o",
     messages: [
