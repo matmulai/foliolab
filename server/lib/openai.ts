@@ -27,10 +27,13 @@ async function generateWithOpenAI(
   userContent: string,
   apiKey: string,
 ): Promise<RepoSummary> {
-  const openai = new OpenAI({ apiKey });
+  const openai = new OpenAI({
+    apiKey,
+    ...(process.env.OPENAI_API_BASE_URL && { baseURL: process.env.OPENAI_API_BASE_URL })
+  });
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: process.env.OPENAI_API_MODEL || "gpt-4o",
     messages: [
       {
         role: "system",
@@ -113,9 +116,12 @@ async function generateUserIntroduction(
     const prompt = `${USER_INTRO_PROMPT} ${USER_INTRO_FORMAT}`;
     const userContent = JSON.stringify(repoInfo, null, 2);
 
-    const openai = new OpenAI({ apiKey });
+    const openai = new OpenAI({
+      apiKey,
+      ...(process.env.OPENAI_API_BASE_URL && { baseURL: process.env.OPENAI_API_BASE_URL })
+    });
     const response = await openai.chat.completions.create({
-      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      model: process.env.OPENAI_API_MODEL || "gpt-4o", // defaults to gpt-4o, can be overridden with OPENAI_API_MODEL env var
       messages: [
         {
           role: "system",
