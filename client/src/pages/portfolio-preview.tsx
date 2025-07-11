@@ -45,8 +45,7 @@ export default function PortfolioPreview() {
   const { mutate: generateIntro, isPending: isGenerating } = useMutation({
     mutationFn: async (repositories: Repository[]) => {
       const res = await apiRequest("POST", "/api/user/introduction", {
-        repositories,
-        openaiKey: localStorage.getItem("openai_api_key"), // Optional
+        repositories
       });
       const data = await res.json();
       return data;

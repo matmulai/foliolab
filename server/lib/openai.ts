@@ -1,5 +1,4 @@
 import OpenAI from "openai";
-import fetch from "node-fetch";
 
 interface RepoSummary {
   summary: string;
@@ -21,103 +20,7 @@ const USER_INTRO_PROMPT =
 const USER_INTRO_FORMAT =
   "Respond with JSON in this format: { 'introduction': string, 'skills': string[], 'interests': string[] }";
 
-const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-const OPENROUTER_DEFAULT_MODEL =
-  "google/gemini-2.0-flash-lite-preview-02-05:free";
-const OPENROUTER_MODEL =
-  process.env.OPENROUTER_MODEL || OPENROUTER_DEFAULT_MODEL;
 
-function extractJsonFromMarkdown(content: string): string {
-  const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
-  if (jsonMatch && jsonMatch[1]) {
-    console.log("Extracted JSON from markdown code block");
-    return jsonMatch[1];
-  }
-
-  const directJsonMatch = content.match(/\s*(\{[\s\S]*\})\s*/);
-  if (directJsonMatch && directJsonMatch[1]) {
-    console.log("Found direct JSON content");
-    return directJsonMatch[1];
-  }
-
-  console.error("Could not extract JSON from content:", content);
-  throw new Error(
-    "Invalid response format: Could not extract JSON from response",
-  );
-}
-
-async function generateWithOpenRouter(
-  prompt: string,
-  userContent: string,
-): Promise<RepoSummary> {
-  console.log("Making OpenRouter API request with:", {
-    url: OPENROUTER_API_URL,
-    model: OPENROUTER_MODEL,
-    prompt,
-    contentLength: userContent.length,
-  });
-
-  const requestBody = {
-    model: OPENROUTER_MODEL,
-    messages: [
-      {
-        role: "system",
-        content: prompt,
-      },
-      {
-        role: "user",
-        content: userContent,
-      },
-    ],
-  };
-
-  console.log("OpenRouter request body:", JSON.stringify(requestBody, null, 2));
-
-  const response = await fetch(OPENROUTER_API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      "HTTP-Referer": "https://replit.com",
-      "X-Title": "FolioLab",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(requestBody),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("OpenRouter API error:", {
-      status: response.status,
-      statusText: response.statusText,
-      error: errorText,
-    });
-    throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
-  }
-
-  const data = await response.json();
-  console.log("OpenRouter API response:", JSON.stringify(data, null, 2));
-
-  const content = data.choices[0].message.content;
-  if (!content) {
-    throw new Error("Empty response from OpenRouter API");
-  }
-
-  try {
-    const jsonContent = extractJsonFromMarkdown(content);
-    const result = JSON.parse(jsonContent) as RepoSummary;
-
-    if (!result.summary || !Array.isArray(result.keyFeatures)) {
-      throw new Error("Invalid response structure: missing required fields");
-    }
-
-    return result;
-  } catch (error) {
-    console.error("Failed to parse OpenRouter response:", error);
-    throw new Error(
-      `Failed to parse OpenRouter response: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
-}
 
 async function generateWithOpenAI(
   prompt: string,
@@ -155,7 +58,7 @@ async function generateRepoSummary(
   name: string,
   description: string,
   readme: string,
-  apiKey?: string,
+  apiKey: string,
   customPrompt?: string,
 ): Promise<RepoSummary> {
   try {
@@ -163,9 +66,7 @@ async function generateRepoSummary(
       name,
       descriptionLength: description?.length,
       readmeLength: readme?.length,
-      usingOpenAI: !!apiKey,
-      hasCustomPrompt: !!customPrompt,
-      openrouterModel: OPENROUTER_MODEL,
+      hasCustomPrompt: !!customPrompt
     });
 
     const maxReadmeLength = 2000;
@@ -176,14 +77,6 @@ async function generateRepoSummary(
 
     const prompt = `${customPrompt || DEFAULT_PROMPT} ${JSON_FORMAT_SUFFIX}`;
     const userContent = `Repository Name: ${name}\nDescription: ${description}\nREADME:\n${trimmedReadme}`;
-
-    if (!apiKey) {
-      console.log(
-        "Using OpenRouter API for generation with model:",
-        OPENROUTER_MODEL,
-      );
-      return generateWithOpenRouter(prompt, userContent);
-    }
 
     console.log("Using OpenAI API for generation");
     return generateWithOpenAI(prompt, userContent, apiKey);
@@ -204,13 +97,10 @@ async function generateUserIntroduction(
     };
     summary?: string;
   }>,
-  apiKey?: string,
+  apiKey: string,
 ): Promise<UserIntroduction> {
   try {
-    console.log("Generating user introduction based on:", {
-      repoCount: repositories.length,
-      hasApiKey: !!apiKey,
-    });
+    console.log("Generating user introduction based on repositories");
 
     const repoInfo = repositories.map((repo) => ({
       name: repo.name,
@@ -222,41 +112,6 @@ async function generateUserIntroduction(
 
     const prompt = `${USER_INTRO_PROMPT} ${USER_INTRO_FORMAT}`;
     const userContent = JSON.stringify(repoInfo, null, 2);
-
-    if (!apiKey) {
-      console.log("Using OpenRouter API for user introduction");
-      const response = await fetch(OPENROUTER_API_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          "HTTP-Referer": "https://replit.com",
-          "X-Title": "FolioLab",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: OPENROUTER_MODEL,
-          messages: [
-            {
-              role: "system",
-              content: prompt,
-            },
-            {
-              role: "user",
-              content: userContent,
-            },
-          ],
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`OpenRouter API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const content = data.choices[0].message.content;
-      const jsonContent = extractJsonFromMarkdown(content);
-      return JSON.parse(jsonContent) as UserIntroduction;
-    }
 
     const openai = new OpenAI({ apiKey });
     const response = await openai.chat.completions.create({

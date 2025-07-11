@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Repository } from "@shared/schema";
 import { Search } from "lucide-react";
-import { ApiKeyDialog } from "@/components/api-key-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { toggleRepositorySelection, saveRepositories, getRepositories } from "@/lib/storage";
 import { AnalysisProgress } from "@/components/analysis-progress";
@@ -25,7 +24,6 @@ const REPOS_PER_PAGE = 10;
 
 export default function RepoSelect() {
   const [, setLocation] = useLocation();
-  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedOwner, setSelectedOwner] = useState<string>("all");
@@ -145,12 +143,7 @@ export default function RepoSelect() {
 
   const allSelected = paginatedRepos.length > 0 && paginatedRepos.every((repo) => repo.selected);
 
-  const handleAnalyzeRepos = (openaiKey: string | undefined, customPrompt?: string) => {
-    // No need to check for openaiKey if it's undefined (means using OpenRouter)
-    analyzeRepos(openaiKey, customPrompt);
-  };
-  
-  const analyzeRepos = async (openaiKey: string | undefined, customPrompt?: string) => {
+  const analyzeRepos = async () => {
     try {
       setAnalysisProgress({
         isAnalyzing: true,
@@ -172,9 +165,7 @@ export default function RepoSelect() {
 
           const res = await apiRequest("POST", `/api/repositories/${repo.id}/analyze`, {
             accessToken: localStorage.getItem("github_token"),
-            username: localStorage.getItem("github_username"),
-            openaiKey,
-            customPrompt,
+            username: localStorage.getItem("github_username")
           });
 
           if (!res.ok) {
@@ -281,7 +272,7 @@ export default function RepoSelect() {
               </div>
               {selectedCount > 0 && (
                 <Button
-                  onClick={() => setShowApiKeyDialog(true)}
+                  onClick={analyzeRepos}
                   disabled={isToggling}
                 >
                   Generate Portfolio ({selectedCount} selected)
@@ -375,15 +366,9 @@ export default function RepoSelect() {
         )}
 
 
-        {/* Generate Portfolio button - This part is removed as per instruction */}
+        {/* Generate Portfolio button appears above */}
         
       </div>
-
-      <ApiKeyDialog
-        open={showApiKeyDialog}
-        onOpenAIKey={handleAnalyzeRepos}
-        onClose={() => setShowApiKeyDialog(false)}
-      />
 
       <AnalysisProgress
         open={analysisProgress.isAnalyzing}

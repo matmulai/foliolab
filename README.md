@@ -34,6 +34,8 @@ Create a `.env` file with the following:
 # GitHub OAuth Configuration
 GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
+# OpenAI API Key (for AI-powered descriptions)
+OPENAI_API_KEY=your_openai_api_key
 ```
 
 To obtain GitHub OAuth credentials:
@@ -62,6 +64,7 @@ cd foliolab
 GITHUB_CLIENT_ID=your_github_client_id
 VITE_GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
+OPENAI_API_KEY=your_openai_api_key
 ```
 
 3. Build and run with Docker Compose:

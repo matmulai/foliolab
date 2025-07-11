@@ -83,16 +83,11 @@ export async function registerRoutes(app: Express) {
 
   app.post("/api/repositories/:id/analyze", async (req, res) => {
     const { id } = req.params;
-    const { accessToken, username, openaiKey, customPrompt } = req.body;
+    const { accessToken, username } = req.body;
     const repoId = parseInt(id);
 
     if (!accessToken || !username) {
       return res.status(400).json({ error: "Access token and username are required" });
-    }
-
-    // Only check for OpenAI key if explicitly provided (user chose OpenAI option)
-    if (openaiKey && !openaiKey.startsWith('sk-')) {
-      return res.status(400).json({ error: "Invalid OpenAI API key format" });
     }
 
     try {
@@ -120,12 +115,14 @@ export async function registerRoutes(app: Express) {
         // Continue with empty README - don't interrupt the flow
       }
       
+      // Use the server's API key from environment variables
+      const serverApiKey = process.env.OPENAI_API_KEY;
+      
       const summary = await generateRepoSummary(
         repo.name,
         repo.description || '',
         readme, // Use empty string if README fetch failed
-        openaiKey,
-        customPrompt
+        serverApiKey
       );
 
       // Return the repository with the new summary and display name
@@ -159,8 +156,9 @@ export async function registerRoutes(app: Express) {
       
       // Only generate a new introduction if one wasn't provided
       if (!userIntroduction) {
-        const openaiKey = req.body.openaiKey;
-        userIntroduction = await generateUserIntroduction(repositories, openaiKey);
+        // Use the server's API key from environment variables
+        const serverApiKey = process.env.OPENAI_API_KEY;
+        userIntroduction = await generateUserIntroduction(repositories, serverApiKey);
       }
       
       const theme = themes.find(t => t.id === themeId) || themes[1]; // Find theme or default to modern
@@ -197,8 +195,7 @@ export async function registerRoutes(app: Express) {
 
   app.post("/api/deploy/github-pages", async (req, res) => {
     const { accessToken, repositories, themeId, userInfo, introduction } = req.body;
-    const openaiKey = req.body.openaiKey;
-
+    
     if (!accessToken) {
       return res.status(400).json({ error: "GitHub access token is required" });
     }
@@ -215,7 +212,9 @@ export async function registerRoutes(app: Express) {
       
       // Only generate a new introduction if one wasn't provided
       if (!userIntroduction) {
-        userIntroduction = await generateUserIntroduction(repositories, openaiKey);
+        // Use the server's API key from environment variables
+        const serverApiKey = process.env.OPENAI_API_KEY;
+        userIntroduction = await generateUserIntroduction(repositories, serverApiKey);
       }
       
       const theme = themes.find(t => t.id === themeId) || themes[1]; // Find theme or default to modern
@@ -241,7 +240,7 @@ export async function registerRoutes(app: Express) {
   });
 
   app.post("/api/user/introduction", async (req, res) => {
-    const { repositories, openaiKey } = req.body;
+    const { repositories } = req.body;
     const accessToken = req.headers.authorization?.replace('Bearer ', '');
 
     if (!accessToken) {
@@ -250,7 +249,9 @@ export async function registerRoutes(app: Express) {
 
     try {
       const user = await getGithubUser(accessToken);
-      const introduction = await generateUserIntroduction(repositories, openaiKey);
+      // Use the server's API key from environment variables
+      const serverApiKey = process.env.OPENAI_API_KEY;
+      const introduction = await generateUserIntroduction(repositories, serverApiKey);
 
       res.json({
         introduction,
