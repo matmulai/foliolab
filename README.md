@@ -34,8 +34,12 @@ Create a `.env` file with the following:
 # GitHub OAuth Configuration
 GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
-# OpenAI API Key (for AI-powered descriptions)
+# OpenAI API Configuration (for AI-powered descriptions)
 OPENAI_API_KEY=your_openai_api_key
+# Optional: Custom OpenAI API base URL (e.g., for proxy or alternative endpoints)
+OPENAI_API_BASE_URL=https://api.openai.com/v1
+# Optional: Custom OpenAI model (defaults to gpt-4o)
+OPENAI_API_MODEL=gpt-4o
 ```
 
 To obtain GitHub OAuth credentials:
@@ -51,6 +55,30 @@ npm run dev
 
 5. Visit `http://localhost:5000` in your browser
 
+## OpenAI Configuration
+
+FolioLab uses OpenAI's API to generate AI-powered descriptions for your repositories. You can customize the OpenAI configuration using the following environment variables:
+
+### Required
+- `OPENAI_API_KEY`: Your OpenAI API key
+
+### Optional
+- `OPENAI_API_BASE_URL`: Custom base URL for OpenAI API calls
+  - Default: Uses OpenAI's default endpoint
+  - Example: `https://your-proxy.com/` (for proxy servers or alternative endpoints)
+  - Note: Should contain only the base URL, not the full endpoint path
+
+- `OPENAI_API_MODEL`: The OpenAI model to use for generating descriptions
+  - Default: `gpt-4o`
+  - Examples: `gpt-4`, `gpt-3.5-turbo`, `gpt-4-turbo`
+
+### Example Configuration
+```env
+OPENAI_API_KEY=sk-your-api-key-here
+OPENAI_API_BASE_URL=https://api.openai.com/v1
+OPENAI_API_MODEL=gpt-4o
+```
+
 ### Option 2: Docker Deployment
 
 1. Clone the repository:
@@ -64,7 +92,12 @@ cd foliolab
 GITHUB_CLIENT_ID=your_github_client_id
 VITE_GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
+# OpenAI API Configuration
 OPENAI_API_KEY=your_openai_api_key
+# Optional: Custom OpenAI API base URL (e.g., for proxy or alternative endpoints)
+OPENAI_API_BASE_URL=https://api.openai.com/v1
+# Optional: Custom OpenAI model (defaults to gpt-4o)
+OPENAI_API_MODEL=gpt-4o
 ```
 
 3. Build and run with Docker Compose:
