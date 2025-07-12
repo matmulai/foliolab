@@ -1,0 +1,89 @@
+<svg width="800" height="200" viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Modern gradient -->
+    <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#7C3AED;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#EC4899;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Secondary gradient -->
+    <linearGradient id="secondaryGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#06B6D4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Subtle shadow -->
+    <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="800" height="200" fill="#FFFFFF"/>
+  
+  <!-- Main icon container -->
+  <g transform="translate(50, 50)">
+    <!-- Outer circle with gradient -->
+    <circle cx="50" cy="50" r="45" fill="url(#mainGradient)" filter="url(#softShadow)"/>
+    
+    <!-- Inner design - representing portfolio/documents -->
+    <g transform="translate(25, 25)">
+      <!-- Main document/portfolio shape -->
+      <rect x="10" y="15" width="30" height="35" rx="3" fill="white" opacity="0.95"/>
+      
+      <!-- Document lines representing content -->
+      <rect x="15" y="22" width="20" height="2" rx="1" fill="url(#mainGradient)" opacity="0.7"/>
+      <rect x="15" y="27" width="16" height="2" rx="1" fill="url(#mainGradient)" opacity="0.5"/>
+      <rect x="15" y="32" width="18" height="2" rx="1" fill="url(#mainGradient)" opacity="0.6"/>
+      <rect x="15" y="37" width="14" height="2" rx="1" fill="url(#mainGradient)" opacity="0.4"/>
+      
+      <!-- Tech/AI indicator - small geometric shape -->
+      <polygon points="35,20 40,15 45,20 40,25" fill="url(#secondaryGradient)" opacity="0.8"/>
+      
+      <!-- Connection lines suggesting AI/automation -->
+      <circle cx="42" cy="35" r="2" fill="url(#secondaryGradient)" opacity="0.6"/>
+      <line x1="40" y1="20" x2="42" y2="33" stroke="url(#secondaryGradient)" stroke-width="1.5" opacity="0.5"/>
+    </g>
+  </g>
+  
+  <!-- Company name with modern typography -->
+  <g transform="translate(170, 70)">
+    <text x="0" y="40" font-family="'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" 
+          font-size="48" font-weight="800" letter-spacing="-0.02em">
+      <tspan fill="#1F2937">Folio</tspan><tspan fill="url(#mainGradient)">Lab</tspan>
+    </text>
+    
+    <!-- Tagline -->
+    <text x="0" y="70" font-family="'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" 
+          font-size="16" font-weight="500" fill="#6B7280" letter-spacing="0.01em">
+      AI-Powered Portfolio Generation from GitHub Repositories
+    </text>
+    
+    <!-- Feature highlights -->
+    <g transform="translate(0, 90)">
+      <!-- GitHub integration -->
+      <rect x="0" y="0" width="80" height="20" rx="10" fill="url(#secondaryGradient)" opacity="0.1"/>
+      <text x="40" y="13" font-family="'Inter', sans-serif" font-size="11" font-weight="600" 
+            fill="url(#secondaryGradient)" text-anchor="middle">GITHUB</text>
+      
+      <!-- AI powered -->
+      <rect x="90" y="0" width="60" height="20" rx="10" fill="url(#mainGradient)" opacity="0.1"/>
+      <text x="120" y="13" font-family="'Inter', sans-serif" font-size="11" font-weight="600" 
+            fill="url(#mainGradient)" text-anchor="middle">AI</text>
+      
+      <!-- One-click deploy -->
+      <rect x="160" y="0" width="80" height="20" rx="10" fill="#10B981" opacity="0.1"/>
+      <text x="200" y="13" font-family="'Inter', sans-serif" font-size="11" font-weight="600" 
+            fill="#10B981" text-anchor="middle">DEPLOY</text>
+    </g>
+  </g>
+  
+  <!-- Decorative elements -->
+  <g opacity="0.1">
+    <!-- Subtle geometric pattern in background -->
+    <circle cx="700" cy="50" r="30" fill="url(#mainGradient)"/>
+    <circle cx="720" cy="150" r="20" fill="url(#secondaryGradient)"/>
+    <polygon points="650,120 670,100 690,120 670,140" fill="url(#mainGradient)"/>
+  </g>
+</svg>

@@ -83,8 +83,8 @@ export function removeBadges(readme: string): string {
  * @param readme - README content
  * @returns Cleaned and focused README content
  */
-export function cleanReadmeContent(readme: string): string {
-  if (!readme) return readme;
+export function cleanReadmeContent(readme: string | null | undefined): string {
+  if (!readme) return "";
 
   let cleaned = removeBadges(readme);
   cleaned = removeBoilerplateSections(cleaned);
