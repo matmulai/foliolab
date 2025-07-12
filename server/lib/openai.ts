@@ -1,4 +1,6 @@
 import OpenAI from "openai";
+import { cleanReadmeContent } from "./readme-cleaner.js";
+import { analyzeProjectStructure, generateProjectSummary, type ProjectStructure } from "./project-analyzer.js";
 
 interface RepoSummary {
   summary: string;
@@ -64,25 +66,118 @@ async function generateRepoSummary(
   readme: string,
   apiKey: string,
   customPrompt?: string,
+  metadata?: {
+    language: string | null;
+    topics: string[];
+    stars: number;
+    url?: string | null;
+  },
+  accessToken?: string,
+  owner?: string
 ): Promise<RepoSummary> {
   try {
     console.log("Generating repo summary for:", {
       name,
       descriptionLength: description?.length,
       readmeLength: readme?.length,
-      hasCustomPrompt: !!customPrompt
+      hasCustomPrompt: !!customPrompt,
+      metadata: metadata ? {
+        language: metadata.language,
+        topicsCount: metadata.topics.length,
+        stars: metadata.stars
+      } : null
     });
 
-    const maxReadmeLength = 2000;
-    const trimmedReadme =
-      readme.length > maxReadmeLength
-        ? readme.substring(0, maxReadmeLength) + "..."
-        : readme;
+    // Build enhanced context with metadata
+    let userContent = `Repository Name: ${name}`;
+    
+    if (description) {
+      userContent += `\nDescription: ${description}`;
+    }
+    
+    if (metadata) {
+      if (metadata.language) {
+        userContent += `\nPrimary Language: ${metadata.language}`;
+      }
+      
+      if (metadata.topics && metadata.topics.length > 0) {
+        userContent += `\nTopics/Tags: ${metadata.topics.join(', ')}`;
+      }
+      
+      if (metadata.stars > 0) {
+        userContent += `\nStars: ${metadata.stars}`;
+      }
+      
+      if (metadata.url) {
+        userContent += `\nProject URL: ${metadata.url}`;
+      }
+    }
+
+    // Handle README content or fallback to project structure analysis
+    if (readme && readme.trim()) {
+      console.log("Using README content for analysis");
+      // Clean the README content to remove badges and noise
+      const cleanedReadme = cleanReadmeContent(readme);
+      
+      const maxReadmeLength = 2000;
+      const trimmedReadme =
+        cleanedReadme.length > maxReadmeLength
+          ? cleanedReadme.substring(0, maxReadmeLength) + "..."
+          : cleanedReadme;
+      
+      userContent += `\nREADME:\n${trimmedReadme}`;
+    } else if (accessToken && owner) {
+      console.log("No README found, analyzing project structure...");
+      try {
+        // Analyze project structure when README is not available
+        const projectStructure = await analyzeProjectStructure(accessToken, owner, name);
+        const structureSummary = generateProjectSummary(projectStructure);
+        
+        userContent += `\nProject Structure Analysis:\n${structureSummary}`;
+        
+        // Add detailed structure information
+        if (projectStructure.frameworkIndicators.length > 0) {
+          userContent += `\nDetected Frameworks: ${projectStructure.frameworkIndicators.map(f => f.framework).join(', ')}`;
+        }
+        
+        if (projectStructure.techStack.length > 0) {
+          userContent += `\nTech Stack: ${projectStructure.techStack.join(', ')}`;
+        }
+        
+        if (projectStructure.sourceFiles.length > 0) {
+          const entryPoints = projectStructure.sourceFiles.filter(f => f.isEntryPoint);
+          if (entryPoints.length > 0) {
+            userContent += `\nEntry Points: ${entryPoints.map(f => f.name).join(', ')}`;
+          }
+          
+          const languages = Array.from(new Set(projectStructure.sourceFiles.map(f => f.language)));
+          userContent += `\nLanguages Used: ${languages.join(', ')}`;
+        }
+        
+        if (projectStructure.packageFiles.length > 0) {
+          const packageInfo = projectStructure.packageFiles[0];
+          if (packageInfo.description) {
+            userContent += `\nPackage Description: ${packageInfo.description}`;
+          }
+          if (packageInfo.dependencies && packageInfo.dependencies.length > 0) {
+            const majorDeps = packageInfo.dependencies.slice(0, 10); // Limit to avoid token overflow
+            userContent += `\nKey Dependencies: ${majorDeps.join(', ')}`;
+          }
+        }
+        
+        console.log("Project structure analysis completed successfully");
+      } catch (error) {
+        console.warn("Failed to analyze project structure:", error);
+        userContent += `\nNote: No README available and project structure analysis failed. Analysis based on repository metadata only.`;
+      }
+    } else {
+      console.log("No README and insufficient data for structure analysis");
+      userContent += `\nNote: No README available. Analysis based on repository metadata only.`;
+    }
 
     const prompt = `${customPrompt || DEFAULT_PROMPT} ${JSON_FORMAT_SUFFIX}`;
-    const userContent = `Repository Name: ${name}\nDescription: ${description}\nREADME:\n${trimmedReadme}`;
 
-    console.log("Using OpenAI API for generation");
+    console.log("Using OpenAI API for generation with enhanced metadata context");
     return generateWithOpenAI(prompt, userContent, apiKey);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

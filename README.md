@@ -57,7 +57,7 @@ npm run dev
 
 ## OpenAI Configuration
 
-FolioLab uses OpenAI's API to generate AI-powered descriptions for your repositories. You can customize the OpenAI configuration using the following environment variables:
+FolioLab uses LLM to generate AI-powered descriptions for your repositories. You can customize the OpenAI configuration using the following environment variables:
 
 ### Required
 - `OPENAI_API_KEY`: Your OpenAI API key
@@ -111,21 +111,3 @@ To stop the container:
 ```bash
 docker-compose down
 ```
-
-### Option 3: Deploy on Replit
-
-1. Fork this repository to your GitHub account
-2. Create a new Repl, importing from your forked repository
-3. Set up the environment variables in Replit's Secrets tab
-4. Click "Run" to start the application
-
-### Option 4: Deploy Anywhere
-
-1. Build the application:
-```bash
-npm run build
-```
-
-2. Start the production server:
-```bash
-npm start

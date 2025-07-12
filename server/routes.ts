@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer } from "http";
 import { getRepositories, getReadmeContent, getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages, extractTitleFromReadme } from "./lib/github.js";
 import { generateRepoSummary, generateUserIntroduction } from "./lib/openai.js";
+import { cleanReadmeContent } from "./lib/readme-cleaner.js";
 import { Repository } from "../shared/schema.js";
 import { themes } from "../shared/themes.js";
 // Import Octokit directly from the github file
@@ -107,9 +108,11 @@ export async function registerRoutes(app: Express) {
       
       try {
         // Try to fetch README content
-        readme = await getReadmeContent(accessToken, username, repo.name) || '';
-        // Extract title from README if available
-        displayName = extractTitleFromReadme(readme);
+        const rawReadme = await getReadmeContent(accessToken, username, repo.name) || '';
+        // Clean the README content before processing
+        readme = cleanReadmeContent(rawReadme);
+        // Extract title from original README (before cleaning) to preserve formatting
+        displayName = extractTitleFromReadme(rawReadme);
       } catch (error) {
         console.warn(`Couldn't fetch README for ${repo.name}:`, error);
         // Continue with empty README - don't interrupt the flow
@@ -118,11 +121,27 @@ export async function registerRoutes(app: Express) {
       // Use the server's API key from environment variables
       const serverApiKey = process.env.OPENAI_API_KEY;
       
+      if (!serverApiKey) {
+        return res.status(500).json({
+          error: "OpenAI API key not configured",
+          details: "OPENAI_API_KEY environment variable is required"
+        });
+      }
+      
       const summary = await generateRepoSummary(
         repo.name,
         repo.description || '',
-        readme, // Use empty string if README fetch failed
-        serverApiKey
+        readme, // Use cleaned README content
+        serverApiKey,
+        undefined, // customPrompt
+        {
+          language: repo.metadata.language,
+          topics: repo.metadata.topics,
+          stars: repo.metadata.stars,
+          url: repo.metadata.url
+        },
+        accessToken, // Pass access token for project structure analysis
+        repo.owner.login // Pass owner for project structure analysis
       );
 
       // Return the repository with the new summary and display name
@@ -158,6 +177,12 @@ export async function registerRoutes(app: Express) {
       if (!userIntroduction) {
         // Use the server's API key from environment variables
         const serverApiKey = process.env.OPENAI_API_KEY;
+        if (!serverApiKey) {
+          return res.status(500).json({
+            error: "OpenAI API key not configured",
+            details: "OPENAI_API_KEY environment variable is required"
+          });
+        }
         userIntroduction = await generateUserIntroduction(repositories, serverApiKey);
       }
       
@@ -214,6 +239,12 @@ export async function registerRoutes(app: Express) {
       if (!userIntroduction) {
         // Use the server's API key from environment variables
         const serverApiKey = process.env.OPENAI_API_KEY;
+        if (!serverApiKey) {
+          return res.status(500).json({
+            error: "OpenAI API key not configured",
+            details: "OPENAI_API_KEY environment variable is required"
+          });
+        }
         userIntroduction = await generateUserIntroduction(repositories, serverApiKey);
       }
       
@@ -251,6 +282,12 @@ export async function registerRoutes(app: Express) {
       const user = await getGithubUser(accessToken);
       // Use the server's API key from environment variables
       const serverApiKey = process.env.OPENAI_API_KEY;
+      if (!serverApiKey) {
+        return res.status(500).json({
+          error: "OpenAI API key not configured",
+          details: "OPENAI_API_KEY environment variable is required"
+        });
+      }
       const introduction = await generateUserIntroduction(repositories, serverApiKey);
 
       res.json({
