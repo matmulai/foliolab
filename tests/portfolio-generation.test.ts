@@ -263,11 +263,11 @@ describe('Portfolio Generation', () => {
       
       const html = generatePortfolioHtml('testuser', repoWithHtml);
       
-      // The HTML should contain the malicious content as text (not escaped in this simple implementation)
+      // The HTML should escape malicious content to prevent XSS vulnerabilities
       // The summary is used in the template, not the description
-      expect(html).toContain('<img src="x" onerror="alert(1)">'); // Raw HTML is included from summary
+      expect(html).toContain('&lt;img src=&quot;x&quot; onerror=&quot;alert(1)&quot;&gt;'); // Escaped HTML is included from summary
       expect(html).not.toContain('<script>alert("xss")</script>'); // Script is in description, not shown
-      // Note: In a production app, this content should be properly escaped
+      // Ensure all user-generated content is properly escaped
     });
 
     it('should handle missing displayName gracefully', () => {
