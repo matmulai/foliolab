@@ -1,6 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { persistQueryClient } from '@tanstack/react-query-persist-client';
+import { getGitHubToken, removeGitHubToken } from './storage';
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -20,7 +21,7 @@ export async function apiRequest(
   }
 
   // Add GitHub token if available
-  const githubToken = localStorage.getItem("github_token");
+  const githubToken = getGitHubToken();
   if (githubToken) {
     headers["Authorization"] = `Bearer ${githubToken}`;
   }
@@ -45,7 +46,7 @@ export const getQueryFn: <T>(options: {
     const headers: Record<string, string> = {};
 
     // Add GitHub token if available
-    const githubToken = localStorage.getItem("github_token");
+    const githubToken = getGitHubToken();
     if (githubToken) {
       headers["Authorization"] = `Bearer ${githubToken}`;
     }
@@ -119,7 +120,7 @@ export function forceRefreshRepositories() {
 
 // Clear all data when returning to home
 export function clearAllData() {
-  localStorage.removeItem("github_token");
+  removeGitHubToken();
   localStorage.removeItem("github_username");
   queryClient.clear();
 }

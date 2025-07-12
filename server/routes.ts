@@ -128,6 +128,14 @@ export async function registerRoutes(app: Express) {
         });
       }
       
+      console.log("Starting repository analysis for:", repo.name);
+      console.log("Repository metadata:", {
+        language: repo.metadata.language,
+        topics: repo.metadata.topics,
+        stars: repo.metadata.stars,
+        hasReadme: !!readme && readme.trim().length > 0
+      });
+      
       const summary = await generateRepoSummary(
         repo.name,
         repo.description || '',
@@ -143,6 +151,8 @@ export async function registerRoutes(app: Express) {
         accessToken, // Pass access token for project structure analysis
         repo.owner.login // Pass owner for project structure analysis
       );
+      
+      console.log("Successfully generated summary for:", repo.name);
 
       // Return the repository with the new summary and display name
       res.json({

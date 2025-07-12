@@ -22,42 +22,69 @@ const USER_INTRO_PROMPT =
 const USER_INTRO_FORMAT =
   "Respond with JSON in this format: { 'introduction': string, 'skills': string[], 'interests': string[] }";
 
-
-
 async function generateWithOpenAI(
   prompt: string,
   userContent: string,
   apiKey: string,
 ): Promise<RepoSummary> {
-  console.log("using open ai base url", process.env.OPENAI_API_BASE_URL)
-  console.log("using open ai model", process.env.OPENAI_API_MODEL)
-  const openai = new OpenAI({
-    apiKey,
-    ...(process.env.OPENAI_API_BASE_URL && { baseURL: process.env.OPENAI_API_BASE_URL })
-  });
-  const response = await openai.chat.completions.create({
-    model: process.env.OPENAI_API_MODEL || "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content: prompt,
-      },
-      {
-        role: "user",
-        content: userContent,
-      },
-    ],
-    response_format: { type: "json_object" },
-    temperature: 0.7,
-    max_tokens: 500,
-  });
+  const timeout = parseInt(process.env.OPENAI_TIMEOUT || '60000');
+  const maxRetries = parseInt(process.env.OPENAI_MAX_RETRIES || '2');
+  
+  try {
+    const openai = new OpenAI({
+      apiKey,
+      timeout, // Configurable timeout
+      maxRetries, // Configurable retries
+      ...(process.env.OPENAI_API_BASE_URL && { baseURL: process.env.OPENAI_API_BASE_URL })
+    });
+    
+    const response = await openai.chat.completions.create({
+      model: process.env.OPENAI_API_MODEL || "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: prompt,
+        },
+        {
+          role: "user",
+          content: userContent,
+        },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 500,
+    });
+    
+    // Check if response structure is valid
+    if (!response || !response.choices || !Array.isArray(response.choices) || response.choices.length === 0) {
+      console.error("Invalid response structure:", response);
+      throw new Error("Invalid response structure from LLM API");
+    }
+    
+    const choice = response.choices[0];
+    if (!choice || !choice.message) {
+      console.error("Invalid choice structure:", choice);
+      throw new Error("Invalid choice structure in LLM response");
+    }
+    
+    const content = choice.message.content;
+    if (!content) {
+      console.error("No content in message:", choice.message);
+      throw new Error("No content in LLM response message");
+    }
 
-  const content = response.choices[0].message.content;
-  if (!content) {
-    throw new Error("No content in OpenAI response");
+    try {
+      const parsed = JSON.parse(content) as RepoSummary;
+      return parsed;
+    } catch (parseError) {
+      console.error("Failed to parse JSON response:", parseError);
+      console.error("Raw content:", content);
+      throw new Error(`Failed to parse JSON response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+    }
+  } catch (error) {
+    console.error("Error in generateWithOpenAI:", error);
+    throw error;
   }
-
-  return JSON.parse(content) as RepoSummary;
 }
 
 async function generateRepoSummary(
@@ -76,18 +103,6 @@ async function generateRepoSummary(
   owner?: string
 ): Promise<RepoSummary> {
   try {
-    console.log("Generating repo summary for:", {
-      name,
-      descriptionLength: description?.length,
-      readmeLength: readme?.length,
-      hasCustomPrompt: !!customPrompt,
-      metadata: metadata ? {
-        language: metadata.language,
-        topicsCount: metadata.topics.length,
-        stars: metadata.stars
-      } : null
-    });
-
     // Build enhanced context with metadata
     let userContent = `Repository Name: ${name}`;
     
@@ -115,7 +130,6 @@ async function generateRepoSummary(
 
     // Handle README content or fallback to project structure analysis
     if (readme && readme.trim()) {
-      console.log("Using README content for analysis");
       // Clean the README content to remove badges and noise
       const cleanedReadme = cleanReadmeContent(readme);
       
@@ -127,7 +141,6 @@ async function generateRepoSummary(
       
       userContent += `\nREADME:\n${trimmedReadme}`;
     } else if (accessToken && owner) {
-      console.log("No README found, analyzing project structure...");
       try {
         // Analyze project structure when README is not available
         const projectStructure = await analyzeProjectStructure(accessToken, owner, name);
@@ -165,23 +178,27 @@ async function generateRepoSummary(
           }
         }
         
-        console.log("Project structure analysis completed successfully");
       } catch (error) {
         console.warn("Failed to analyze project structure:", error);
         userContent += `\nNote: No README available and project structure analysis failed. Analysis based on repository metadata only.`;
       }
     } else {
-      console.log("No README and insufficient data for structure analysis");
       userContent += `\nNote: No README available. Analysis based on repository metadata only.`;
     }
 
     const prompt = `${customPrompt || DEFAULT_PROMPT} ${JSON_FORMAT_SUFFIX}`;
-
-    console.log("Using OpenAI API for generation with enhanced metadata context");
-    return generateWithOpenAI(prompt, userContent, apiKey);
+    
+    try {
+      const result = await generateWithOpenAI(prompt, userContent, apiKey);
+      return result;
+    } catch (llmError) {
+      console.error("LLM generation error:", llmError);
+      throw llmError;
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Failed to generate summary:", errorMessage);
+    console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
     throw new Error("Failed to generate summary: " + errorMessage);
   }
 }
@@ -199,8 +216,6 @@ async function generateUserIntroduction(
   apiKey: string,
 ): Promise<UserIntroduction> {
   try {
-    console.log("Generating user introduction based on repositories");
-
     const repoInfo = repositories.map((repo) => ({
       name: repo.name,
       description: repo.description,
@@ -212,12 +227,18 @@ async function generateUserIntroduction(
     const prompt = `${USER_INTRO_PROMPT} ${USER_INTRO_FORMAT}`;
     const userContent = JSON.stringify(repoInfo, null, 2);
 
+    const timeout = parseInt(process.env.OPENAI_TIMEOUT || '60000');
+    const maxRetries = parseInt(process.env.OPENAI_MAX_RETRIES || '2');
+    
     const openai = new OpenAI({
       apiKey,
+      timeout,
+      maxRetries,
       ...(process.env.OPENAI_API_BASE_URL && { baseURL: process.env.OPENAI_API_BASE_URL })
     });
+    
     const response = await openai.chat.completions.create({
-      model: process.env.OPENAI_API_MODEL || "gpt-4o", // defaults to gpt-4o, can be overridden with OPENAI_API_MODEL env var
+      model: process.env.OPENAI_API_MODEL || "gpt-4o",
       messages: [
         {
           role: "system",
@@ -232,13 +253,33 @@ async function generateUserIntroduction(
       temperature: 0.7,
       max_tokens: 500,
     });
-
-    const content = response.choices[0].message.content;
+    
+    // Check if response structure is valid
+    if (!response || !response.choices || !Array.isArray(response.choices) || response.choices.length === 0) {
+      console.error("Invalid response structure:", response);
+      throw new Error("Invalid response structure from LLM API");
+    }
+    
+    const choice = response.choices[0];
+    if (!choice || !choice.message) {
+      console.error("Invalid choice structure:", choice);
+      throw new Error("Invalid choice structure in LLM response");
+    }
+    
+    const content = choice.message.content;
     if (!content) {
-      throw new Error("No content in OpenAI response");
+      console.error("No content in message:", choice.message);
+      throw new Error("No content in LLM response message");
     }
 
-    return JSON.parse(content) as UserIntroduction;
+    try {
+      const parsed = JSON.parse(content) as UserIntroduction;
+      return parsed;
+    } catch (parseError) {
+      console.error("Failed to parse JSON response:", parseError);
+      console.error("Raw content:", content);
+      throw new Error(`Failed to parse JSON response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+    }
   } catch (error) {
     console.error("Failed to generate user introduction:", error);
     throw new Error(

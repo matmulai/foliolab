@@ -78,11 +78,6 @@ export function removeBadges(readme: string): string {
 }
 
 /**
- * Additional cleanup for common README noise
- * @param readme - README content
- * @returns Further cleaned README content
- */
-/**
  * Extracts the most relevant content from README for portfolio generation
  * Removes badges, boilerplate sections, and focuses on project essence
  * @param readme - README content
