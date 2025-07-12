@@ -30,7 +30,7 @@ describe('GitHub Token Migration', () => {
     localStorage.clear();
   });
 
-// Removed redundant afterEach block
+  // afterEach is not needed since beforeEach clears localStorage
 
   it('should return null when no token exists', () => {
     const token = getGitHubToken();
