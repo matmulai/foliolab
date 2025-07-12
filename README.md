@@ -1,8 +1,8 @@
 # FolioLab
 
-![FolioLab](images/FolioLab.png)
+![FolioLab](images/FolioLab-new.svg)
 
-FolioLab is an app that allows you to create a portfolio from your git repositories.
+FolioLab is an AI-powered portfolio generation tool that transforms your GitHub repositories into beautiful, professional portfolios in minutes.
 
 Create your portfolio using this link: https://foliolab.vercel.app/
 
