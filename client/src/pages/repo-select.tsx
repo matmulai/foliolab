@@ -10,7 +10,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Repository } from "@shared/schema";
 import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { toggleRepositorySelection, saveRepositories, getRepositories } from "@/lib/storage";
+import { toggleRepositorySelection, saveRepositories, getRepositories, getGitHubToken } from "@/lib/storage";
 import { AnalysisProgress } from "@/components/analysis-progress";
 import { 
   Select,
@@ -164,7 +164,7 @@ export default function RepoSelect() {
           }));
 
           const res = await apiRequest("POST", `/api/repositories/${repo.id}/analyze`, {
-            accessToken: localStorage.getItem("github_token"),
+            accessToken: getGitHubToken(),
             username: localStorage.getItem("github_username")
           });
 

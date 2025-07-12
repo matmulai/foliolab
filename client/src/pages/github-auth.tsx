@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { saveGitHubToken, removeGitHubToken } from "@/lib/storage";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
@@ -31,7 +32,7 @@ export default function GithubAuth() {
 
       // Store GitHub token and username for later use
       if (data.accessToken) {
-        localStorage.setItem("github_token", data.accessToken);
+        saveGitHubToken(data.accessToken);
         localStorage.setItem("github_username", data.username);
 
         // Initialize repositories in query cache
@@ -68,7 +69,7 @@ export default function GithubAuth() {
     if (code) {
       // Clear any existing data before starting new auth
       queryClient.clear();
-      localStorage.removeItem("github_token");
+      removeGitHubToken();
       localStorage.removeItem("github_username");
       authenticate(code);
     } else {

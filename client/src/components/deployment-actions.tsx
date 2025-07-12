@@ -10,6 +10,7 @@ import {
 import { Loader2, Github, Download, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { getGitHubToken } from "@/lib/storage";
 import { DeploymentOverlay } from "./deployment-overlay";
 import { VercelDeploymentOverlay } from "./vercel-deployment-overlay";
 import { Repository } from "@shared/schema";
@@ -53,7 +54,7 @@ export function DeploymentActions({
     try {
       setIsDownloading(true);
       const res = await apiRequest("POST", "/api/deploy/github", {
-        accessToken: localStorage.getItem("github_token"),
+        accessToken: getGitHubToken(),
         downloadOnly: true,
         repositories,
         userInfo,
@@ -98,7 +99,7 @@ export function DeploymentActions({
     try {
       setIsDeployingToPages(true);
       const res = await apiRequest("POST", "/api/deploy/github-pages", {
-        accessToken: localStorage.getItem("github_token"),
+        accessToken: getGitHubToken(),
         repositories,
         userInfo,
         introduction,
@@ -142,7 +143,7 @@ export function DeploymentActions({
     try {
       setIsCreatingRepo(true);
 
-      const githubToken = localStorage.getItem("github_token");
+      const githubToken = getGitHubToken();
       if (!githubToken) {
         throw new Error("GitHub token not found. Please reconnect your GitHub account.");
       }
