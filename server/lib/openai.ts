@@ -1,5 +1,6 @@
 import OpenAI from "openai";
-import fetch from "node-fetch";
+import { cleanReadmeContent } from "./readme-cleaner.js";
+import { analyzeProjectStructure, generateProjectSummary, type ProjectStructure } from "./project-analyzer.js";
 
 interface RepoSummary {
   summary: string;
@@ -21,246 +22,24 @@ const USER_INTRO_PROMPT =
 const USER_INTRO_FORMAT =
   "Respond with JSON in this format: { 'introduction': string, 'skills': string[], 'interests': string[] }";
 
-const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-const OPENROUTER_DEFAULT_MODEL =
-  "google/gemini-2.0-flash-lite-preview-02-05:free";
-const OPENROUTER_MODEL =
-  process.env.OPENROUTER_MODEL || OPENROUTER_DEFAULT_MODEL;
-
-function extractJsonFromMarkdown(content: string): string {
-  const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
-  if (jsonMatch && jsonMatch[1]) {
-    console.log("Extracted JSON from markdown code block");
-    return jsonMatch[1];
-  }
-
-  const directJsonMatch = content.match(/\s*(\{[\s\S]*\})\s*/);
-  if (directJsonMatch && directJsonMatch[1]) {
-    console.log("Found direct JSON content");
-    return directJsonMatch[1];
-  }
-
-  console.error("Could not extract JSON from content:", content);
-  throw new Error(
-    "Invalid response format: Could not extract JSON from response",
-  );
-}
-
-async function generateWithOpenRouter(
-  prompt: string,
-  userContent: string,
-): Promise<RepoSummary> {
-  console.log("Making OpenRouter API request with:", {
-    url: OPENROUTER_API_URL,
-    model: OPENROUTER_MODEL,
-    prompt,
-    contentLength: userContent.length,
-  });
-
-  const requestBody = {
-    model: OPENROUTER_MODEL,
-    messages: [
-      {
-        role: "system",
-        content: prompt,
-      },
-      {
-        role: "user",
-        content: userContent,
-      },
-    ],
-  };
-
-  console.log("OpenRouter request body:", JSON.stringify(requestBody, null, 2));
-
-  const response = await fetch(OPENROUTER_API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      "HTTP-Referer": "https://replit.com",
-      "X-Title": "FolioLab",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(requestBody),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("OpenRouter API error:", {
-      status: response.status,
-      statusText: response.statusText,
-      error: errorText,
-    });
-    throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
-  }
-
-  const data = await response.json();
-  console.log("OpenRouter API response:", JSON.stringify(data, null, 2));
-
-  const content = data.choices[0].message.content;
-  if (!content) {
-    throw new Error("Empty response from OpenRouter API");
-  }
-
-  try {
-    const jsonContent = extractJsonFromMarkdown(content);
-    const result = JSON.parse(jsonContent) as RepoSummary;
-
-    if (!result.summary || !Array.isArray(result.keyFeatures)) {
-      throw new Error("Invalid response structure: missing required fields");
-    }
-
-    return result;
-  } catch (error) {
-    console.error("Failed to parse OpenRouter response:", error);
-    throw new Error(
-      `Failed to parse OpenRouter response: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
-}
-
 async function generateWithOpenAI(
   prompt: string,
   userContent: string,
   apiKey: string,
 ): Promise<RepoSummary> {
-  const openai = new OpenAI({ apiKey });
-
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content: prompt,
-      },
-      {
-        role: "user",
-        content: userContent,
-      },
-    ],
-    response_format: { type: "json_object" },
-    temperature: 0.7,
-    max_tokens: 500,
-  });
-
-  const content = response.choices[0].message.content;
-  if (!content) {
-    throw new Error("No content in OpenAI response");
-  }
-
-  return JSON.parse(content) as RepoSummary;
-}
-
-async function generateRepoSummary(
-  name: string,
-  description: string,
-  readme: string,
-  apiKey?: string,
-  customPrompt?: string,
-): Promise<RepoSummary> {
+  const timeout = parseInt(process.env.OPENAI_TIMEOUT || '60000');
+  const maxRetries = parseInt(process.env.OPENAI_MAX_RETRIES || '2');
+  
   try {
-    console.log("Generating repo summary for:", {
-      name,
-      descriptionLength: description?.length,
-      readmeLength: readme?.length,
-      usingOpenAI: !!apiKey,
-      hasCustomPrompt: !!customPrompt,
-      openrouterModel: OPENROUTER_MODEL,
+    const openai = new OpenAI({
+      apiKey,
+      timeout, // Configurable timeout
+      maxRetries, // Configurable retries
+      ...(process.env.OPENAI_API_BASE_URL && { baseURL: process.env.OPENAI_API_BASE_URL })
     });
-
-    const maxReadmeLength = 2000;
-    const trimmedReadme =
-      readme.length > maxReadmeLength
-        ? readme.substring(0, maxReadmeLength) + "..."
-        : readme;
-
-    const prompt = `${customPrompt || DEFAULT_PROMPT} ${JSON_FORMAT_SUFFIX}`;
-    const userContent = `Repository Name: ${name}\nDescription: ${description}\nREADME:\n${trimmedReadme}`;
-
-    if (!apiKey) {
-      console.log(
-        "Using OpenRouter API for generation with model:",
-        OPENROUTER_MODEL,
-      );
-      return generateWithOpenRouter(prompt, userContent);
-    }
-
-    console.log("Using OpenAI API for generation");
-    return generateWithOpenAI(prompt, userContent, apiKey);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("Failed to generate summary:", errorMessage);
-    throw new Error("Failed to generate summary: " + errorMessage);
-  }
-}
-
-async function generateUserIntroduction(
-  repositories: Array<{
-    name: string;
-    description: string;
-    metadata: {
-      language: string | null;
-      topics: string[];
-    };
-    summary?: string;
-  }>,
-  apiKey?: string,
-): Promise<UserIntroduction> {
-  try {
-    console.log("Generating user introduction based on:", {
-      repoCount: repositories.length,
-      hasApiKey: !!apiKey,
-    });
-
-    const repoInfo = repositories.map((repo) => ({
-      name: repo.name,
-      description: repo.description,
-      language: repo.metadata.language,
-      topics: repo.metadata.topics,
-      summary: repo.summary,
-    }));
-
-    const prompt = `${USER_INTRO_PROMPT} ${USER_INTRO_FORMAT}`;
-    const userContent = JSON.stringify(repoInfo, null, 2);
-
-    if (!apiKey) {
-      console.log("Using OpenRouter API for user introduction");
-      const response = await fetch(OPENROUTER_API_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          "HTTP-Referer": "https://replit.com",
-          "X-Title": "FolioLab",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: OPENROUTER_MODEL,
-          messages: [
-            {
-              role: "system",
-              content: prompt,
-            },
-            {
-              role: "user",
-              content: userContent,
-            },
-          ],
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`OpenRouter API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const content = data.choices[0].message.content;
-      const jsonContent = extractJsonFromMarkdown(content);
-      return JSON.parse(jsonContent) as UserIntroduction;
-    }
-
-    const openai = new OpenAI({ apiKey });
+    
     const response = await openai.chat.completions.create({
-      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      model: process.env.OPENAI_API_MODEL || "gpt-4o",
       messages: [
         {
           role: "system",
@@ -275,13 +54,232 @@ async function generateUserIntroduction(
       temperature: 0.7,
       max_tokens: 500,
     });
-
-    const content = response.choices[0].message.content;
+    
+    // Check if response structure is valid
+    if (!response || !response.choices || !Array.isArray(response.choices) || response.choices.length === 0) {
+      console.error("Invalid response structure:", response);
+      throw new Error("Invalid response structure from LLM API");
+    }
+    
+    const choice = response.choices[0];
+    if (!choice || !choice.message) {
+      console.error("Invalid choice structure:", choice);
+      throw new Error("Invalid choice structure in LLM response");
+    }
+    
+    const content = choice.message.content;
     if (!content) {
-      throw new Error("No content in OpenAI response");
+      console.error("No content in message:", choice.message);
+      throw new Error("No content in LLM response message");
     }
 
-    return JSON.parse(content) as UserIntroduction;
+    try {
+      const parsed = JSON.parse(content) as RepoSummary;
+      return parsed;
+    } catch (parseError) {
+      console.error("Failed to parse JSON response:", parseError);
+      console.error("Raw content:", content);
+      throw new Error(`Failed to parse JSON response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+    }
+  } catch (error) {
+    console.error("Error in generateWithOpenAI:", error);
+    throw error;
+  }
+}
+
+async function generateRepoSummary(
+  name: string,
+  description: string,
+  readme: string,
+  apiKey: string,
+  customPrompt?: string,
+  metadata?: {
+    language: string | null;
+    topics: string[];
+    stars: number;
+    url?: string | null;
+  },
+  accessToken?: string,
+  owner?: string
+): Promise<RepoSummary> {
+  try {
+    // Build enhanced context with metadata
+    let userContent = `Repository Name: ${name}`;
+    
+    if (description) {
+      userContent += `\nDescription: ${description}`;
+    }
+    
+    if (metadata) {
+      if (metadata.language) {
+        userContent += `\nPrimary Language: ${metadata.language}`;
+      }
+      
+      if (metadata.topics && metadata.topics.length > 0) {
+        userContent += `\nTopics/Tags: ${metadata.topics.join(', ')}`;
+      }
+      
+      if (metadata.stars > 0) {
+        userContent += `\nStars: ${metadata.stars}`;
+      }
+      
+      if (metadata.url) {
+        userContent += `\nProject URL: ${metadata.url}`;
+      }
+    }
+
+    // Handle README content or fallback to project structure analysis
+    if (readme && readme.trim()) {
+      // Clean the README content to remove badges and noise
+      const cleanedReadme = cleanReadmeContent(readme);
+      
+      const maxReadmeLength = 2000;
+      const trimmedReadme =
+        cleanedReadme.length > maxReadmeLength
+          ? cleanedReadme.substring(0, maxReadmeLength) + "..."
+          : cleanedReadme;
+      
+      userContent += `\nREADME:\n${trimmedReadme}`;
+    } else if (accessToken && owner) {
+      try {
+        // Analyze project structure when README is not available
+        const projectStructure = await analyzeProjectStructure(accessToken, owner, name);
+        const structureSummary = generateProjectSummary(projectStructure);
+        
+        userContent += `\nProject Structure Analysis:\n${structureSummary}`;
+        
+        // Add detailed structure information
+        if (projectStructure.frameworkIndicators.length > 0) {
+          userContent += `\nDetected Frameworks: ${projectStructure.frameworkIndicators.map(f => f.framework).join(', ')}`;
+        }
+        
+        if (projectStructure.techStack.length > 0) {
+          userContent += `\nTech Stack: ${projectStructure.techStack.join(', ')}`;
+        }
+        
+        if (projectStructure.sourceFiles.length > 0) {
+          const entryPoints = projectStructure.sourceFiles.filter(f => f.isEntryPoint);
+          if (entryPoints.length > 0) {
+            userContent += `\nEntry Points: ${entryPoints.map(f => f.name).join(', ')}`;
+          }
+          
+          const languages = Array.from(new Set(projectStructure.sourceFiles.map(f => f.language)));
+          userContent += `\nLanguages Used: ${languages.join(', ')}`;
+        }
+        
+        if (projectStructure.packageFiles.length > 0) {
+          const packageInfo = projectStructure.packageFiles[0];
+          if (packageInfo.description) {
+            userContent += `\nPackage Description: ${packageInfo.description}`;
+          }
+          if (packageInfo.dependencies && packageInfo.dependencies.length > 0) {
+            const majorDeps = packageInfo.dependencies.slice(0, 10); // Limit to avoid token overflow
+            userContent += `\nKey Dependencies: ${majorDeps.join(', ')}`;
+          }
+        }
+        
+      } catch (error) {
+        console.warn("Failed to analyze project structure:", error);
+        userContent += `\nNote: No README available and project structure analysis failed. Analysis based on repository metadata only.`;
+      }
+    } else {
+      userContent += `\nNote: No README available. Analysis based on repository metadata only.`;
+    }
+
+    const prompt = `${customPrompt || DEFAULT_PROMPT} ${JSON_FORMAT_SUFFIX}`;
+    
+    try {
+      const result = await generateWithOpenAI(prompt, userContent, apiKey);
+      return result;
+    } catch (llmError) {
+      console.error("LLM generation error:", llmError);
+      throw llmError;
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Failed to generate summary:", errorMessage);
+    console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+    throw new Error("Failed to generate summary: " + errorMessage);
+  }
+}
+
+async function generateUserIntroduction(
+  repositories: Array<{
+    name: string;
+    description: string;
+    metadata: {
+      language: string | null;
+      topics: string[];
+    };
+    summary?: string;
+  }>,
+  apiKey: string,
+): Promise<UserIntroduction> {
+  try {
+    const repoInfo = repositories.map((repo) => ({
+      name: repo.name,
+      description: repo.description,
+      language: repo.metadata.language,
+      topics: repo.metadata.topics,
+      summary: repo.summary,
+    }));
+
+    const prompt = `${USER_INTRO_PROMPT} ${USER_INTRO_FORMAT}`;
+    const userContent = JSON.stringify(repoInfo, null, 2);
+
+    const timeout = parseInt(process.env.OPENAI_TIMEOUT || '60000');
+    const maxRetries = parseInt(process.env.OPENAI_MAX_RETRIES || '2');
+    
+    const openai = new OpenAI({
+      apiKey,
+      timeout,
+      maxRetries,
+      ...(process.env.OPENAI_API_BASE_URL && { baseURL: process.env.OPENAI_API_BASE_URL })
+    });
+    
+    const response = await openai.chat.completions.create({
+      model: process.env.OPENAI_API_MODEL || "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: prompt,
+        },
+        {
+          role: "user",
+          content: userContent,
+        },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 500,
+    });
+    
+    // Check if response structure is valid
+    if (!response || !response.choices || !Array.isArray(response.choices) || response.choices.length === 0) {
+      console.error("Invalid response structure:", response);
+      throw new Error("Invalid response structure from LLM API");
+    }
+    
+    const choice = response.choices[0];
+    if (!choice || !choice.message) {
+      console.error("Invalid choice structure:", choice);
+      throw new Error("Invalid choice structure in LLM response");
+    }
+    
+    const content = choice.message.content;
+    if (!content) {
+      console.error("No content in message:", choice.message);
+      throw new Error("No content in LLM response message");
+    }
+
+    try {
+      const parsed = JSON.parse(content) as UserIntroduction;
+      return parsed;
+    } catch (parseError) {
+      console.error("Failed to parse JSON response:", parseError);
+      console.error("Raw content:", content);
+      throw new Error(`Failed to parse JSON response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+    }
   } catch (error) {
     console.error("Failed to generate user introduction:", error);
     throw new Error(

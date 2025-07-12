@@ -84,7 +84,7 @@ app.use((req, res, next) => {
     });
   } else {
     // Only import and setup Vite in development
-    const { setupVite } = await import("./vite.js");
+    const { setupVite } = await import("./vite.ts");
     await setupVite(app, server);
   }
 
