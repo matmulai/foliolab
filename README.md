@@ -152,6 +152,7 @@ The test suite covers the core functionality of FolioLab:
 - **`tests/github-integration.test.ts`** - Tests for GitHub API integration and repository fetching
 - **`tests/portfolio-generation.test.ts`** - Tests for portfolio HTML generation and theming
 - **`tests/openai-integration.test.ts`** - Tests for OpenAI/LLM integration and summary generation
+- **`tests/token-migration.test.ts`** - Tests for backward compatibility and token storage migration
 
 ### Test Framework
 

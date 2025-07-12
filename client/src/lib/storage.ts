@@ -10,11 +10,27 @@ export function saveGitHubToken(token: string) {
 }
 
 export function getGitHubToken(): string | null {
-  return localStorage.getItem(STORAGE_KEYS.GITHUB_TOKEN);
+  // First try the new key
+  let token = localStorage.getItem(STORAGE_KEYS.GITHUB_TOKEN);
+  
+  // If not found, try the old key for backward compatibility
+  if (!token) {
+    token = localStorage.getItem("github_token");
+    
+    // If found in old key, migrate it to new key and remove old one
+    if (token) {
+      localStorage.setItem(STORAGE_KEYS.GITHUB_TOKEN, token);
+      localStorage.removeItem("github_token");
+    }
+  }
+  
+  return token;
 }
 
 export function removeGitHubToken() {
+  // Remove both old and new keys to ensure complete cleanup
   localStorage.removeItem(STORAGE_KEYS.GITHUB_TOKEN);
+  localStorage.removeItem("github_token");
 }
 
 export function saveRepositories(repositories: Repository[]) {

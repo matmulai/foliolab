@@ -120,7 +120,7 @@ export function forceRefreshRepositories() {
 
 // Clear all data when returning to home
 export function clearAllData() {
-  removeGitHubToken();
+  removeGitHubToken(); // This now handles both old and new token keys
   localStorage.removeItem("github_username");
   queryClient.clear();
 }

@@ -319,7 +319,7 @@ export async function getReadmeContent(
     });
     return data.toString();
   } catch (error) {
-    console.warn(`Failed to fetch README for ${owner}/${repo}:`, error);
+    console.warn(`Failed to fetch README for ${owner}/${repo}:`);
     return null;
   }
 }
