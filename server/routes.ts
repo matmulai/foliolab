@@ -664,6 +664,16 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  // Helper function to escape HTML to prevent XSS attacks
+  function escapeHtml(unsafe: string): string {
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   // Helper function to generate portfolio HTML
   function generatePortfolioHtml(
     username: string,
@@ -700,7 +710,7 @@ export async function registerRoutes(app: Express) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${username}'s Portfolio</title>
+    <title>${escapeHtml(username)}'s Portfolio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -743,23 +753,23 @@ export async function registerRoutes(app: Express) {
                 <div class="${theme.layout.profile}">
                     ${avatarUrl ? `
                     <div class="mb-6">
-                        <img src="${avatarUrl}" alt="${username}" class="w-32 h-32 rounded-full mx-auto border-4 border-gray-200 shadow-lg">
+                        <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(username)}" class="w-32 h-32 rounded-full mx-auto border-4 border-gray-200 shadow-lg">
                     </div>
                     ` : ''}
-                    <h1 class="text-4xl font-bold mb-6 ${theme.preview.text}">${username}'s Portfolio</h1>
+                    <h1 class="text-4xl font-bold mb-6 ${theme.preview.text}">${escapeHtml(username)}'s Portfolio</h1>
                     ${introduction ? `
                     <div class="max-w-2xl ${theme.id === 'modern' ? 'text-center' : 'text-left'}">
-                        <p class="${theme.preview.text} mb-8 leading-relaxed">${introduction.introduction}</p>
+                        <p class="${theme.preview.text} mb-8 leading-relaxed">${escapeHtml(introduction.introduction)}</p>
                         <div class="flex flex-wrap gap-3 ${theme.id === 'modern' ? 'justify-center' : ''} mb-8">
                             ${introduction.skills.map(skill => {
                               // For Modern theme with gradient background, use explicit classes
-                              return theme.id === 'modern' 
-                                ? `<span class="px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 text-white">${skill}</span>`
-                                : `<span class="${theme.preview.accent} px-3 py-1 rounded-full text-sm font-medium">${skill}</span>`;
+                              return theme.id === 'modern'
+                                ? `<span class="px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 text-white">${escapeHtml(skill)}</span>`
+                                : `<span class="${theme.preview.accent} px-3 py-1 rounded-full text-sm font-medium">${escapeHtml(skill)}</span>`;
                             }).join('')}
                         </div>
                         <p class="${theme.preview.text} text-sm mb-8">
-                            <span class="font-medium">Interests:</span> ${introduction.interests.join(', ')}
+                            <span class="font-medium">Interests:</span> ${introduction.interests.map(interest => escapeHtml(interest)).join(', ')}
                         </p>
                     </div>
                     ` : ''}
@@ -782,7 +792,7 @@ export async function registerRoutes(app: Express) {
                   return `
                     <article class="${theme.preview.card} p-6 relative card-shadow ${marginClass}">
                         <div class="flex justify-between items-start">
-                            <h2 class="text-2xl font-semibold mb-2 ${theme.preview.text}">${repo.displayName || repo.name || 'Untitled Project'}</h2>
+                            <h2 class="text-2xl font-semibold mb-2 ${theme.preview.text}">${escapeHtml(repo.displayName || repo.name || 'Untitled Project')}</h2>
                             <div class="flex items-center gap-2">
                                 ${repo.metadata?.stars > 0 ? `
                                 <span class="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">
@@ -799,12 +809,12 @@ export async function registerRoutes(app: Express) {
                                     : ''}
                             </div>
                         </div>
-                        <p class="${theme.preview.text} mb-4">${description}</p>
+                        <p class="${theme.preview.text} mb-4">${escapeHtml(description)}</p>
                         <div class="flex gap-2 flex-wrap">
                             ${topics.map(topic => {
-                                return theme.id === 'modern' 
-                                    ? `<span class="px-2 py-1 rounded-full text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white">${topic}</span>`
-                                    : `<span class="${theme.preview.accent} px-2 py-1 rounded-full text-sm">${topic}</span>`;
+                                return theme.id === 'modern'
+                                    ? `<span class="px-2 py-1 rounded-full text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white">${escapeHtml(topic)}</span>`
+                                    : `<span class="${theme.preview.accent} px-2 py-1 rounded-full text-sm">${escapeHtml(topic)}</span>`;
                             }).join('')}
                         </div>
                     </article>
