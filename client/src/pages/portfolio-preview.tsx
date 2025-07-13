@@ -34,6 +34,7 @@ export default function PortfolioPreview() {
   const [selectedRepos, setSelectedRepos] = useState<Repository[]>([]);
   const [userIntro, setUserIntro] = useState<UserIntroduction | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [customTitle, setCustomTitle] = useState<string | null>(null);
   const [selectedTheme, setSelectedTheme] = useState("modern");
   const theme = themes.find((t) => t.id === selectedTheme) || themes[0];
 
@@ -42,12 +43,16 @@ export default function PortfolioPreview() {
   const [editingSkills, setEditingSkills] = useState(false);
   const [editingInterests, setEditingInterests] = useState(false);
   const [editingRepo, setEditingRepo] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingRepoTitle, setEditingRepoTitle] = useState<number | null>(null);
   
   // Temporary edit values
   const [tempIntro, setTempIntro] = useState("");
   const [tempSkills, setTempSkills] = useState<string[]>([]);
   const [tempInterests, setTempInterests] = useState<string[]>([]);
   const [tempRepoSummary, setTempRepoSummary] = useState("");
+  const [tempTitle, setTempTitle] = useState("");
+  const [tempRepoTitle, setTempRepoTitle] = useState("");
   const [newSkill, setNewSkill] = useState("");
   const [newInterest, setNewInterest] = useState("");
 
@@ -108,6 +113,18 @@ export default function PortfolioPreview() {
     setEditingRepo(repoId);
   };
 
+  const startEditingTitle = () => {
+    if (userInfo) {
+      setTempTitle(`${userInfo.username}'s Portfolio`);
+      setEditingTitle(true);
+    }
+  };
+
+  const startEditingRepoTitle = (repoId: number, title: string) => {
+    setTempRepoTitle(title);
+    setEditingRepoTitle(repoId);
+  };
+
   const saveIntro = () => {
     if (userIntro) {
       setUserIntro({ ...userIntro, introduction: tempIntro });
@@ -158,15 +175,45 @@ export default function PortfolioPreview() {
     }
   };
 
+  const saveTitle = () => {
+    setCustomTitle(tempTitle);
+    setEditingTitle(false);
+    toast({
+      title: "Portfolio Title Updated",
+      description: "Your portfolio title has been updated successfully.",
+    });
+  };
+
+  const saveRepoTitle = () => {
+    if (editingRepoTitle !== null) {
+      setSelectedRepos(repos =>
+        repos.map(repo =>
+          repo.id === editingRepoTitle
+            ? { ...repo, displayName: tempRepoTitle }
+            : repo
+        )
+      );
+      setEditingRepoTitle(null);
+      toast({
+        title: "Repository Title Updated",
+        description: "The repository title has been updated successfully.",
+      });
+    }
+  };
+
   const cancelEdit = () => {
     setEditingIntro(false);
     setEditingSkills(false);
     setEditingInterests(false);
     setEditingRepo(null);
+    setEditingTitle(false);
+    setEditingRepoTitle(null);
     setTempIntro("");
     setTempSkills([]);
     setTempInterests([]);
     setTempRepoSummary("");
+    setTempTitle("");
+    setTempRepoTitle("");
     setNewSkill("");
     setNewInterest("");
   };
@@ -293,12 +340,43 @@ export default function PortfolioPreview() {
           >
             <CardHeader>
               <div className="flex justify-between items-start">
-                <h2
-                  className={cn("text-2xl font-semibold", theme.preview.text)}
-                >
-                  {repo.displayName || repo.name}
-                </h2>
-                <div className="flex items-center gap-2">
+                <div className="relative group flex-1">
+                  {editingRepoTitle === repo.id ? (
+                    <div className="space-y-2">
+                      <Input
+                        value={tempRepoTitle}
+                        onChange={(e) => setTempRepoTitle(e.target.value)}
+                        className="text-2xl font-semibold"
+                        placeholder="Enter repository title..."
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={saveRepoTitle}>
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={cancelEdit}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <h2
+                        className={cn("text-2xl font-semibold", theme.preview.text)}
+                      >
+                        {repo.displayName || repo.name}
+                      </h2>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => startEditingRepoTitle(repo.id, repo.displayName || repo.name)}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 ml-2">
                   {repo.metadata.stars > 0 && (
                     <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">
                       ★ {repo.metadata.stars}
@@ -421,9 +499,40 @@ export default function PortfolioPreview() {
                 {userInfo.username.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <h1 className={cn("text-4xl font-bold mb-6", theme.preview.text)}>
-              {userInfo.username}'s Portfolio
-            </h1>
+            <div className="relative group">
+              {editingTitle ? (
+                <div className="space-y-2">
+                  <Input
+                    value={tempTitle}
+                    onChange={(e) => setTempTitle(e.target.value)}
+                    className="text-center text-4xl font-bold"
+                    placeholder="Enter portfolio title..."
+                  />
+                  <div className="flex gap-2 justify-center">
+                    <Button size="sm" onClick={saveTitle}>
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={cancelEdit}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h1 className={cn("text-4xl font-bold mb-6", theme.preview.text)}>
+                    {customTitle || `${userInfo.username}'s Portfolio`}
+                  </h1>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={startEditingTitle}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
           </>
         )}
 
@@ -661,15 +770,46 @@ export default function PortfolioPreview() {
                     >
                       <CardHeader>
                         <div className="flex justify-between items-start">
-                          <h2
-                            className={cn(
-                              "text-2xl font-semibold",
-                              theme.preview.text,
+                          <div className="relative group flex-1">
+                            {editingRepoTitle === repo.id ? (
+                              <div className="space-y-2">
+                                <Input
+                                  value={tempRepoTitle}
+                                  onChange={(e) => setTempRepoTitle(e.target.value)}
+                                  className="text-2xl font-semibold"
+                                  placeholder="Enter repository title..."
+                                />
+                                <div className="flex gap-2">
+                                  <Button size="sm" onClick={saveRepoTitle}>
+                                    <Check className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={cancelEdit}>
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <h2
+                                  className={cn(
+                                    "text-2xl font-semibold",
+                                    theme.preview.text,
+                                  )}
+                                >
+                                  {repo.displayName || repo.name}
+                                </h2>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => startEditingRepoTitle(repo.id, repo.displayName || repo.name)}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                              </>
                             )}
-                          >
-                            {repo.displayName || repo.name}
-                          </h2>
-                          <div className="flex items-center gap-2">
+                          </div>
+                          <div className="flex items-center gap-2 ml-2">
                             {repo.metadata.stars > 0 && (
                               <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">
                                 ★ {repo.metadata.stars}
