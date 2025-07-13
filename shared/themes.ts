@@ -71,10 +71,10 @@ export const themes: Theme[] = [
       border: "border-stone-200",
     },
     layout: {
-      container: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12",
+      container: "grid grid-cols-1 md:grid-cols-2 gap-12",
       header: "col-span-full flex justify-center",
       content:
-        "col-span-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8",
+        "col-span-full grid grid-cols-1 md:grid-cols-2 gap-8",
       profile: "flex flex-col items-center",
     },
   },
