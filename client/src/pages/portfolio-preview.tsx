@@ -28,6 +28,11 @@ interface UserInfo {
   avatarUrl: string | null;
 }
 
+// Helper function to capitalize first letter
+const capitalizeFirstLetter = (str: string) => {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+};
+
 export default function PortfolioPreview() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -115,7 +120,7 @@ export default function PortfolioPreview() {
 
   const startEditingTitle = () => {
     if (userInfo) {
-      setTempTitle(`${userInfo.username}'s Portfolio`);
+      setTempTitle(`${capitalizeFirstLetter(userInfo.username)}'s Portfolio`);
       setEditingTitle(true);
     }
   };
@@ -520,7 +525,7 @@ export default function PortfolioPreview() {
               ) : (
                 <>
                   <h1 className={cn("text-4xl font-bold mb-6", theme.preview.text)}>
-                    {customTitle || `${userInfo.username}'s Portfolio`}
+                    {customTitle || `${capitalizeFirstLetter(userInfo.username)}'s Portfolio`}
                   </h1>
                   <Button
                     size="sm"
