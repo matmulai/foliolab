@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Github, ExternalLink, ArrowLeft } from "lucide-react";
+import { Github, ExternalLink, ArrowLeft, Edit2, Check, X, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { DeploymentActions } from "@/components/deployment-actions";
@@ -14,6 +14,8 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeSelector } from "@/components/theme-selector";
 import { themes } from "@shared/themes";
 import { cn } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
 interface UserIntroduction {
   introduction: string;
@@ -34,6 +36,20 @@ export default function PortfolioPreview() {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [selectedTheme, setSelectedTheme] = useState("modern");
   const theme = themes.find((t) => t.id === selectedTheme) || themes[0];
+
+  // Edit state management
+  const [editingIntro, setEditingIntro] = useState(false);
+  const [editingSkills, setEditingSkills] = useState(false);
+  const [editingInterests, setEditingInterests] = useState(false);
+  const [editingRepo, setEditingRepo] = useState<number | null>(null);
+  
+  // Temporary edit values
+  const [tempIntro, setTempIntro] = useState("");
+  const [tempSkills, setTempSkills] = useState<string[]>([]);
+  const [tempInterests, setTempInterests] = useState<string[]>([]);
+  const [tempRepoSummary, setTempRepoSummary] = useState("");
+  const [newSkill, setNewSkill] = useState("");
+  const [newInterest, setNewInterest] = useState("");
 
   // Get repository data from client-side cache
   const { data, isLoading, error } = useQuery<{ repositories: Repository[] }>({
@@ -64,6 +80,118 @@ export default function PortfolioPreview() {
       });
     },
   });
+
+  // Edit handlers
+  const startEditingIntro = () => {
+    if (userIntro) {
+      setTempIntro(userIntro.introduction);
+      setEditingIntro(true);
+    }
+  };
+
+  const startEditingSkills = () => {
+    if (userIntro) {
+      setTempSkills([...userIntro.skills]);
+      setEditingSkills(true);
+    }
+  };
+
+  const startEditingInterests = () => {
+    if (userIntro) {
+      setTempInterests([...userIntro.interests]);
+      setEditingInterests(true);
+    }
+  };
+
+  const startEditingRepo = (repoId: number, summary: string) => {
+    setTempRepoSummary(summary);
+    setEditingRepo(repoId);
+  };
+
+  const saveIntro = () => {
+    if (userIntro) {
+      setUserIntro({ ...userIntro, introduction: tempIntro });
+      setEditingIntro(false);
+      toast({
+        title: "Introduction Updated",
+        description: "Your introduction has been updated successfully.",
+      });
+    }
+  };
+
+  const saveSkills = () => {
+    if (userIntro) {
+      setUserIntro({ ...userIntro, skills: tempSkills });
+      setEditingSkills(false);
+      toast({
+        title: "Skills Updated",
+        description: "Your skills have been updated successfully.",
+      });
+    }
+  };
+
+  const saveInterests = () => {
+    if (userIntro) {
+      setUserIntro({ ...userIntro, interests: tempInterests });
+      setEditingInterests(false);
+      toast({
+        title: "Interests Updated",
+        description: "Your interests have been updated successfully.",
+      });
+    }
+  };
+
+  const saveRepoSummary = () => {
+    if (editingRepo !== null) {
+      setSelectedRepos(repos =>
+        repos.map(repo =>
+          repo.id === editingRepo
+            ? { ...repo, summary: tempRepoSummary }
+            : repo
+        )
+      );
+      setEditingRepo(null);
+      toast({
+        title: "Repository Summary Updated",
+        description: "The repository summary has been updated successfully.",
+      });
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingIntro(false);
+    setEditingSkills(false);
+    setEditingInterests(false);
+    setEditingRepo(null);
+    setTempIntro("");
+    setTempSkills([]);
+    setTempInterests([]);
+    setTempRepoSummary("");
+    setNewSkill("");
+    setNewInterest("");
+  };
+
+  const addSkill = () => {
+    if (newSkill.trim() && !tempSkills.includes(newSkill.trim())) {
+      setTempSkills([...tempSkills, newSkill.trim()]);
+      setNewSkill("");
+    }
+  };
+
+  const removeSkill = (index: number) => {
+    setTempSkills(tempSkills.filter((_, i) => i !== index));
+  };
+
+  const addInterest = () => {
+    if (newInterest.trim() && !tempInterests.includes(newInterest.trim())) {
+      setTempInterests([...tempInterests, newInterest.trim()]);
+      setNewInterest("");
+    }
+  };
+
+  const removeInterest = (index: number) => {
+    setTempInterests(tempInterests.filter((_, i) => i !== index));
+  };
 
   useEffect(() => {
     if (data?.repositories && !isLoading) {
@@ -201,10 +329,39 @@ export default function PortfolioPreview() {
             </CardHeader>
             <CardContent>
               {repo.summary ? (
-                <>
-                  <p className={cn("mb-4", theme.preview.text)}>
-                    {repo.summary}
-                  </p>
+                <div className="relative group">
+                  {editingRepo === repo.id ? (
+                    <div className="space-y-3">
+                      <Textarea
+                        value={tempRepoSummary}
+                        onChange={(e) => setTempRepoSummary(e.target.value)}
+                        className="min-h-[100px]"
+                        placeholder="Enter repository summary..."
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={saveRepoSummary}>
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={cancelEdit}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className={cn("mb-4", theme.preview.text)}>
+                        {repo.summary}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => startEditingRepo(repo.id, repo.summary || "")}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                   <div className="flex gap-2 flex-wrap">
                     {repo.metadata.topics.map((topic) => (
                       <span
@@ -219,7 +376,7 @@ export default function PortfolioPreview() {
                       </span>
                     ))}
                   </div>
-                </>
+                </div>
               ) : (
                 <div className="space-y-4">
                   <Skeleton className="h-24" />
@@ -278,34 +435,175 @@ export default function PortfolioPreview() {
               isElegant ? "max-w-3xl mx-auto" : "", // Add max width for Elegant theme
             )}
           >
-            <p className={cn("leading-relaxed", theme.preview.text)}>
-              {userIntro.introduction}
-            </p>
-            <div
-              className={cn(
-                "flex flex-wrap gap-2",
-                isMinimal ? "" : "justify-center",
+            <div className="relative group">
+              {editingIntro ? (
+                <div className="space-y-2">
+                  <Textarea
+                    value={tempIntro}
+                    onChange={(e) => setTempIntro(e.target.value)}
+                    className="min-h-[100px]"
+                    placeholder="Enter your introduction..."
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={saveIntro}>
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={cancelEdit}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className={cn("leading-relaxed", theme.preview.text)}>
+                    {userIntro.introduction}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={startEditingIntro}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                </>
               )}
-            >
-              {userIntro.skills.map((skill, index) => (
-                <span
-                  key={index}
-                  className={
-                    isModern
-                      ? "px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
-                      : isElegant
-                        ? "px-3 py-1 rounded-full text-sm font-medium bg-stone-900 text-stone-50" // Special styling for Elegant
-                        : "px-3 py-1 rounded-full text-sm font-medium bg-slate-800 text-white" // Default for Minimal
-                  }
-                >
-                  {skill}
-                </span>
-              ))}
             </div>
-            <p className={cn("text-sm", theme.preview.text)}>
-              <span className="font-medium">Interests:</span>{" "}
-              {userIntro.interests.join(", ")}
-            </p>
+            <div className="relative group">
+              {editingSkills ? (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {tempSkills.map((skill, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-800"
+                      >
+                        <span>{skill}</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-4 w-4 p-0 hover:bg-red-100"
+                          onClick={() => removeSkill(index)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={newSkill}
+                      onChange={(e) => setNewSkill(e.target.value)}
+                      placeholder="Add new skill..."
+                      onKeyPress={(e) => e.key === 'Enter' && addSkill()}
+                      className="flex-1"
+                    />
+                    <Button size="sm" onClick={addSkill}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={saveSkills}>
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={cancelEdit}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div
+                    className={cn(
+                      "flex flex-wrap gap-2",
+                      isMinimal ? "" : "justify-center",
+                    )}
+                  >
+                    {userIntro.skills.map((skill, index) => (
+                      <span
+                        key={index}
+                        className={
+                          isModern
+                            ? "px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
+                            : isElegant
+                              ? "px-3 py-1 rounded-full text-sm font-medium bg-stone-900 text-stone-50" // Special styling for Elegant
+                              : "px-3 py-1 rounded-full text-sm font-medium bg-slate-800 text-white" // Default for Minimal
+                        }
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={startEditingSkills}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
+            <div className="relative group">
+              {editingInterests ? (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {tempInterests.map((interest, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-1 px-2 py-1 rounded text-sm bg-gray-200 text-gray-800"
+                      >
+                        <span>{interest}</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-4 w-4 p-0 hover:bg-red-100"
+                          onClick={() => removeInterest(index)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={newInterest}
+                      onChange={(e) => setNewInterest(e.target.value)}
+                      placeholder="Add new interest..."
+                      onKeyPress={(e) => e.key === 'Enter' && addInterest()}
+                      className="flex-1"
+                    />
+                    <Button size="sm" onClick={addInterest}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={saveInterests}>
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={cancelEdit}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className={cn("text-sm", theme.preview.text)}>
+                    <span className="font-medium">Interests:</span>{" "}
+                    {userIntro.interests.join(", ")}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={startEditingInterests}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -401,23 +699,54 @@ export default function PortfolioPreview() {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <p className={cn("mb-4", theme.preview.text)}>
-                          {repo.summary || repo.description}
-                        </p>
-                        {repo.metadata.topics &&
-                          repo.metadata.topics.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {repo.metadata.topics.map((topic) => (
-                                <Badge
-                                  key={topic}
-                                  variant="outline"
-                                  className="bg-stone-900 text-stone-50"
-                                >
-                                  {topic}
-                                </Badge>
-                              ))}
+                        <div className="relative group">
+                          {editingRepo === repo.id ? (
+                            <div className="space-y-3">
+                              <Textarea
+                                value={tempRepoSummary}
+                                onChange={(e) => setTempRepoSummary(e.target.value)}
+                                className="min-h-[100px]"
+                                placeholder="Enter repository summary..."
+                              />
+                              <div className="flex gap-2">
+                                <Button size="sm" onClick={saveRepoSummary}>
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={cancelEdit}>
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
+                          ) : (
+                            <>
+                              <p className={cn("mb-4", theme.preview.text)}>
+                                {repo.summary || repo.description}
+                              </p>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => startEditingRepo(repo.id, repo.summary || repo.description || "")}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
+                          {repo.metadata.topics &&
+                            repo.metadata.topics.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {repo.metadata.topics.map((topic) => (
+                                  <Badge
+                                    key={topic}
+                                    variant="outline"
+                                    className="bg-stone-900 text-stone-50"
+                                  >
+                                    {topic}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
