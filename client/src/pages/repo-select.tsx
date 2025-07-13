@@ -303,7 +303,7 @@ export default function RepoSelect() {
                     disabled={isToggling}
                   />
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <label
                         htmlFor={`repo-${repo.id}`}
                         className="text-lg font-semibold cursor-pointer"
@@ -312,6 +312,11 @@ export default function RepoSelect() {
                       </label>
                       <span className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">
                         {repo.owner.type === "User" ? "User" : "Org"}: {repo.owner.login}
+                      </span>
+                      <span className="text-xs text-muted-foreground bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+                        <a href={repo.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                          Url: {repo.url.replace('https://github.com/', '')}
+                        </a>
                       </span>
                     </div>
                     
