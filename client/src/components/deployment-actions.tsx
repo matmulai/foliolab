@@ -29,6 +29,7 @@ interface DeploymentActionsProps {
     interests: string[];
   } | null;
   theme?: Theme;
+  customTitle?: string | null;
 }
 
 export function DeploymentActions({
@@ -36,7 +37,8 @@ export function DeploymentActions({
   repositories,
   userInfo,
   introduction,
-  theme
+  theme,
+  customTitle
 }: DeploymentActionsProps) {
   const [isCreatingRepo, setIsCreatingRepo] = useState(false);
   const [isDeployingToPages, setIsDeployingToPages] = useState(false);
@@ -59,7 +61,8 @@ export function DeploymentActions({
         repositories,
         userInfo,
         introduction,
-        themeId: theme?.id 
+        themeId: theme?.id,
+        customTitle
       });
 
       if (!res.ok) {
@@ -103,7 +106,8 @@ export function DeploymentActions({
         repositories,
         userInfo,
         introduction,
-        themeId: theme?.id 
+        themeId: theme?.id,
+        customTitle
       });
 
       if (!res.ok) {
@@ -212,7 +216,8 @@ export function DeploymentActions({
             repositories,
             themeId: theme?.id,
             introduction,
-            userInfo
+            userInfo,
+            customTitle
           });
 
           if (!deployResponse.ok) {

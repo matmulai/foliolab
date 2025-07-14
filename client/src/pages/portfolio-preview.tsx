@@ -911,6 +911,7 @@ export default function PortfolioPreview() {
             userInfo={userInfo}
             introduction={userIntro}
             theme={theme}
+            customTitle={customTitle}
           />
         </div>
       </div>
