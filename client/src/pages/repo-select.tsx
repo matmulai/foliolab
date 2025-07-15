@@ -118,10 +118,17 @@ export default function RepoSelect() {
     }
     
     // Then filter by search query
-    return filtered.filter((repo) =>
+    filtered = filtered.filter((repo) =>
       repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (repo.description?.toLowerCase() || "").includes(searchQuery.toLowerCase())
     );
+    
+    // Sort by last modified date (most recent first)
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.metadata.updatedAt || 0);
+      const dateB = new Date(b.metadata.updatedAt || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
   }, [data?.repositories, searchQuery, selectedOwner]);
 
   const paginatedRepos = useMemo(() => {
@@ -282,88 +289,171 @@ export default function RepoSelect() {
           </div>
         </div>
 
-        {/* Repository list */}
-        <div className="grid gap-4">
-          {isLoading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-32" />
-            ))
-          ) : (
-            paginatedRepos.map((repo) => (
-              <Card key={repo.id} className="transition-shadow hover:shadow-md">
-                <CardHeader className="flex flex-row items-start gap-4 p-4 md:p-6">
-                  <Checkbox
-                    id={`repo-${repo.id}`}
-                    checked={repo.selected}
-                    onCheckedChange={(checked) => {
-                      if (repo.id) {
-                        toggleRepo({ id: repo.id, selected: !!checked });
-                      }
-                    }}
-                    disabled={isToggling}
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <label
-                        htmlFor={`repo-${repo.id}`}
-                        className="text-lg font-semibold cursor-pointer"
-                      >
-                        {repo.displayName || repo.name}
-                      </label>
-                      <span className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">
-                        {repo.owner.type === "User" ? "User" : "Org"}: {repo.owner.login}
-                      </span>
-                    </div>
-                    
-                    {repo.description && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {repo.description}
-                      </p>
-                    )}
-                    
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {repo.metadata.language && (
-                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
-                          {repo.metadata.language}
-                        </span>
-                      )}
-                      {repo.metadata.stars > 0 && (
-                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
-                          ★ {repo.metadata.stars}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-            ))
-          )}
-        </div>
+        {/* Two-column layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left Column - Repository Selection */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Available Repositories</h2>
+              <span className="text-sm text-muted-foreground">{filteredRepos.length} repositories</span>
+            </div>
+            
+            <div className="grid gap-4 max-h-[600px] overflow-y-auto">
+              {isLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-32" />
+                ))
+              ) : (
+                paginatedRepos.map((repo) => (
+                  <Card key={repo.id} className="transition-shadow hover:shadow-md">
+                    <CardHeader className="flex flex-row items-start gap-4 p-4">
+                      <Checkbox
+                        id={`repo-${repo.id}`}
+                        checked={repo.selected}
+                        onCheckedChange={(checked) => {
+                          if (repo.id) {
+                            toggleRepo({ id: repo.id, selected: !!checked });
+                          }
+                        }}
+                        disabled={isToggling}
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <label
+                            htmlFor={`repo-${repo.id}`}
+                            className="text-base font-semibold cursor-pointer"
+                          >
+                            {repo.displayName || repo.name}
+                          </label>
+                          <span className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">
+                            {repo.owner.type === "User" ? "User" : "Org"}: {repo.owner.login}
+                          </span>
+                        </div>
+                        
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Updated {new Date(repo.metadata.updatedAt).toLocaleDateString()}
+                        </div>
+                        
+                        {repo.description && (
+                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                            {repo.description}
+                          </p>
+                        )}
+                        
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {repo.metadata.language && (
+                            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                              {repo.metadata.language}
+                            </span>
+                          )}
+                          {repo.metadata.stars > 0 && (
+                            <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
+                              ★ {repo.metadata.stars}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                ))
+              )}
+            </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center gap-2 mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              Previous
-            </Button>
-            <span className="flex items-center px-3 text-sm text-muted-foreground">
-              Page {currentPage} of {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-            >
-              Next
-            </Button>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <span className="flex items-center px-3 text-sm text-muted-foreground">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Right Column - Selected Repositories */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Selected Repositories</h2>
+              <span className="text-sm text-muted-foreground">{selectedCount} selected</span>
+            </div>
+            
+            <div className="border-2 border-dashed border-muted rounded-lg p-4 min-h-[600px]">
+              {selectedCount === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-12">
+                  <div className="w-16 h-16 mb-4 rounded-full bg-muted flex items-center justify-center">
+                    <Search className="w-8 h-8" />
+                  </div>
+                  <p className="text-center font-medium">No repositories selected</p>
+                  <p className="text-sm text-center mt-1">Select repositories from the left to see them here</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[550px] overflow-y-auto">
+                  {selectedRepos.map((repo) => (
+                    <Card key={repo.id} className="border-primary/20 bg-primary/5">
+                      <CardHeader className="p-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-semibold text-sm">
+                                {repo.displayName || repo.name}
+                              </h3>
+                              <span className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">
+                                {repo.owner.type === "User" ? "User" : "Org"}: {repo.owner.login}
+                              </span>
+                            </div>
+                            
+                            {repo.description && (
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                {repo.description}
+                              </p>
+                            )}
+                            
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {repo.metadata.language && (
+                                <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
+                                  {repo.metadata.language}
+                                </span>
+                              )}
+                              {repo.metadata.stars > 0 && (
+                                <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
+                                  ★ {repo.metadata.stars}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => repo.id && toggleRepo({ id: repo.id, selected: false })}
+                            className="ml-2 h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                            title="Remove from selection"
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
 
         {/* Generate Portfolio button appears above */}

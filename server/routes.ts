@@ -172,7 +172,7 @@ export async function registerRoutes(app: Express) {
   });
 
   app.post("/api/deploy/github", async (req, res) => {
-    const { accessToken, downloadOnly, repositories, themeId, userInfo, introduction } = req.body;
+    const { accessToken, downloadOnly, repositories, themeId, userInfo, introduction, customTitle } = req.body;
 
     if (!accessToken) {
       return res.status(400).json({ error: "GitHub access token is required" });
@@ -197,7 +197,7 @@ export async function registerRoutes(app: Express) {
       }
       
       const theme = themes.find(t => t.id === themeId) || themes[1]; // Find theme or default to modern
-      const html = generatePortfolioHtml(user.username, repositories, userIntroduction, user.avatarUrl, theme);
+      const html = generatePortfolioHtml(user.username, repositories, userIntroduction, user.avatarUrl, theme, customTitle);
 
       if (downloadOnly) {
         return res.json({ html });
@@ -229,7 +229,7 @@ export async function registerRoutes(app: Express) {
   });
 
   app.post("/api/deploy/github-pages", async (req, res) => {
-    const { accessToken, repositories, themeId, userInfo, introduction } = req.body;
+    const { accessToken, repositories, themeId, userInfo, introduction, customTitle } = req.body;
     
     if (!accessToken) {
       return res.status(400).json({ error: "GitHub access token is required" });
@@ -259,7 +259,7 @@ export async function registerRoutes(app: Express) {
       }
       
       const theme = themes.find(t => t.id === themeId) || themes[1]; // Find theme or default to modern
-      const html = generatePortfolioHtml(user.username, repositories, userIntroduction, user.avatarUrl, theme);
+      const html = generatePortfolioHtml(user.username, repositories, userIntroduction, user.avatarUrl, theme, customTitle);
 
       const { url, wasCreated } = await deployToGitHubPages(accessToken, user.username, html);
 
@@ -361,7 +361,7 @@ export async function registerRoutes(app: Express) {
   });
 
   app.post("/api/deploy/vercel", async (req, res) => {
-    const { accessToken, teamId, username, repositories, themeId, introduction, userInfo } = req.body;
+    const { accessToken, teamId, username, repositories, themeId, introduction, userInfo, customTitle } = req.body;
 
     if (!accessToken || !username) {
       return res.status(400).json({ error: "Vercel access token and username are required" });
@@ -391,7 +391,7 @@ export async function registerRoutes(app: Express) {
 
       // Generate the portfolio HTML
       const theme = themes.find(t => t.id === themeId) || themes[1]; // Find theme or default to modern
-      const html = generatePortfolioHtml(username, repositories, introduction, userAvatar, theme);
+      const html = generatePortfolioHtml(username, repositories, introduction, userAvatar, theme, customTitle);
 
       // Create or update the GitHub repository
       const repoName = `${username}-foliolab`;
@@ -674,6 +674,11 @@ export async function registerRoutes(app: Express) {
       .replace(/'/g, "&#039;");
   }
 
+  // Helper function to capitalize first letter
+  function capitalizeFirstLetter(str: string): string {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
   // Helper function to generate portfolio HTML
   function generatePortfolioHtml(
     username: string,
@@ -699,18 +704,22 @@ export async function registerRoutes(app: Express) {
         content: string;
         profile: string;
       };
-    } = themes[1] // Default to modern theme
+    } = themes[1], // Default to modern theme
+    customTitle?: string | null
   ): string {
     if (!repositories || repositories.length === 0) {
       throw new Error("No repositories provided for portfolio generation");
     }
 
+    const capitalizedUsername = capitalizeFirstLetter(username);
+    const portfolioTitle = customTitle || `${capitalizedUsername}'s Portfolio`;
+    
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${escapeHtml(username)}'s Portfolio</title>
+    <title>${escapeHtml(portfolioTitle)}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -753,10 +762,10 @@ export async function registerRoutes(app: Express) {
                 <div class="${theme.layout.profile}">
                     ${avatarUrl ? `
                     <div class="mb-6">
-                        <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(username)}" class="w-32 h-32 rounded-full mx-auto border-4 border-gray-200 shadow-lg">
+                        <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(capitalizedUsername)}" class="w-32 h-32 rounded-full mx-auto border-4 border-gray-200 shadow-lg">
                     </div>
                     ` : ''}
-                    <h1 class="text-4xl font-bold mb-6 ${theme.preview.text}">${escapeHtml(username)}'s Portfolio</h1>
+                    <h1 class="text-4xl font-bold mb-6 ${theme.preview.text}">${escapeHtml(portfolioTitle)}</h1>
                     ${introduction ? `
                     <div class="max-w-2xl ${theme.id === 'modern' ? 'text-center' : 'text-left'}">
                         <p class="${theme.preview.text} mb-8 leading-relaxed">${escapeHtml(introduction.introduction)}</p>

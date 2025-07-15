@@ -4,20 +4,17 @@ import { Github } from "lucide-react";
 
 export function Header() {
   return (
-    <header className="border-b bg-white/50 backdrop-blur-sm">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+    <header className="border-b bg-white/80 backdrop-blur-md shadow-sm">
+      <div className="container mx-auto px-6 flex items-center justify-between" style={{ height: '100px' }}>
         <Link href="/">
-          <a className="flex items-center gap-2 group">
-            <img src="/logo.svg" alt="FolioLab Logo" className="h-8 w-8 group-hover:scale-105 transition-transform" />
-            <span className="text-2xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary-foreground bg-clip-text text-transparent hover:opacity-80 transition-opacity">
-              FolioLab
-            </span>
-          </a>
+          <div className="flex items-center group py-2 cursor-pointer">
+            <img src="/logo.svg" alt="FolioLab Logo" className="h-13 group-hover:scale-105 transition-all duration-200 drop-shadow-sm" />
+          </div>
         </Link>
         <Button
           variant="outline"
           size="sm"
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 hover:bg-primary/5 transition-colors duration-200"
           asChild
         >
           <a

@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Github, Shield, Globe, FileQuestion, Mail } from "lucide-react";
+import { Github, Shield, Globe, FileQuestion, Mail, Info } from "lucide-react";
 import { clearAllData } from "@/lib/queryClient";
 import { clearStorage } from "@/lib/storage";
 import { useEffect } from "react";
@@ -25,10 +25,10 @@ export default function Home() {
       <main className="flex-1">
         <div className="container mx-auto px-4 py-20">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-6">
+            <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-6 animate-in fade-in slide-in-from-bottom-4 duration-1000">
               Create Your Developer Portfolio in Minutes
             </h1>
-            <p className="text-lg text-muted-foreground mb-12">
+            <p className="text-lg text-muted-foreground mb-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-200">
               Turn your GitHub repositories into a beautiful portfolio website powered by AI
             </p>
 
@@ -38,7 +38,7 @@ export default function Home() {
                   <Button
                     asChild
                     size="lg"
-                    className="w-full"
+                    className="w-full hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
                     onClick={handleStartClick}
                   >
                     <Link href="/auth/github" className="flex items-center justify-center gap-2">
@@ -47,8 +47,8 @@ export default function Home() {
                     </Link>
                   </Button>
                   <div className="flex items-center gap-2 justify-center text-sm text-muted-foreground">
-                    <Shield className="w-4 h-4" />
-                    <span>You'll need an OpenAI API key for AI-powered summaries</span>
+                    <Info className="w-4 h-4" />
+                    <span>Other sources like GitLab, BitBucket will be coming soon.</span>
                   </div>
                 </div>
               </CardContent>
@@ -90,15 +90,13 @@ export default function Home() {
                 <div>
                   <h3 className="font-semibold mb-2">Is it free to use?</h3>
                   <p className="text-muted-foreground">
-                    FolioLab is open-source and free to use. You'll need your own OpenAI API
-                    key for AI-powered summaries, but you can also write your own descriptions.
+                    FolioLab is open-source and free to use. 
                   </p>
                 </div>
                 <div>
                   <h3 className="font-semibold mb-2">What data do you collect?</h3>
                   <p className="text-muted-foreground">
-                    We don't store any of your data. Everything is processed client-side,
-                    and your GitHub token and OpenAI API key are only used for API calls.
+                    We don't store any of your data.
                   </p>
                 </div>
               </div>
@@ -111,9 +109,8 @@ export default function Home() {
                   <div className="text-left">
                     <h3 className="font-semibold mb-2">Privacy First</h3>
                     <p className="text-sm text-muted-foreground">
-                      Your data stays private. We only use your GitHub access to read repositories
-                      and OpenAI API key for generating summaries. No data is stored on our servers,
-                      everything is processed client-side.
+                      Your data stays private. We only use your GitHub access to read repositories.
+                      No data is stored on our servers, everything is processed client-side.
                     </p>
                   </div>
                 </div>
@@ -124,19 +121,17 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t bg-white/50 backdrop-blur-sm py-8">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <img src="/logo.svg" alt="FolioLab Logo" className="h-6 w-6" />
-              <span className="font-semibold">FolioLab</span>
+      <footer className="border-t bg-white/80 backdrop-blur-md shadow-sm py-6">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center">
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-8">
               <a
                 href="https://github.com/matmulai/foliolab"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors duration-200"
               >
                 <Github className="h-4 w-4" />
                 GitHub
@@ -145,7 +140,7 @@ export default function Home() {
                 href="https://github.com/matmulai/foliolab/issues"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors duration-200"
               >
                 <FileQuestion className="h-4 w-4" />
                 FAQs
@@ -154,14 +149,14 @@ export default function Home() {
                 href="https://github.com/matmulai/foliolab"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors duration-200"
               >
                 <Mail className="h-4 w-4" />
                 Contact Developers
               </a>
             </div>
           </div>
-          <div className="mt-4 text-center text-sm text-muted-foreground">
+          <div className="mt-6 text-center text-sm text-muted-foreground">
             <p>
               Made with ❤️ by the{" "}
               <a

@@ -4,7 +4,6 @@ import { analyzeProjectStructure, generateProjectSummary, type ProjectStructure 
 
 interface RepoSummary {
   summary: string;
-  keyFeatures: string[];
 }
 
 interface UserIntroduction {
@@ -14,11 +13,11 @@ interface UserIntroduction {
 }
 
 const DEFAULT_PROMPT =
-  "Generate a concise project summary and key features list from the repository information. Keep the summary under 150 words and limit key features to 3-5 bullet points.";
+  "Generate a comprehensive yet readable project summary for a developer portfolio. The summary should be 200-300 words, providing enough detail to showcase the project's purpose, technical approach, and impact without being overwhelming. Focus on what makes this project interesting and valuable, highlighting technical challenges solved, technologies used effectively, and potential impact. Write in a professional tone that demonstrates the developer's capabilities and technical expertise.";
 const JSON_FORMAT_SUFFIX =
-  "Respond with JSON in this format: { 'summary': string, 'keyFeatures': string[] }";
+  "Respond with JSON in this format: { 'summary': string }";
 const USER_INTRO_PROMPT =
-  "Based on the repository information, generate a professional introduction that highlights the developer's expertise, interests, and technical focus. Include a list of their primary skills and areas of interest.";
+  "Based on the repository information, generate a compelling professional introduction for a developer portfolio. The introduction should be 150-200 words, showcasing the developer's expertise, technical journey, and what drives their work. Highlight their strongest technical skills, preferred technologies, and areas of specialization. Make it personal yet professional, demonstrating both technical competence and passion for development. Include 8-12 primary skills and 4-6 areas of interest that reflect their technical focus and career direction.";
 const USER_INTRO_FORMAT =
   "Respond with JSON in this format: { 'introduction': string, 'skills': string[], 'interests': string[] }";
 
@@ -52,7 +51,7 @@ async function generateWithOpenAI(
       ],
       response_format: { type: "json_object" },
       temperature: 0.7,
-      max_tokens: 500,
+      max_tokens: 800,
     });
     
     // Check if response structure is valid
@@ -186,7 +185,15 @@ async function generateRepoSummary(
       userContent += `\nNote: No README available. Analysis based on repository metadata only.`;
     }
 
-    const prompt = `${customPrompt || DEFAULT_PROMPT} ${JSON_FORMAT_SUFFIX}`;
+    const prompt = `${customPrompt || DEFAULT_PROMPT}
+    
+Additional context: This summary will be displayed in a developer portfolio to showcase technical skills and project impact. Focus on:
+- Technical challenges solved and approaches used
+- Technologies and frameworks utilized effectively
+- Project outcomes and potential impact
+- Code quality and development practices demonstrated
+
+${JSON_FORMAT_SUFFIX}`;
     
     try {
       const result = await generateWithOpenAI(prompt, userContent, apiKey);
@@ -251,7 +258,7 @@ async function generateUserIntroduction(
       ],
       response_format: { type: "json_object" },
       temperature: 0.7,
-      max_tokens: 500,
+      max_tokens: 600,
     });
     
     // Check if response structure is valid
