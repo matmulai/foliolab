@@ -100,4 +100,4 @@ The new FolioLab logo conveys:
 
 ## Migration from Old Logo
 
-The previous `images/FolioLab.png` has been replaced with the new SVG-based logo system. The README now references `images/FolioLab-new.svg` as the primary logo display.
+The old PNG-based logo has been removed in favor of the new SVG-based system. The README now references `images/FolioLab-new.svg` as the primary logo display.
