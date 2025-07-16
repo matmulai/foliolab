@@ -1,5 +1,8 @@
-import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes.js";  // Add .js extension for ESM
+import express, { type Request, Response, NextFunction, Router, type Express } from "express";
+import { createServer } from "http";
+import githubRoutes from "./routes/github.js";
+import deployRoutes from "./routes/deploy.js";
+import userRoutes from "./routes/user.js";
 
 const app = express();
 app.use(express.json());
@@ -32,6 +35,16 @@ app.use((req, res, next) => {
 
   next();
 });
+
+async function registerRoutes(app: Express) {
+  const router = Router();
+  router.use(githubRoutes);
+  router.use(deployRoutes);
+  router.use(userRoutes);
+  app.use(router);
+  const httpServer = createServer(app);
+  return httpServer;
+}
 
 // Request logging middleware
 app.use((req, res, next) => {
