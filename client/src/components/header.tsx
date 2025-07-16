@@ -18,7 +18,7 @@ export function Header() {
           asChild
         >
           <a
-            href="https://github.com/replit/FolioLab"
+            href="https://github.com/matmulai/foliolab"
             target="_blank"
             rel="noopener noreferrer"
           >
