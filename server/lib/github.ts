@@ -69,9 +69,12 @@ async function getUserRepositories(
     });
 
     const filteredRepos = data.filter((repo) => {
+      const lowerName = repo.name.toLowerCase();
       return (
-        !repo.name.toLowerCase().includes("-folio") &&
-        !repo.name.toLowerCase().includes("github.io") &&
+        !repo.fork &&
+        !repo.archived &&
+        !lowerName.includes("-folio") &&
+        !lowerName.includes("github.io") &&
         repo.name !== "foliolab-vercel"
       );
     });
@@ -131,9 +134,12 @@ async function getOrganizationRepositories(
     });
 
     const filteredRepos = data.filter((repo) => {
+      const lowerName = repo.name.toLowerCase();
       return (
-        !repo.name.toLowerCase().includes("-folio") &&
-        !repo.name.toLowerCase().includes("github.io") &&
+        !repo.fork &&
+        !repo.archived &&
+        !lowerName.includes("-folio") &&
+        !lowerName.includes("github.io") &&
         repo.name !== "foliolab-vercel"
       );
     });

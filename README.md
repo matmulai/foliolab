@@ -14,6 +14,7 @@ Create your portfolio using this link: https://foliolab.vercel.app/
 - Auto deploy to Vercel/GitHub Pages with a single click
 - Update your portfolio as many times as you want
 - 100% free and open source, self-hosted or on Vercel
+- Automatically skips forked and archived repositories
 
 ## Tech Stack
 

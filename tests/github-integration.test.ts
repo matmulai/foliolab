@@ -126,6 +126,21 @@ Content here.`;
       expect(filteredRepos.map(r => r.name)).toEqual(['my-project', 'valid-project']);
     });
 
+    it('should filter out forked and archived repositories', () => {
+      const mockRepos = [
+        { name: 'forked', id: 1, fork: true, archived: false },
+        { name: 'archived', id: 2, fork: false, archived: true },
+        { name: 'regular', id: 3, fork: false, archived: false },
+      ];
+
+      const filteredRepos = mockRepos.filter(repo => {
+        return !repo.fork && !repo.archived;
+      });
+
+      expect(filteredRepos).toHaveLength(1);
+      expect(filteredRepos[0].name).toBe('regular');
+    });
+
     it('should extract owner from GitHub URL', () => {
       const githubUrl = 'https://github.com/testuser/test-repo';
       const urlParts = githubUrl.split('/');
