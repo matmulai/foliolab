@@ -15,7 +15,7 @@ function getGithubAuthUrl() {
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: `${window.location.origin}/auth/github`,
-    scope: 'repo,read:user',
+    scope: 'repo,read:user,read:org',
     state: crypto.randomUUID(),
   });
 

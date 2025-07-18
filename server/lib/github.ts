@@ -43,17 +43,42 @@ export async function getUserOrganizations(
   const octokit = new Octokit({ auth: accessToken });
 
   try {
-    const { data } = await octokit.orgs.listForAuthenticatedUser();
+    // Handle pagination to get all organizations
+    const organizations: Organization[] = [];
+    let page = 1;
+    let hasMore = true;
 
-    return data.map((org) => ({
-      id: org.id,
-      login: org.login,
-      name: org.description || null, // Org API response doesn't have 'name' but has 'description'
-      avatarUrl: org.avatar_url || null,
-    }));
+    while (hasMore) {
+      const { data } = await octokit.orgs.listForAuthenticatedUser({
+        per_page: 100,
+        page: page,
+      });
+
+      if (data.length === 0) {
+        hasMore = false;
+      } else {
+        organizations.push(...data.map((org) => ({
+          id: org.id,
+          login: org.login,
+          name: org.description || null,
+          avatarUrl: org.avatar_url || null,
+        })));
+        
+        // If we got less than 100 results, we're on the last page
+        if (data.length < 100) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      }
+    }
+
+    console.log(`Fetched ${organizations.length} organizations for user`);
+    return organizations;
   } catch (error) {
     console.error("Failed to fetch user organizations:", error);
-    return [];
+    // Don't return empty array - let the caller know there was an error
+    throw new Error(`Failed to fetch organizations: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -62,22 +87,45 @@ async function getUserRepositories(
   user: { login: string; type: "User"; avatarUrl: string | null },
 ): Promise<Repository[]> {
   try {
-    const { data } = await octokit.repos.listForAuthenticatedUser({
-      visibility: "public",
-      sort: "updated",
-      per_page: 100,
-    });
+    // Handle pagination to get all user repositories
+    const allRepos: any[] = [];
+    let page = 1;
+    let hasMore = true;
 
-    const filteredRepos = data.filter((repo) => {
+    while (hasMore) {
+      const { data } = await octokit.repos.listForAuthenticatedUser({
+        visibility: "public",
+        sort: "updated",
+        per_page: 100,
+        page: page,
+      });
+
+      if (data.length === 0) {
+        hasMore = false;
+      } else {
+        allRepos.push(...data);
+        
+        // If we got less than 100 results, we're on the last page
+        if (data.length < 100) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      }
+    }
+
+    // Apply filtering - make it less aggressive
+    const filteredRepos = allRepos.filter((repo) => {
       const lowerName = repo.name.toLowerCase();
       return (
-        !repo.fork &&
-        !repo.archived &&
+        !repo.archived && // Keep forks but remove archived repos
         !lowerName.includes("-folio") &&
-        !lowerName.includes("github.io") &&
         repo.name !== "foliolab-vercel"
+        // Removed github.io filter as it might be legitimate portfolio sites
       );
     });
+
+    console.log(`Fetched ${allRepos.length} repositories for user ${user.login}, ${filteredRepos.length} after filtering`);
 
     return filteredRepos.map((repo) => {
       // Extract the actual owner from the repository URL
@@ -117,7 +165,8 @@ async function getUserRepositories(
       `Failed to fetch repositories for user ${user.login}:`,
       error,
     );
-    return [];
+    // Don't return empty array - let the caller handle the error
+    throw new Error(`Failed to fetch repositories for user ${user.login}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -126,23 +175,46 @@ async function getOrganizationRepositories(
   org: { login: string; avatarUrl: string | null },
 ): Promise<Repository[]> {
   try {
-    const { data } = await octokit.repos.listForOrg({
-      org: org.login,
-      type: "public",
-      sort: "updated",
-      per_page: 100,
-    });
+    // Handle pagination to get all repositories for the organization
+    const allRepos: any[] = [];
+    let page = 1;
+    let hasMore = true;
 
-    const filteredRepos = data.filter((repo) => {
+    while (hasMore) {
+      const { data } = await octokit.repos.listForOrg({
+        org: org.login,
+        type: "public",
+        sort: "updated",
+        per_page: 100,
+        page: page,
+      });
+
+      if (data.length === 0) {
+        hasMore = false;
+      } else {
+        allRepos.push(...data);
+        
+        // If we got less than 100 results, we're on the last page
+        if (data.length < 100) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      }
+    }
+
+    // Apply filtering - make it less aggressive
+    const filteredRepos = allRepos.filter((repo) => {
       const lowerName = repo.name.toLowerCase();
       return (
-        !repo.fork &&
-        !repo.archived &&
+        !repo.archived && // Keep forks but remove archived repos
         !lowerName.includes("-folio") &&
-        !lowerName.includes("github.io") &&
         repo.name !== "foliolab-vercel"
+        // Removed github.io filter as it might be legitimate portfolio sites
       );
     });
+
+    console.log(`Fetched ${allRepos.length} repositories for org ${org.login}, ${filteredRepos.length} after filtering`);
 
     return filteredRepos.map((repo) => {
       // Extract the actual owner from the repository URL
@@ -176,7 +248,8 @@ async function getOrganizationRepositories(
     });
   } catch (error) {
     console.error(`Failed to fetch repositories for org ${org.login}:`, error);
-    return [];
+    // Don't return empty array - let the caller handle the error
+    throw new Error(`Failed to fetch repositories for org ${org.login}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -194,25 +267,47 @@ export async function getRepositories(
       avatarUrl: userData.avatar_url || null,
     };
 
-    // Get user repositories
-    const userRepos = await getUserRepositories(octokit, userInfo);
+    // Get user repositories with error handling
+    let userRepos: Repository[] = [];
+    try {
+      userRepos = await getUserRepositories(octokit, userInfo);
+    } catch (error) {
+      console.warn("Failed to fetch user repositories, continuing with organizations only:", error);
+      userRepos = [];
+    }
 
-    // Get user organizations
-    const orgs = await getUserOrganizations(accessToken);
+    // Get user organizations with error handling
+    let orgs: Organization[] = [];
+    try {
+      orgs = await getUserOrganizations(accessToken);
+    } catch (error) {
+      console.warn("Failed to fetch organizations, continuing with user repos only:", error);
+      orgs = [];
+    }
 
-    // Get repositories for each organization
-    const orgReposPromises = orgs.map((org) =>
-      getOrganizationRepositories(octokit, {
-        login: org.login,
-        avatarUrl: org.avatarUrl,
-      }),
-    );
-
-    const orgReposArrays = await Promise.all(orgReposPromises);
-    const orgRepos = orgReposArrays.flat();
+    // Get repositories for each organization with individual error handling
+    const orgRepos: Repository[] = [];
+    for (const org of orgs) {
+      try {
+        const repos = await getOrganizationRepositories(octokit, {
+          login: org.login,
+          avatarUrl: org.avatarUrl,
+        });
+        orgRepos.push(...repos);
+      } catch (error) {
+        console.warn(`Failed to fetch repositories for organization ${org.login}, skipping:`, error);
+        // Continue with other organizations
+      }
+    }
 
     // Combine user and organization repositories, but deduplicate based on repo ID
     const allRepos = [...userRepos, ...orgRepos];
+    
+    console.log(`Repository Summary:
+      - User repositories: ${userRepos.length}
+      - Organization repositories: ${orgRepos.length}
+      - Total before deduplication: ${allRepos.length}
+      - Organizations processed: ${orgs.length}`);
 
     // Use a Map to deduplicate repositories by ID
     const uniqueReposMap = new Map<number, Repository>();
@@ -224,6 +319,7 @@ export async function getRepositories(
     }
 
     const repositories = Array.from(uniqueReposMap.values());
+    console.log(`Final repository count after deduplication: ${repositories.length}`);
 
     // Fetch READMEs and extract titles (in batches to avoid rate limiting)
     const batchSize = 5;
