@@ -48,7 +48,7 @@ export function DeploymentOverlay({
           setCustomDomain(domain);
         }
       } catch (error) {
-        console.log('No custom domain configured');
+        // No custom domain configured
       }
     };
 

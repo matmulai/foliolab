@@ -113,13 +113,6 @@ router.post('/api/repositories/:id/analyze', async (req, res) => {
       });
     }
 
-    console.log('Starting repository analysis for:', repo.name);
-    console.log('Repository metadata:', {
-      language: repo.metadata.language,
-      topics: repo.metadata.topics,
-      stars: repo.metadata.stars,
-      hasReadme: !!readme && readme.trim().length > 0
-    });
 
     const summary = await generateRepoSummary(
       repo.name,
@@ -136,8 +129,6 @@ router.post('/api/repositories/:id/analyze', async (req, res) => {
       accessToken,
       repo.owner.login
     );
-
-    console.log('Successfully generated summary for:', repo.name);
 
     res.json({
       repository: {

@@ -109,12 +109,10 @@ persistQueryClient({
 // Helper to clear cache (useful for debugging)
 export function clearQueryCache() {
   queryClient.clear();
-  console.log('Query cache cleared');
 }
 
 // Force refresh repositories only when explicitly needed
 export function forceRefreshRepositories() {
-  console.log('Forcing repository data refresh');
   return queryClient.invalidateQueries({ queryKey: ['/api/repositories'] });
 }
 

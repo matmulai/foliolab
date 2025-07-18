@@ -165,13 +165,11 @@ router.post('/api/deploy/vercel', async (req, res) => {
     try {
       if (userInfo && userInfo.avatarUrl) {
         userAvatar = userInfo.avatarUrl;
-        console.log('Using avatarUrl from userInfo:', userAvatar);
       } else {
         const githubToken = req.headers.authorization?.replace('Bearer ', '');
         if (githubToken) {
           const githubUser = await getGithubUser(githubToken);
           userAvatar = githubUser.avatarUrl;
-          console.log('Using avatarUrl from GitHub:', userAvatar);
         }
       }
     } catch (userError) {
