@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Repository } from "@shared/schema";
-import { Search } from "lucide-react";
+import { Search, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toggleRepositorySelection, saveRepositories, getRepositories, getGitHubToken } from "@/lib/storage";
 import { AnalysisProgress } from "@/components/analysis-progress";
@@ -328,6 +328,15 @@ export default function RepoSelect() {
                           <span className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">
                             {repo.owner.type === "User" ? "User" : "Org"}: {repo.owner.login}
                           </span>
+                          <a
+                            href={repo.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-full flex items-center gap-1 transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            GitHub <ExternalLink className="w-3 h-3" />
+                          </a>
                         </div>
                         
                         <div className="text-xs text-muted-foreground mt-1">
@@ -415,6 +424,15 @@ export default function RepoSelect() {
                               <span className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">
                                 {repo.owner.type === "User" ? "User" : "Org"}: {repo.owner.login}
                               </span>
+                              <a
+                                href={repo.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-full flex items-center gap-1 transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                GitHub <ExternalLink className="w-3 h-3" />
+                              </a>
                             </div>
                             
                             {repo.description && (
