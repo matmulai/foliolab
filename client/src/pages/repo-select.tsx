@@ -298,7 +298,7 @@ export default function RepoSelect() {
               <span className="text-sm text-muted-foreground">{filteredRepos.length} repositories</span>
             </div>
             
-            <div className="grid gap-4 max-h-[600px] overflow-y-auto">
+            <div className="grid gap-4 max-h-[800px] overflow-y-auto">
               {isLoading ? (
                 Array.from({ length: 3 }).map((_, i) => (
                   <Skeleton key={i} className="h-32" />
@@ -392,7 +392,7 @@ export default function RepoSelect() {
               <span className="text-sm text-muted-foreground">{selectedCount} selected</span>
             </div>
             
-            <div className="border-2 border-dashed border-muted rounded-lg p-4 min-h-[600px]">
+            <div className="border-2 border-dashed border-muted rounded-lg p-4 min-h-[800px]">
               {selectedCount === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-12">
                   <div className="w-16 h-16 mb-4 rounded-full bg-muted flex items-center justify-center">
@@ -402,7 +402,7 @@ export default function RepoSelect() {
                   <p className="text-sm text-center mt-1">Select repositories from the left to see them here</p>
                 </div>
               ) : (
-                <div className="space-y-3 max-h-[550px] overflow-y-auto">
+                <div className="space-y-3 max-h-[750px] overflow-y-auto">
                   {selectedRepos.map((repo) => (
                     <Card key={repo.id} className="border-primary/20 bg-primary/5">
                       <CardHeader className="p-3">
