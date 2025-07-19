@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Github, ExternalLink, ArrowLeft, Edit2, Check, X, Plus, Camera } from "lucide-react";
+import { Github, ExternalLink, ArrowLeft, Edit2, Check, X, Plus, Camera, Info, Lightbulb } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { DeploymentActions } from "@/components/deployment-actions";
@@ -16,6 +16,7 @@ import { themes } from "@shared/themes";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface UserIntroduction {
   introduction: string;
@@ -816,6 +817,36 @@ export default function PortfolioPreview() {
               onValueChange={setSelectedTheme}
             />
           </div>
+
+          {/* Editing Hints Banner */}
+          <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+            <Lightbulb className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <AlertDescription className="text-blue-800 dark:text-blue-200">
+              <div className="flex items-start gap-2">
+                <div>
+                  <strong>💡 Tip:</strong> Your portfolio is fully customizable! Hover over any element to see edit options:
+                  <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Camera className="h-3 w-3" />
+                      <span>Click profile picture to change image</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Edit2 className="h-3 w-3" />
+                      <span>Edit portfolio title and introduction</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Plus className="h-3 w-3" />
+                      <span>Customize skills and interests</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Edit2 className="h-3 w-3" />
+                      <span>Modify repository titles & descriptions</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </AlertDescription>
+          </Alert>
 
           {/* For specific themes, use explicit grid layouts */}
           {selectedTheme === "minimal" ? (
