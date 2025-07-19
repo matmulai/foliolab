@@ -445,40 +445,41 @@ export default function PortfolioPreview() {
                 <div className="flex items-start gap-2 flex-1">
                   <GripVertical className="h-5 w-5 text-gray-400 mt-1 cursor-grab active:cursor-grabbing" />
                   <div className="relative group flex-1">
-                  {editingRepoTitle === repo.id ? (
-                    <div className="space-y-2">
-                      <Input
-                        value={tempRepoTitle}
-                        onChange={(e) => setTempRepoTitle(e.target.value)}
-                        className="text-2xl font-semibold"
-                        placeholder="Enter repository title..."
-                      />
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={saveRepoTitle}>
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={cancelEdit}>
-                          <X className="h-4 w-4" />
-                        </Button>
+                    {editingRepoTitle === repo.id ? (
+                      <div className="space-y-2">
+                        <Input
+                          value={tempRepoTitle}
+                          onChange={(e) => setTempRepoTitle(e.target.value)}
+                          className="text-2xl font-semibold"
+                          placeholder="Enter repository title..."
+                        />
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={saveRepoTitle}>
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={cancelEdit}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <>
-                      <h2
-                        className={cn("text-2xl font-semibold", theme.preview.text)}
-                      >
-                        {repo.displayName || repo.name}
-                      </h2>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => startEditingRepoTitle(repo.id, repo.displayName || repo.name)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
+                    ) : (
+                      <>
+                        <h2
+                          className={cn("text-2xl font-semibold", theme.preview.text)}
+                        >
+                          {repo.displayName || repo.name}
+                        </h2>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => startEditingRepoTitle(repo.id, repo.displayName || repo.name)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 ml-2">
                   {repo.metadata.stars > 0 && (
@@ -950,44 +951,44 @@ export default function PortfolioPreview() {
                           <div className="flex items-start gap-2 flex-1">
                             <GripVertical className="h-5 w-5 text-gray-400 mt-1 cursor-grab active:cursor-grabbing" />
                             <div className="relative group flex-1">
-                            {editingRepoTitle === repo.id ? (
-                              <div className="space-y-2">
-                                <Input
-                                  value={tempRepoTitle}
-                                  onChange={(e) => setTempRepoTitle(e.target.value)}
-                                  className="text-2xl font-semibold"
-                                  placeholder="Enter repository title..."
-                                />
-                                <div className="flex gap-2">
-                                  <Button size="sm" onClick={saveRepoTitle}>
-                                    <Check className="h-4 w-4" />
-                                  </Button>
-                                  <Button size="sm" variant="outline" onClick={cancelEdit}>
-                                    <X className="h-4 w-4" />
-                                  </Button>
+                              {editingRepoTitle === repo.id ? (
+                                <div className="space-y-2">
+                                  <Input
+                                    value={tempRepoTitle}
+                                    onChange={(e) => setTempRepoTitle(e.target.value)}
+                                    className="text-2xl font-semibold"
+                                    placeholder="Enter repository title..."
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button size="sm" onClick={saveRepoTitle}>
+                                      <Check className="h-4 w-4" />
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={cancelEdit}>
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
                                 </div>
-                              </div>
-                            ) : (
-                              <>
-                                <h2
-                                  className={cn(
-                                    "text-2xl font-semibold",
-                                    theme.preview.text,
-                                  )}
-                                >
-                                  {repo.displayName || repo.name}
-                                </h2>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={() => startEditingRepoTitle(repo.id, repo.displayName || repo.name)}
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                           </div>
+                              ) : (
+                                <>
+                                  <h2
+                                    className={cn(
+                                      "text-2xl font-semibold",
+                                      theme.preview.text,
+                                    )}
+                                  >
+                                    {repo.displayName || repo.name}
+                                  </h2>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => startEditingRepoTitle(repo.id, repo.displayName || repo.name)}
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                          </div>
                          <div className="flex items-center gap-2 ml-2">
                             {repo.metadata.stars > 0 && (
