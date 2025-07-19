@@ -27,6 +27,7 @@ interface DeploymentActionsProps {
     introduction: string;
     skills: string[];
     interests: string[];
+    customImageUrl?: string;
   } | null;
   theme?: Theme;
   customTitle?: string | null;

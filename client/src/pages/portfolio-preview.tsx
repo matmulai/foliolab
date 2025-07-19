@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Github, ExternalLink, ArrowLeft, Edit2, Check, X, Plus } from "lucide-react";
+import { Github, ExternalLink, ArrowLeft, Edit2, Check, X, Plus, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { DeploymentActions } from "@/components/deployment-actions";
@@ -21,6 +21,7 @@ interface UserIntroduction {
   introduction: string;
   skills: string[];
   interests: string[];
+  customImageUrl?: string;
 }
 
 interface UserInfo {
@@ -50,6 +51,7 @@ export default function PortfolioPreview() {
   const [editingRepo, setEditingRepo] = useState<number | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingRepoTitle, setEditingRepoTitle] = useState<number | null>(null);
+  const [editingImage, setEditingImage] = useState(false);
   
   // Temporary edit values
   const [tempIntro, setTempIntro] = useState("");
@@ -58,6 +60,7 @@ export default function PortfolioPreview() {
   const [tempRepoSummary, setTempRepoSummary] = useState("");
   const [tempTitle, setTempTitle] = useState("");
   const [tempRepoTitle, setTempRepoTitle] = useState("");
+  const [tempImageUrl, setTempImageUrl] = useState("");
   const [newSkill, setNewSkill] = useState("");
   const [newInterest, setNewInterest] = useState("");
 
@@ -128,6 +131,11 @@ export default function PortfolioPreview() {
   const startEditingRepoTitle = (repoId: number, title: string) => {
     setTempRepoTitle(title);
     setEditingRepoTitle(repoId);
+  };
+
+  const startEditingImage = () => {
+    setTempImageUrl(userIntro?.customImageUrl || "");
+    setEditingImage(true);
   };
 
   const saveIntro = () => {
@@ -206,6 +214,17 @@ export default function PortfolioPreview() {
     }
   };
 
+  const saveImageUrl = () => {
+    if (userIntro) {
+      setUserIntro({ ...userIntro, customImageUrl: tempImageUrl });
+      setEditingImage(false);
+      toast({
+        title: "Profile Image Updated",
+        description: "Your profile image has been updated successfully.",
+      });
+    }
+  };
+
   const cancelEdit = () => {
     setEditingIntro(false);
     setEditingSkills(false);
@@ -213,12 +232,14 @@ export default function PortfolioPreview() {
     setEditingRepo(null);
     setEditingTitle(false);
     setEditingRepoTitle(null);
+    setEditingImage(false);
     setTempIntro("");
     setTempSkills([]);
     setTempInterests([]);
     setTempRepoSummary("");
     setTempTitle("");
     setTempRepoTitle("");
+    setTempImageUrl("");
     setNewSkill("");
     setNewInterest("");
   };
@@ -495,15 +516,60 @@ export default function PortfolioPreview() {
       >
         {userInfo && (
           <>
-            <Avatar className="w-32 h-32 mb-6">
-              <AvatarImage
-                src={userInfo.avatarUrl || undefined}
-                alt={userInfo.username}
-              />
-              <AvatarFallback>
-                {userInfo.username.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative group mb-6">
+              <Avatar className="w-32 h-32">
+                <AvatarImage
+                  src={userIntro?.customImageUrl || userInfo.avatarUrl || undefined}
+                  alt={userInfo.username}
+                  onError={(e) => {
+                    // Fallback to GitHub avatar if custom URL fails
+                    if (userIntro?.customImageUrl && e.currentTarget.src !== userInfo.avatarUrl) {
+                      e.currentTarget.src = userInfo.avatarUrl || '';
+                    }
+                  }}
+                />
+                <AvatarFallback>
+                  {userInfo.username.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                onClick={startEditingImage}
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Image URL Editor */}
+            {editingImage && (
+              <div className="mb-6 p-4 border rounded-lg bg-white shadow-sm max-w-md mx-auto">
+                <h3 className="text-lg font-semibold mb-2">Edit Profile Image</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Enter a custom image URL or leave empty to use your GitHub avatar
+                </p>
+                <div className="space-y-4">
+                  <Input
+                    type="url"
+                    placeholder="https://example.com/your-image.jpg"
+                    value={tempImageUrl}
+                    onChange={(e) => setTempImageUrl(e.target.value)}
+                    className="w-full"
+                  />
+                  <div className="flex gap-2 justify-center">
+                    <Button size="sm" onClick={saveImageUrl}>
+                      <Check className="h-4 w-4 mr-2" />
+                      Save
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={cancelEdit}>
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="relative group">
               {editingTitle ? (
                 <div className="space-y-2">
