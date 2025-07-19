@@ -25,14 +25,29 @@ router.get('/api/repositories', async (req, res) => {
 
 router.post('/api/fetch-repos', async (req, res) => {
   const { code } = req.body;
+  
   try {
     if (!code) {
-      return res.status(400).json({ error: 'Authorization code is required' });
+      return res.status(400).json({
+        error: 'Authorization code is required',
+        details: 'No authorization code provided in request body'
+      });
     }
 
+    // Validate environment variables
+    if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
+      console.error('Missing GitHub OAuth configuration');
+      return res.status(500).json({
+        error: 'Server configuration error',
+        details: 'GitHub OAuth credentials not properly configured'
+      });
+    }
+
+    console.log('Exchanging authorization code for access token...');
+    
     const params = new URLSearchParams();
-    params.append('client_id', process.env.GITHUB_CLIENT_ID!);
-    params.append('client_secret', process.env.GITHUB_CLIENT_SECRET!);
+    params.append('client_id', process.env.GITHUB_CLIENT_ID);
+    params.append('client_secret', process.env.GITHUB_CLIENT_SECRET);
     params.append('code', code);
 
     const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
@@ -46,18 +61,55 @@ router.post('/api/fetch-repos', async (req, res) => {
       body: params.toString()
     });
 
-    const tokenData = await tokenResponse.json();
+    if (!tokenResponse.ok) {
+      console.error('GitHub token exchange failed:', tokenResponse.status, tokenResponse.statusText);
+      return res.status(500).json({
+        error: 'GitHub OAuth error',
+        details: `Token exchange failed with status ${tokenResponse.status}`
+      });
+    }
 
+    const tokenData = await tokenResponse.json();
+    console.log('Token exchange response received');
+
+    // Handle GitHub OAuth errors
     if (tokenData.error) {
-      throw new Error(`GitHub OAuth error: ${tokenData.error_description || tokenData.error}`);
+      console.error('GitHub OAuth error:', tokenData.error, tokenData.error_description);
+      
+      // Provide more specific error messages
+      let userMessage = 'GitHub authentication failed';
+      if (tokenData.error === 'bad_verification_code') {
+        userMessage = 'The authorization code is invalid or has expired. Please try signing in again.';
+      } else if (tokenData.error === 'incorrect_client_credentials') {
+        userMessage = 'GitHub application credentials are incorrect. Please contact support.';
+      } else if (tokenData.error === 'redirect_uri_mismatch') {
+        userMessage = 'Redirect URI mismatch. Please contact support.';
+      }
+      
+      return res.status(400).json({
+        error: userMessage,
+        details: tokenData.error_description || tokenData.error,
+        code: tokenData.error
+      });
     }
 
     if (!tokenData.access_token) {
-      throw new Error('No access token in GitHub response');
+      console.error('No access token in GitHub response:', tokenData);
+      return res.status(500).json({
+        error: 'GitHub authentication failed',
+        details: 'No access token received from GitHub'
+      });
     }
 
-    const githubUser = await getGithubUser(tokenData.access_token);
-    const repos = await getRepositories(tokenData.access_token);
+    console.log('Access token received, fetching user and repositories...');
+
+    // Fetch user and repositories with the new token
+    const [githubUser, repos] = await Promise.all([
+      getGithubUser(tokenData.access_token),
+      getRepositories(tokenData.access_token)
+    ]);
+
+    console.log(`Successfully authenticated user: ${githubUser.username}, found ${repos.length} repositories`);
 
     res.json({
       repositories: repos,
@@ -66,9 +118,22 @@ router.post('/api/fetch-repos', async (req, res) => {
     });
   } catch (error) {
     console.error('Failed to fetch repositories:', error);
+    
+    // Provide more specific error handling
+    if (error instanceof Error) {
+      if (error.message.includes('GitHub OAuth error')) {
+        return res.status(400).json({
+          error: 'GitHub authentication failed',
+          details: error.message,
+          suggestion: 'Please try signing in again. If the problem persists, the authorization code may have expired.'
+        });
+      }
+    }
+    
     res.status(500).json({
       error: 'Failed to fetch repositories',
-      details: error instanceof Error ? error.message : String(error)
+      details: error instanceof Error ? error.message : String(error),
+      suggestion: 'Please try again. If the problem persists, try clearing your browser cache and signing in again.'
     });
   }
 });

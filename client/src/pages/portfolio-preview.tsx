@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Github, ExternalLink, ArrowLeft, Edit2, Check, X, Plus } from "lucide-react";
+import { Github, ExternalLink, ArrowLeft, Edit2, Check, X, Plus, Camera, Trash2, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { DeploymentActions } from "@/components/deployment-actions";
@@ -21,6 +21,7 @@ interface UserIntroduction {
   introduction: string;
   skills: string[];
   interests: string[];
+  customImageUrl?: string;
 }
 
 interface UserInfo {
@@ -50,6 +51,7 @@ export default function PortfolioPreview() {
   const [editingRepo, setEditingRepo] = useState<number | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingRepoTitle, setEditingRepoTitle] = useState<number | null>(null);
+  const [editingImage, setEditingImage] = useState(false);
   
   // Temporary edit values
   const [tempIntro, setTempIntro] = useState("");
@@ -58,8 +60,13 @@ export default function PortfolioPreview() {
   const [tempRepoSummary, setTempRepoSummary] = useState("");
   const [tempTitle, setTempTitle] = useState("");
   const [tempRepoTitle, setTempRepoTitle] = useState("");
+  const [tempImageUrl, setTempImageUrl] = useState("");
   const [newSkill, setNewSkill] = useState("");
   const [newInterest, setNewInterest] = useState("");
+  
+  // Drag and drop state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Get repository data from client-side cache
   const { data, isLoading, error } = useQuery<{ repositories: Repository[] }>({
@@ -128,6 +135,11 @@ export default function PortfolioPreview() {
   const startEditingRepoTitle = (repoId: number, title: string) => {
     setTempRepoTitle(title);
     setEditingRepoTitle(repoId);
+  };
+
+  const startEditingImage = () => {
+    setTempImageUrl(userIntro?.customImageUrl || "");
+    setEditingImage(true);
   };
 
   const saveIntro = () => {
@@ -206,6 +218,17 @@ export default function PortfolioPreview() {
     }
   };
 
+  const saveImageUrl = () => {
+    if (userIntro) {
+      setUserIntro({ ...userIntro, customImageUrl: tempImageUrl });
+      setEditingImage(false);
+      toast({
+        title: "Profile Image Updated",
+        description: "Your profile image has been updated successfully.",
+      });
+    }
+  };
+
   const cancelEdit = () => {
     setEditingIntro(false);
     setEditingSkills(false);
@@ -213,12 +236,14 @@ export default function PortfolioPreview() {
     setEditingRepo(null);
     setEditingTitle(false);
     setEditingRepoTitle(null);
+    setEditingImage(false);
     setTempIntro("");
     setTempSkills([]);
     setTempInterests([]);
     setTempRepoSummary("");
     setTempTitle("");
     setTempRepoTitle("");
+    setTempImageUrl("");
     setNewSkill("");
     setNewInterest("");
   };
@@ -243,6 +268,77 @@ export default function PortfolioPreview() {
 
   const removeInterest = (index: number) => {
     setTempInterests(tempInterests.filter((_, i) => i !== index));
+  };
+
+  const deleteRepoSummary = (repoId: number) => {
+    setSelectedRepos(repos =>
+      repos.map(repo =>
+        repo.id === repoId
+          ? { ...repo, summary: "" }
+          : repo
+      )
+    );
+    toast({
+      title: "Repository Summary Deleted",
+      description: "The repository summary has been removed.",
+    });
+  };
+
+  const deleteRepository = (repoId: number) => {
+    setSelectedRepos(repos => repos.filter(repo => repo.id !== repoId));
+    toast({
+      title: "Repository Removed",
+      description: "The repository has been removed from your portfolio.",
+    });
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newRepos = [...selectedRepos];
+    const draggedRepo = newRepos[draggedIndex];
+    
+    // Remove the dragged item
+    newRepos.splice(draggedIndex, 1);
+    
+    // Insert at the new position
+    newRepos.splice(dropIndex, 0, draggedRepo);
+    
+    setSelectedRepos(newRepos);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    
+    toast({
+      title: "Repository Reordered",
+      description: "The repository order has been updated.",
+    });
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   useEffect(() => {
@@ -334,52 +430,64 @@ export default function PortfolioPreview() {
             : cn(theme.layout.content, "grid grid-cols-1 gap-6") // For others, use theme styling plus grid
         }
       >
-        {selectedRepos.map((repo) => (
+        {selectedRepos.map((repo, index) => (
           <Card
             key={repo.id}
+            draggable
+            onDragStart={(e) => handleDragStart(e, index)}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, index)}
+            onDragEnd={handleDragEnd}
             className={cn(
               theme.preview.card,
               isMinimal ? "mb-2" : "mb-4", // Reduce spacing for Minimal theme
               isModern ? "shadow-lg hover:shadow-xl transition-shadow" : "",
+              draggedIndex === index ? "opacity-50" : "",
+              dragOverIndex === index ? "border-blue-500 border-2" : "",
+              "cursor-move relative group"
             )}
           >
             <CardHeader>
               <div className="flex justify-between items-start">
-                <div className="relative group flex-1">
-                  {editingRepoTitle === repo.id ? (
-                    <div className="space-y-2">
-                      <Input
-                        value={tempRepoTitle}
-                        onChange={(e) => setTempRepoTitle(e.target.value)}
-                        className="text-2xl font-semibold"
-                        placeholder="Enter repository title..."
-                      />
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={saveRepoTitle}>
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={cancelEdit}>
-                          <X className="h-4 w-4" />
-                        </Button>
+                <div className="flex items-start gap-2 flex-1">
+                  <GripVertical className="h-5 w-5 text-gray-400 mt-1 cursor-grab active:cursor-grabbing" />
+                  <div className="relative group flex-1">
+                    {editingRepoTitle === repo.id ? (
+                      <div className="space-y-2">
+                        <Input
+                          value={tempRepoTitle}
+                          onChange={(e) => setTempRepoTitle(e.target.value)}
+                          className="text-2xl font-semibold"
+                          placeholder="Enter repository title..."
+                        />
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={saveRepoTitle}>
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={cancelEdit}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <>
-                      <h2
-                        className={cn("text-2xl font-semibold", theme.preview.text)}
-                      >
-                        {repo.displayName || repo.name}
-                      </h2>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => startEditingRepoTitle(repo.id, repo.displayName || repo.name)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
+                    ) : (
+                      <>
+                        <h2
+                          className={cn("text-2xl font-semibold", theme.preview.text)}
+                        >
+                          {repo.displayName || repo.name}
+                        </h2>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => startEditingRepoTitle(repo.id, repo.displayName || repo.name)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 ml-2">
                   {repo.metadata.stars > 0 && (
@@ -435,14 +543,24 @@ export default function PortfolioPreview() {
                       <p className={cn("mb-4", theme.preview.text)}>
                         {repo.summary}
                       </p>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => startEditingRepo(repo.id, repo.summary || "")}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
+                      <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => startEditingRepo(repo.id, repo.summary || "")}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => deleteRepository(repo.id)}
+                          className="text-red-500 hover:text-red-700"
+                          title="Remove repository from portfolio"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </>
                   )}
                   <div className="flex gap-2 flex-wrap">
@@ -495,15 +613,60 @@ export default function PortfolioPreview() {
       >
         {userInfo && (
           <>
-            <Avatar className="w-32 h-32 mb-6">
-              <AvatarImage
-                src={userInfo.avatarUrl || undefined}
-                alt={userInfo.username}
-              />
-              <AvatarFallback>
-                {userInfo.username.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative group mb-6">
+              <Avatar className="w-32 h-32">
+                <AvatarImage
+                  src={userIntro?.customImageUrl || userInfo.avatarUrl || undefined}
+                  alt={userInfo.username}
+                  onError={(e) => {
+                    // Fallback to GitHub avatar if custom URL fails
+                    if (userIntro?.customImageUrl && e.currentTarget.src !== userInfo.avatarUrl) {
+                      e.currentTarget.src = userInfo.avatarUrl || '';
+                    }
+                  }}
+                />
+                <AvatarFallback>
+                  {userInfo.username.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                onClick={startEditingImage}
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Image URL Editor */}
+            {editingImage && (
+              <div className="mb-6 p-4 border rounded-lg bg-white shadow-sm max-w-md mx-auto">
+                <h3 className="text-lg font-semibold mb-2">Edit Profile Image</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Enter a custom image URL or leave empty to use your GitHub avatar
+                </p>
+                <div className="space-y-4">
+                  <Input
+                    type="url"
+                    placeholder="https://example.com/your-image.jpg"
+                    value={tempImageUrl}
+                    onChange={(e) => setTempImageUrl(e.target.value)}
+                    className="w-full"
+                  />
+                  <div className="flex gap-2 justify-center">
+                    <Button size="sm" onClick={saveImageUrl}>
+                      <Check className="h-4 w-4 mr-2" />
+                      Save
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={cancelEdit}>
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="relative group">
               {editingTitle ? (
                 <div className="space-y-2">
@@ -751,6 +914,13 @@ export default function PortfolioPreview() {
             />
           </div>
 
+          {/* Simple Editing Hint */}
+          <div className="text-center mb-4">
+            <p className="text-sm text-muted-foreground">
+              💡 Tip: Your portfolio is fully customizable! Hover over elements to edit, drag repositories to reorder, or delete summaries
+            </p>
+          </div>
+
           {/* For specific themes, use explicit grid layouts */}
           {selectedTheme === "minimal" ? (
             // Minimal theme layout - 2 columns with left sidebar
@@ -768,53 +938,66 @@ export default function PortfolioPreview() {
               </div>
               <div className="w-full max-w-6xl mx-auto px-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {selectedRepos.map((repo) => (
+                  {selectedRepos.map((repo, index) => (
                     <Card
                       key={repo.id}
-                      className="border-l-4 border-stone-900 rounded-none shadow-[0_2px_40px_-12px_rgba(0,0,0,0.1)] bg-white h-full"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, index)}
+                      onDragEnd={handleDragEnd}
+                      className={cn(
+                        "border-l-4 border-stone-900 rounded-none shadow-[0_2px_40px_-12px_rgba(0,0,0,0.1)] bg-white h-full cursor-move relative group",
+                        draggedIndex === index ? "opacity-50" : "",
+                        dragOverIndex === index ? "border-blue-500 border-2" : ""
+                      )}
                     >
                       <CardHeader>
                         <div className="flex justify-between items-start">
-                          <div className="relative group flex-1">
-                            {editingRepoTitle === repo.id ? (
-                              <div className="space-y-2">
-                                <Input
-                                  value={tempRepoTitle}
-                                  onChange={(e) => setTempRepoTitle(e.target.value)}
-                                  className="text-2xl font-semibold"
-                                  placeholder="Enter repository title..."
-                                />
-                                <div className="flex gap-2">
-                                  <Button size="sm" onClick={saveRepoTitle}>
-                                    <Check className="h-4 w-4" />
-                                  </Button>
-                                  <Button size="sm" variant="outline" onClick={cancelEdit}>
-                                    <X className="h-4 w-4" />
-                                  </Button>
+                          <div className="flex items-start gap-2 flex-1">
+                            <GripVertical className="h-5 w-5 text-gray-400 mt-1 cursor-grab active:cursor-grabbing" />
+                            <div className="relative group flex-1">
+                              {editingRepoTitle === repo.id ? (
+                                <div className="space-y-2">
+                                  <Input
+                                    value={tempRepoTitle}
+                                    onChange={(e) => setTempRepoTitle(e.target.value)}
+                                    className="text-2xl font-semibold"
+                                    placeholder="Enter repository title..."
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button size="sm" onClick={saveRepoTitle}>
+                                      <Check className="h-4 w-4" />
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={cancelEdit}>
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
                                 </div>
-                              </div>
-                            ) : (
-                              <>
-                                <h2
-                                  className={cn(
-                                    "text-2xl font-semibold",
-                                    theme.preview.text,
-                                  )}
-                                >
-                                  {repo.displayName || repo.name}
-                                </h2>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={() => startEditingRepoTitle(repo.id, repo.displayName || repo.name)}
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 ml-2">
+                              ) : (
+                                <>
+                                  <h2
+                                    className={cn(
+                                      "text-2xl font-semibold",
+                                      theme.preview.text,
+                                    )}
+                                  >
+                                    {repo.displayName || repo.name}
+                                  </h2>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => startEditingRepoTitle(repo.id, repo.displayName || repo.name)}
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                         </div>
+                         <div className="flex items-center gap-2 ml-2">
                             {repo.metadata.stars > 0 && (
                               <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">
                                 ★ {repo.metadata.stars}
@@ -867,14 +1050,24 @@ export default function PortfolioPreview() {
                               <p className={cn("mb-4", theme.preview.text)}>
                                 {repo.summary || repo.description}
                               </p>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => startEditingRepo(repo.id, repo.summary || repo.description || "")}
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
+                              <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => startEditingRepo(repo.id, repo.summary || repo.description || "")}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => deleteRepository(repo.id)}
+                                  className="text-red-500 hover:text-red-700"
+                                  title="Remove repository from portfolio"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </>
                           )}
                           {repo.metadata.topics &&

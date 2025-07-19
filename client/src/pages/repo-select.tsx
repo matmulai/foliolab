@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Repository } from "@shared/schema";
-import { Search } from "lucide-react";
+import { Search, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toggleRepositorySelection, saveRepositories, getRepositories, getGitHubToken } from "@/lib/storage";
 import { AnalysisProgress } from "@/components/analysis-progress";
@@ -298,7 +298,7 @@ export default function RepoSelect() {
               <span className="text-sm text-muted-foreground">{filteredRepos.length} repositories</span>
             </div>
             
-            <div className="grid gap-4 max-h-[600px] overflow-y-auto">
+            <div className="grid gap-4 max-h-[800px] overflow-y-auto">
               {isLoading ? (
                 Array.from({ length: 3 }).map((_, i) => (
                   <Skeleton key={i} className="h-32" />
@@ -328,6 +328,15 @@ export default function RepoSelect() {
                           <span className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">
                             {repo.owner.type === "User" ? "User" : "Org"}: {repo.owner.login}
                           </span>
+                          <a
+                            href={repo.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-full flex items-center gap-1 transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            GitHub <ExternalLink className="w-3 h-3" />
+                          </a>
                         </div>
                         
                         <div className="text-xs text-muted-foreground mt-1">
@@ -392,7 +401,7 @@ export default function RepoSelect() {
               <span className="text-sm text-muted-foreground">{selectedCount} selected</span>
             </div>
             
-            <div className="border-2 border-dashed border-muted rounded-lg p-4 min-h-[600px]">
+            <div className="border-2 border-dashed border-muted rounded-lg p-4 min-h-[800px]">
               {selectedCount === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-12">
                   <div className="w-16 h-16 mb-4 rounded-full bg-muted flex items-center justify-center">
@@ -402,7 +411,7 @@ export default function RepoSelect() {
                   <p className="text-sm text-center mt-1">Select repositories from the left to see them here</p>
                 </div>
               ) : (
-                <div className="space-y-3 max-h-[550px] overflow-y-auto">
+                <div className="space-y-3 max-h-[750px] overflow-y-auto">
                   {selectedRepos.map((repo) => (
                     <Card key={repo.id} className="border-primary/20 bg-primary/5">
                       <CardHeader className="p-3">
@@ -415,6 +424,15 @@ export default function RepoSelect() {
                               <span className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">
                                 {repo.owner.type === "User" ? "User" : "Org"}: {repo.owner.login}
                               </span>
+                              <a
+                                href={repo.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-full flex items-center gap-1 transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                GitHub <ExternalLink className="w-3 h-3" />
+                              </a>
                             </div>
                             
                             {repo.description && (
