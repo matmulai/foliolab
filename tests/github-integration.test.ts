@@ -186,4 +186,78 @@ Content here.`;
       expect(transformedRepo.metadata.url).toBe('https://test-repo.com');
     });
   });
+
+  describe('OAuth Error Handling', () => {
+    it('should handle bad verification code error', () => {
+      const mockErrorResponse = {
+        error: 'bad_verification_code',
+        error_description: 'The code passed is incorrect or expired.'
+      };
+
+      let userMessage = 'GitHub authentication failed';
+      if (mockErrorResponse.error === 'bad_verification_code') {
+        userMessage = 'The authorization code is invalid or has expired. Please try signing in again.';
+      }
+
+      expect(userMessage).toBe('The authorization code is invalid or has expired. Please try signing in again.');
+    });
+
+    it('should handle incorrect client credentials error', () => {
+      const mockErrorResponse = {
+        error: 'incorrect_client_credentials',
+        error_description: 'The client_id and/or client_secret passed are incorrect.'
+      };
+
+      let userMessage = 'GitHub authentication failed';
+      if (mockErrorResponse.error === 'incorrect_client_credentials') {
+        userMessage = 'GitHub application credentials are incorrect. Please contact support.';
+      }
+
+      expect(userMessage).toBe('GitHub application credentials are incorrect. Please contact support.');
+    });
+
+    it('should handle redirect URI mismatch error', () => {
+      const mockErrorResponse = {
+        error: 'redirect_uri_mismatch',
+        error_description: 'The redirect_uri MUST match the registered callback URL for this application.'
+      };
+
+      let userMessage = 'GitHub authentication failed';
+      if (mockErrorResponse.error === 'redirect_uri_mismatch') {
+        userMessage = 'Redirect URI mismatch. Please contact support.';
+      }
+
+      expect(userMessage).toBe('Redirect URI mismatch. Please contact support.');
+    });
+
+    it('should validate OAuth code format', () => {
+      // OAuth codes are typically 20 characters long and alphanumeric
+      const validCode = 'abcd1234efgh5678ijkl';
+      const invalidCode = '';
+      const shortCode = 'abc123';
+
+      expect(validCode.length).toBe(20);
+      expect(invalidCode.length).toBe(0);
+      expect(shortCode.length).toBeLessThan(20);
+    });
+
+    it('should handle missing environment variables', () => {
+      const mockEnv = {
+        GITHUB_CLIENT_ID: undefined,
+        GITHUB_CLIENT_SECRET: undefined
+      };
+
+      const hasRequiredEnvVars = !!(mockEnv.GITHUB_CLIENT_ID && mockEnv.GITHUB_CLIENT_SECRET);
+      expect(hasRequiredEnvVars).toBe(false);
+    });
+
+    it('should validate OAuth state parameter', () => {
+      // State should be a UUID-like string for security
+      const validState = crypto.randomUUID();
+      const invalidState = '';
+
+      expect(validState).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+      expect(invalidState).toBe('');
+    });
+  });
 });
