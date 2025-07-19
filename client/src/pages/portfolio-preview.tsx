@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Github, ExternalLink, ArrowLeft, Edit2, Check, X, Plus, Camera } from "lucide-react";
+import { Github, ExternalLink, ArrowLeft, Edit2, Check, X, Plus, Camera, Trash2, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { DeploymentActions } from "@/components/deployment-actions";
@@ -63,6 +63,10 @@ export default function PortfolioPreview() {
   const [tempImageUrl, setTempImageUrl] = useState("");
   const [newSkill, setNewSkill] = useState("");
   const [newInterest, setNewInterest] = useState("");
+  
+  // Drag and drop state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Get repository data from client-side cache
   const { data, isLoading, error } = useQuery<{ repositories: Repository[] }>({
@@ -266,6 +270,69 @@ export default function PortfolioPreview() {
     setTempInterests(tempInterests.filter((_, i) => i !== index));
   };
 
+  const deleteRepoSummary = (repoId: number) => {
+    setSelectedRepos(repos =>
+      repos.map(repo =>
+        repo.id === repoId
+          ? { ...repo, summary: "" }
+          : repo
+      )
+    );
+    toast({
+      title: "Repository Summary Deleted",
+      description: "The repository summary has been removed.",
+    });
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newRepos = [...selectedRepos];
+    const draggedRepo = newRepos[draggedIndex];
+    
+    // Remove the dragged item
+    newRepos.splice(draggedIndex, 1);
+    
+    // Insert at the new position
+    newRepos.splice(dropIndex, 0, draggedRepo);
+    
+    setSelectedRepos(newRepos);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    
+    toast({
+      title: "Repository Reordered",
+      description: "The repository order has been updated.",
+    });
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
   useEffect(() => {
     if (data?.repositories && !isLoading) {
       const filtered = data.repositories.filter((repo) => repo.selected);
@@ -355,18 +422,29 @@ export default function PortfolioPreview() {
             : cn(theme.layout.content, "grid grid-cols-1 gap-6") // For others, use theme styling plus grid
         }
       >
-        {selectedRepos.map((repo) => (
+        {selectedRepos.map((repo, index) => (
           <Card
             key={repo.id}
+            draggable
+            onDragStart={(e) => handleDragStart(e, index)}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, index)}
+            onDragEnd={handleDragEnd}
             className={cn(
               theme.preview.card,
               isMinimal ? "mb-2" : "mb-4", // Reduce spacing for Minimal theme
               isModern ? "shadow-lg hover:shadow-xl transition-shadow" : "",
+              draggedIndex === index ? "opacity-50" : "",
+              dragOverIndex === index ? "border-blue-500 border-2" : "",
+              "cursor-move relative group"
             )}
           >
             <CardHeader>
               <div className="flex justify-between items-start">
-                <div className="relative group flex-1">
+                <div className="flex items-start gap-2 flex-1">
+                  <GripVertical className="h-5 w-5 text-gray-400 mt-1 cursor-grab active:cursor-grabbing" />
+                  <div className="relative group flex-1">
                   {editingRepoTitle === repo.id ? (
                     <div className="space-y-2">
                       <Input
@@ -456,14 +534,25 @@ export default function PortfolioPreview() {
                       <p className={cn("mb-4", theme.preview.text)}>
                         {repo.summary}
                       </p>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => startEditingRepo(repo.id, repo.summary || "")}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
+                      <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => startEditingRepo(repo.id, repo.summary || "")}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        {repo.summary && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deleteRepoSummary(repo.id)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </>
                   )}
                   <div className="flex gap-2 flex-wrap">
@@ -820,7 +909,7 @@ export default function PortfolioPreview() {
           {/* Simple Editing Hint */}
           <div className="text-center mb-4">
             <p className="text-sm text-muted-foreground">
-              💡 Tip: Your portfolio is fully customizable! Hover over any element to see edit options
+              💡 Tip: Your portfolio is fully customizable! Hover over elements to edit, drag repositories to reorder, or delete summaries
             </p>
           </div>
 
@@ -841,14 +930,26 @@ export default function PortfolioPreview() {
               </div>
               <div className="w-full max-w-6xl mx-auto px-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {selectedRepos.map((repo) => (
+                  {selectedRepos.map((repo, index) => (
                     <Card
                       key={repo.id}
-                      className="border-l-4 border-stone-900 rounded-none shadow-[0_2px_40px_-12px_rgba(0,0,0,0.1)] bg-white h-full"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, index)}
+                      onDragEnd={handleDragEnd}
+                      className={cn(
+                        "border-l-4 border-stone-900 rounded-none shadow-[0_2px_40px_-12px_rgba(0,0,0,0.1)] bg-white h-full cursor-move relative group",
+                        draggedIndex === index ? "opacity-50" : "",
+                        dragOverIndex === index ? "border-blue-500 border-2" : ""
+                      )}
                     >
                       <CardHeader>
                         <div className="flex justify-between items-start">
-                          <div className="relative group flex-1">
+                          <div className="flex items-start gap-2 flex-1">
+                            <GripVertical className="h-5 w-5 text-gray-400 mt-1 cursor-grab active:cursor-grabbing" />
+                            <div className="relative group flex-1">
                             {editingRepoTitle === repo.id ? (
                               <div className="space-y-2">
                                 <Input
@@ -886,8 +987,9 @@ export default function PortfolioPreview() {
                                 </Button>
                               </>
                             )}
-                          </div>
-                          <div className="flex items-center gap-2 ml-2">
+                           </div>
+                         </div>
+                         <div className="flex items-center gap-2 ml-2">
                             {repo.metadata.stars > 0 && (
                               <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">
                                 ★ {repo.metadata.stars}
@@ -940,14 +1042,25 @@ export default function PortfolioPreview() {
                               <p className={cn("mb-4", theme.preview.text)}>
                                 {repo.summary || repo.description}
                               </p>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => startEditingRepo(repo.id, repo.summary || repo.description || "")}
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
+                              <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => startEditingRepo(repo.id, repo.summary || repo.description || "")}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                {(repo.summary || repo.description) && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => deleteRepoSummary(repo.id)}
+                                    className="text-red-500 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
                             </>
                           )}
                           {repo.metadata.topics &&
