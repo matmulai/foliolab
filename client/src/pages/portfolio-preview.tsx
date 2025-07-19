@@ -284,6 +284,14 @@ export default function PortfolioPreview() {
     });
   };
 
+  const deleteRepository = (repoId: number) => {
+    setSelectedRepos(repos => repos.filter(repo => repo.id !== repoId));
+    toast({
+      title: "Repository Removed",
+      description: "The repository has been removed from your portfolio.",
+    });
+  };
+
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIndex(index);
@@ -543,16 +551,15 @@ export default function PortfolioPreview() {
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
-                        {repo.summary && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => deleteRepoSummary(repo.id)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => deleteRepository(repo.id)}
+                          className="text-red-500 hover:text-red-700"
+                          title="Remove repository from portfolio"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </>
                   )}
@@ -1051,16 +1058,15 @@ export default function PortfolioPreview() {
                                 >
                                   <Edit2 className="h-4 w-4" />
                                 </Button>
-                                {(repo.summary || repo.description) && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => deleteRepoSummary(repo.id)}
-                                    className="text-red-500 hover:text-red-700"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => deleteRepository(repo.id)}
+                                  className="text-red-500 hover:text-red-700"
+                                  title="Remove repository from portfolio"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </div>
                             </>
                           )}
