@@ -8,7 +8,8 @@ Create your portfolio using this link: https://foliolab.vercel.app/
 
 ## Demo
 Pleae go through below video - 
-[![](https://youtu.be/xvnSaZuMXu8)]
+[![Watch the video](https://i.ytimg.com/vi/xvnSaZuMXu8/hqdefault.jpg)](https://youtu.be/xvnSaZuMXu8)
+
 
 ## Features
 
