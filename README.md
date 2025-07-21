@@ -7,7 +7,6 @@ FolioLab is an AI-powered portfolio generation tool that transforms your GitHub 
 Create your portfolio using this link: https://foliolab.vercel.app/
 
 ## Demo
-Pleae go through below video - 
 [![Watch the video](https://i.ytimg.com/vi/xvnSaZuMXu8/hqdefault.jpg)](https://youtu.be/xvnSaZuMXu8)
 
 
