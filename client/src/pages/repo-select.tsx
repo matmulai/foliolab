@@ -228,7 +228,18 @@ export default function RepoSelect() {
       <div className="flex flex-col gap-6">
         {/* Header and filter section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h1 className="text-2xl md:text-3xl font-bold">Select Repositories</h1>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold">Select Repositories</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Choose GitHub repositories for your portfolio, or{' '}
+              <button
+                onClick={() => setLocation('/data-sources')}
+                className="text-blue-600 hover:text-blue-800 underline"
+              >
+                add content from other sources
+              </button>
+            </p>
+          </div>
           
           {/* Owner filter dropdown */}
           {owners.length > 0 && (

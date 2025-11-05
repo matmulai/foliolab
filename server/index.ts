@@ -4,6 +4,7 @@ import githubRoutes from "./routes/github.js";
 import deployRoutes from "./routes/deploy.js";
 import userRoutes from "./routes/user.js";
 import healthRoutes from "./routes/health.js";
+import sourcesRoutes from "./routes/sources.js";
 
 // Validate required environment variables at startup
 function validateEnvironment(): void {
@@ -121,6 +122,7 @@ async function registerRoutes(app: Express) {
   router.use(githubRoutes);
   router.use(deployRoutes);
   router.use(userRoutes);
+  router.use('/api/sources', sourcesRoutes);
   app.use(router);
   const httpServer = createServer(app);
   return httpServer;
