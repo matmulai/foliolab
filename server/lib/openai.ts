@@ -21,21 +21,79 @@ const USER_INTRO_PROMPT =
 const USER_INTRO_FORMAT =
   "Respond with JSON in this format: { 'introduction': string, 'skills': string[], 'interests': string[] }";
 
+/**
+ * Intelligently truncates text at natural boundaries
+ * Tries to break at paragraphs, then sentences, then words
+ *
+ * @param text - Text to truncate
+ * @param maxLength - Maximum length in characters
+ * @returns Truncated text with ellipsis if needed
+ */
+function intelligentTruncate(text: string, maxLength: number): string {
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  // Try to break at paragraph (80% threshold)
+  const nearEndParagraph = text.lastIndexOf('\n\n', maxLength);
+  if (nearEndParagraph > maxLength * 0.8) {
+    return text.substring(0, nearEndParagraph) + '\n\n...';
+  }
+
+  // Try to break at sentence
+  const nearEndSentence = text.lastIndexOf('. ', maxLength);
+  if (nearEndSentence > maxLength * 0.8) {
+    return text.substring(0, nearEndSentence + 1) + ' ...';
+  }
+
+  // Try to break at word boundary
+  const nearEndWord = text.lastIndexOf(' ', maxLength);
+  if (nearEndWord > maxLength * 0.8) {
+    return text.substring(0, nearEndWord) + ' ...';
+  }
+
+  // Last resort: hard cut
+  return text.substring(0, maxLength) + '...';
+}
+
+/**
+ * Singleton OpenAI client instance
+ * Reused across requests for better performance
+ */
+let openaiClient: OpenAI | null = null;
+
+/**
+ * Gets or creates an OpenAI client instance
+ * Uses singleton pattern to avoid recreating the client on every request
+ *
+ * @param apiKey - OpenAI API key
+ * @returns OpenAI client instance
+ */
+function getOpenAIClient(apiKey: string): OpenAI {
+  if (!openaiClient) {
+    const timeout = parseInt(process.env.OPENAI_TIMEOUT || '60000');
+    const maxRetries = parseInt(process.env.OPENAI_MAX_RETRIES || '2');
+
+    openaiClient = new OpenAI({
+      apiKey,
+      timeout,
+      maxRetries,
+      ...(process.env.OPENAI_API_BASE_URL && { baseURL: process.env.OPENAI_API_BASE_URL })
+    });
+
+    console.log('✓ OpenAI client initialized');
+  }
+
+  return openaiClient;
+}
+
 async function generateWithOpenAI(
   prompt: string,
   userContent: string,
   apiKey: string,
 ): Promise<RepoSummary> {
-  const timeout = parseInt(process.env.OPENAI_TIMEOUT || '60000');
-  const maxRetries = parseInt(process.env.OPENAI_MAX_RETRIES || '2');
-  
   try {
-    const openai = new OpenAI({
-      apiKey,
-      timeout, // Configurable timeout
-      maxRetries, // Configurable retries
-      ...(process.env.OPENAI_API_BASE_URL && { baseURL: process.env.OPENAI_API_BASE_URL })
-    });
+    const openai = getOpenAIClient(apiKey);
     
     const response = await openai.chat.completions.create({
       model: process.env.OPENAI_API_MODEL || "gpt-4o",
@@ -131,13 +189,10 @@ async function generateRepoSummary(
     if (readme && readme.trim()) {
       // Clean the README content to remove badges and noise
       const cleanedReadme = cleanReadmeContent(readme);
-      
+
       const maxReadmeLength = 2000;
-      const trimmedReadme =
-        cleanedReadme.length > maxReadmeLength
-          ? cleanedReadme.substring(0, maxReadmeLength) + "..."
-          : cleanedReadme;
-      
+      const trimmedReadme = intelligentTruncate(cleanedReadme, maxReadmeLength);
+
       userContent += `\nREADME:\n${trimmedReadme}`;
     } else if (accessToken && owner) {
       try {
@@ -234,15 +289,7 @@ async function generateUserIntroduction(
     const prompt = `${USER_INTRO_PROMPT} ${USER_INTRO_FORMAT}`;
     const userContent = JSON.stringify(repoInfo, null, 2);
 
-    const timeout = parseInt(process.env.OPENAI_TIMEOUT || '60000');
-    const maxRetries = parseInt(process.env.OPENAI_MAX_RETRIES || '2');
-    
-    const openai = new OpenAI({
-      apiKey,
-      timeout,
-      maxRetries,
-      ...(process.env.OPENAI_API_BASE_URL && { baseURL: process.env.OPENAI_API_BASE_URL })
-    });
+    const openai = getOpenAIClient(apiKey);
     
     const response = await openai.chat.completions.create({
       model: process.env.OPENAI_API_MODEL || "gpt-4o",
