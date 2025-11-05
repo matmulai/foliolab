@@ -7,6 +7,62 @@ interface GithubUser {
   avatarUrl: string | null;
 }
 
+/**
+ * Octokit error interface for better type safety
+ */
+interface OctokitError extends Error {
+  status?: number;
+  response?: {
+    status: number;
+    data: any;
+  };
+}
+
+/**
+ * Type guard to check if an error is an Octokit error
+ * @param error - The error to check
+ * @returns True if the error is an OctokitError
+ */
+function isOctokitError(error: unknown): error is OctokitError {
+  return (
+    error instanceof Error &&
+    ('status' in error || ('response' in error && typeof (error as any).response === 'object'))
+  );
+}
+
+/**
+ * Generic pagination helper for GitHub API calls
+ * Automatically handles pagination to retrieve all results
+ *
+ * @param fetchPage - Function that fetches a single page of results
+ * @param perPage - Number of items per page (default: 100)
+ * @returns Promise containing all paginated results
+ */
+async function paginateGithubAPI<T>(
+  fetchPage: (page: number) => Promise<T[]>,
+  perPage: number = 100
+): Promise<T[]> {
+  const results: T[] = [];
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const data = await fetchPage(page);
+
+    if (data.length === 0) {
+      hasMore = false;
+    } else {
+      results.push(...data);
+      hasMore = data.length === perPage;
+      if (hasMore) {
+        page++;
+      }
+    }
+  }
+
+  return results;
+}
+
 export async function getGithubUser(accessToken: string): Promise<GithubUser> {
   const octokit = new Octokit({ auth: accessToken });
   const { data } = await octokit.users.getAuthenticated();
@@ -30,7 +86,7 @@ export async function checkRepositoryExists(
     });
     return true;
   } catch (error) {
-    if ((error as any).status === 404) {
+    if (isOctokitError(error) && error.status === 404) {
       return false;
     }
     throw error;
@@ -43,35 +99,22 @@ export async function getUserOrganizations(
   const octokit = new Octokit({ auth: accessToken });
 
   try {
-    // Handle pagination to get all organizations
-    const organizations: Organization[] = [];
-    let page = 1;
-    let hasMore = true;
-
-    while (hasMore) {
-      const { data } = await octokit.orgs.listForAuthenticatedUser({
-        per_page: 100,
-        page: page,
-      });
-
-      if (data.length === 0) {
-        hasMore = false;
-      } else {
-        organizations.push(...data.map((org) => ({
-          id: org.id,
-          login: org.login,
-          name: org.description || null,
-          avatarUrl: org.avatar_url || null,
-        })));
-        
-        // If we got less than 100 results, we're on the last page
-        if (data.length < 100) {
-          hasMore = false;
-        } else {
-          page++;
-        }
+    const orgData = await paginateGithubAPI(
+      async (page) => {
+        const { data } = await octokit.orgs.listForAuthenticatedUser({
+          per_page: 100,
+          page,
+        });
+        return data;
       }
-    }
+    );
+
+    const organizations = orgData.map((org) => ({
+      id: org.id,
+      login: org.login,
+      name: org.description || null,
+      avatarUrl: org.avatar_url || null,
+    }));
 
     console.log(`Fetched ${organizations.length} organizations for user`);
     return organizations;
@@ -87,32 +130,17 @@ async function getUserRepositories(
   user: { login: string; type: "User"; avatarUrl: string | null },
 ): Promise<Repository[]> {
   try {
-    // Handle pagination to get all user repositories
-    const allRepos: any[] = [];
-    let page = 1;
-    let hasMore = true;
-
-    while (hasMore) {
-      const { data } = await octokit.repos.listForAuthenticatedUser({
-        visibility: "public",
-        sort: "updated",
-        per_page: 100,
-        page: page,
-      });
-
-      if (data.length === 0) {
-        hasMore = false;
-      } else {
-        allRepos.push(...data);
-        
-        // If we got less than 100 results, we're on the last page
-        if (data.length < 100) {
-          hasMore = false;
-        } else {
-          page++;
-        }
+    const allRepos = await paginateGithubAPI(
+      async (page) => {
+        const { data } = await octokit.repos.listForAuthenticatedUser({
+          visibility: "public",
+          sort: "updated",
+          per_page: 100,
+          page,
+        });
+        return data;
       }
-    }
+    );
 
     // Apply filtering - make it less aggressive
     const filteredRepos = allRepos.filter((repo) => {
@@ -175,33 +203,18 @@ async function getOrganizationRepositories(
   org: { login: string; avatarUrl: string | null },
 ): Promise<Repository[]> {
   try {
-    // Handle pagination to get all repositories for the organization
-    const allRepos: any[] = [];
-    let page = 1;
-    let hasMore = true;
-
-    while (hasMore) {
-      const { data } = await octokit.repos.listForOrg({
-        org: org.login,
-        type: "public",
-        sort: "updated",
-        per_page: 100,
-        page: page,
-      });
-
-      if (data.length === 0) {
-        hasMore = false;
-      } else {
-        allRepos.push(...data);
-        
-        // If we got less than 100 results, we're on the last page
-        if (data.length < 100) {
-          hasMore = false;
-        } else {
-          page++;
-        }
+    const allRepos = await paginateGithubAPI(
+      async (page) => {
+        const { data } = await octokit.repos.listForOrg({
+          org: org.login,
+          type: "public",
+          sort: "updated",
+          per_page: 100,
+          page,
+        });
+        return data;
       }
-    }
+    );
 
     // Apply filtering - make it less aggressive
     const filteredRepos = allRepos.filter((repo) => {
@@ -322,10 +335,17 @@ export async function getRepositories(
     console.log(`Final repository count after deduplication: ${repositories.length}`);
 
     // Fetch READMEs and extract titles (in batches to avoid rate limiting)
-    const batchSize = 5;
-    for (let i = 0; i < repositories.length; i += batchSize) {
-      const batch = repositories.slice(i, i + batchSize);
-      await Promise.allSettled(
+    const BATCH_SIZE = parseInt(process.env.GITHUB_BATCH_SIZE || '10');
+    const BATCH_DELAY_MS = parseInt(process.env.GITHUB_BATCH_DELAY_MS || '100');
+
+    for (let i = 0; i < repositories.length; i += BATCH_SIZE) {
+      const batch = repositories.slice(i, i + BATCH_SIZE);
+      const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(repositories.length / BATCH_SIZE);
+
+      console.log(`Processing README batch ${batchNumber}/${totalBatches} (${batch.length} repos)`);
+
+      const results = await Promise.allSettled(
         batch.map(async (repo) => {
           try {
             const readme = await getReadmeContent(
@@ -349,6 +369,17 @@ export async function getRepositories(
           }
         }),
       );
+
+      // Log batch results for monitoring
+      const failures = results.filter(r => r.status === 'rejected');
+      if (failures.length > 0) {
+        console.warn(`Batch ${batchNumber}: ${failures.length}/${batch.length} failures`);
+      }
+
+      // Add delay between batches to avoid rate limiting (except for last batch)
+      if (i + BATCH_SIZE < repositories.length) {
+        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+      }
     }
 
     return repositories;
