@@ -3,6 +3,7 @@ import { createServer } from "http";
 import githubRoutes from "./routes/github.js";
 import deployRoutes from "./routes/deploy.js";
 import userRoutes from "./routes/user.js";
+import healthRoutes from "./routes/health.js";
 
 // Validate required environment variables at startup
 function validateEnvironment(): void {
@@ -42,6 +43,49 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Add request ID for tracing
+app.use((req, res, next) => {
+  // Use existing request ID from header or generate new one
+  const requestId = req.headers['x-request-id'] as string ||
+                    `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // Store on request and response
+  (req as any).id = requestId;
+  res.setHeader('X-Request-ID', requestId);
+
+  next();
+});
+
+// Add security headers
+app.use((_req, res, next) => {
+  // Prevent clickjacking
+  res.setHeader('X-Frame-Options', 'DENY');
+
+  // Prevent MIME type sniffing
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+
+  // Enable XSS protection
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+
+  // Referrer policy
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // Content Security Policy (basic)
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
+    );
+  }
+
+  // HSTS (only in production)
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+
+  next();
+});
+
 // Add CORS headers
 app.use((req, res, next) => {
   const requestOrigin = req.headers.origin;
@@ -73,6 +117,7 @@ app.use((req, res, next) => {
 
 async function registerRoutes(app: Express) {
   const router = Router();
+  router.use(healthRoutes);
   router.use(githubRoutes);
   router.use(deployRoutes);
   router.use(userRoutes);
@@ -85,6 +130,7 @@ async function registerRoutes(app: Express) {
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
+  const requestId = (req as any).id;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
@@ -96,7 +142,7 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      let logLine = `[${requestId}] ${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
@@ -114,6 +160,19 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+
+  // Configure request timeout to prevent hanging connections
+  const REQUEST_TIMEOUT_MS = parseInt(process.env.REQUEST_TIMEOUT_MS || '30000');
+  server.setTimeout(REQUEST_TIMEOUT_MS);
+
+  server.on('timeout', (socket) => {
+    console.warn('Request timeout', {
+      remoteAddress: socket.remoteAddress,
+      remotePort: socket.remotePort,
+      timestamp: new Date().toISOString()
+    });
+    socket.destroy();
+  });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

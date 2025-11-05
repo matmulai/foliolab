@@ -335,10 +335,17 @@ export async function getRepositories(
     console.log(`Final repository count after deduplication: ${repositories.length}`);
 
     // Fetch READMEs and extract titles (in batches to avoid rate limiting)
-    const batchSize = 5;
-    for (let i = 0; i < repositories.length; i += batchSize) {
-      const batch = repositories.slice(i, i + batchSize);
-      await Promise.allSettled(
+    const BATCH_SIZE = parseInt(process.env.GITHUB_BATCH_SIZE || '10');
+    const BATCH_DELAY_MS = parseInt(process.env.GITHUB_BATCH_DELAY_MS || '100');
+
+    for (let i = 0; i < repositories.length; i += BATCH_SIZE) {
+      const batch = repositories.slice(i, i + BATCH_SIZE);
+      const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(repositories.length / BATCH_SIZE);
+
+      console.log(`Processing README batch ${batchNumber}/${totalBatches} (${batch.length} repos)`);
+
+      const results = await Promise.allSettled(
         batch.map(async (repo) => {
           try {
             const readme = await getReadmeContent(
@@ -362,6 +369,17 @@ export async function getRepositories(
           }
         }),
       );
+
+      // Log batch results for monitoring
+      const failures = results.filter(r => r.status === 'rejected');
+      if (failures.length > 0) {
+        console.warn(`Batch ${batchNumber}: ${failures.length}/${batch.length} failures`);
+      }
+
+      // Add delay between batches to avoid rate limiting (except for last batch)
+      if (i + BATCH_SIZE < repositories.length) {
+        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+      }
     }
 
     return repositories;
