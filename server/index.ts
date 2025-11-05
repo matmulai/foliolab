@@ -4,27 +4,62 @@ import githubRoutes from "./routes/github.js";
 import deployRoutes from "./routes/deploy.js";
 import userRoutes from "./routes/user.js";
 
+// Validate required environment variables at startup
+function validateEnvironment(): void {
+  const required = [
+    'GITHUB_CLIENT_ID',
+    'GITHUB_CLIENT_SECRET',
+    'OPENAI_API_KEY'
+  ];
+
+  const missing = required.filter(key => !process.env[key]);
+
+  if (missing.length > 0) {
+    console.error('❌ Missing required environment variables:');
+    missing.forEach(key => console.error(`   - ${key}`));
+    console.error('\nPlease check your .env file or environment configuration.');
+    console.error('See .env.example for reference.\n');
+    process.exit(1);
+  }
+
+  // Validate optional but recommended variables
+  const recommended = ['APP_URL', 'OPENAI_API_MODEL'];
+  const missingRecommended = recommended.filter(key => !process.env[key]);
+
+  if (missingRecommended.length > 0) {
+    console.warn('⚠️  Optional environment variables not set:');
+    missingRecommended.forEach(key => console.warn(`   - ${key}`));
+    console.warn('   Using default values.\n');
+  }
+
+  console.log('✅ Environment validation passed\n');
+}
+
+// Validate environment before starting server
+validateEnvironment();
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Add CORS headers
 app.use((req, res, next) => {
-  // Allow specific origins in production, or all in development
-  let origin = '*';
-  if (process.env.NODE_ENV === 'production') {
-    // Allow both production and preview URLs
-    const allowedOrigins = [
-      process.env.APP_URL ? process.env.APP_URL : null
-    ].filter(Boolean);
+  const requestOrigin = req.headers.origin;
 
-    const requestOrigin = req.headers.origin;
-    if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
-      origin = requestOrigin;
-    }
+  // Define allowed origins based on environment
+  const allowedOrigins = process.env.NODE_ENV === 'production'
+    ? [process.env.APP_URL].filter(Boolean)
+    : ['http://localhost:5000', 'http://localhost:5173']; // Vite dev server
+
+  // Check if request origin is allowed
+  if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+  } else if (process.env.NODE_ENV === 'development') {
+    // In development, allow any origin for flexibility
+    res.setHeader('Access-Control-Allow-Origin', '*');
   }
+  // In production, if origin not allowed, don't set the header (request will be rejected)
 
-  res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -85,7 +120,14 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+
+    // Log error instead of throwing to prevent server crash
+    console.error('Error handled:', {
+      status,
+      message,
+      stack: err.stack,
+      timestamp: new Date().toISOString()
+    });
   });
 
   // In production, serve static files from the dist directory
