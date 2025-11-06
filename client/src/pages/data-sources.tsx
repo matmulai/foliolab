@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 import { PortfolioItem, BlogPost, MediumPost, FreeformContent } from '@shared/schema';
 import {
   addPortfolioItems,
@@ -13,7 +13,7 @@ import {
 type DataSourceType = 'rss' | 'medium' | 'gitlab' | 'bitbucket' | 'freeform';
 
 export default function DataSourcesPage() {
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const [activeSource, setActiveSource] = useState<DataSourceType | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -272,7 +272,7 @@ export default function DataSourcesPage() {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => navigate('/repos')}
+            onClick={() => setLocation('/repos')}
             className="text-gray-600 hover:text-gray-900 mb-4 flex items-center gap-2"
           >
             ← Back to GitHub Repos
@@ -604,7 +604,7 @@ export default function DataSourcesPage() {
         {/* Continue Button */}
         <div className="flex justify-center">
           <button
-            onClick={() => navigate('/preview')}
+            onClick={() => setLocation('/preview')}
             className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-8 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg"
           >
             Continue to Portfolio →
