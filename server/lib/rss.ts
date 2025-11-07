@@ -47,7 +47,7 @@ export async function fetchRSSFeed(feedUrl: string): Promise<RSSFeed> {
         title: item.title || 'Untitled',
         link: item.link || '',
         pubDate: item.pubDate,
-        creator: item.creator || item.author,
+        creator: item.creator || (item as any).author,
         content: (item as any).contentEncoded || item.content,
         contentSnippet: item.contentSnippet,
         guid: item.guid || item.link,

@@ -200,7 +200,7 @@ export function updatePortfolioItem(id: string | number, updates: Partial<Portfo
 
   if (index === -1) return null;
 
-  const updatedItem = { ...items[index], ...updates };
+  const updatedItem = { ...items[index], ...updates } as PortfolioItem;
   items[index] = updatedItem;
   savePortfolioItems(items);
 

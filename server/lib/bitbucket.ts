@@ -97,7 +97,7 @@ export async function getBitbucketRepositories(
 
     // Bitbucket uses cursor-based pagination
     while (nextUrl && pageCount < 10) {
-      const response = await axios.get<BitbucketPaginatedResponse<BitbucketRepo>>(
+      const response: { data: BitbucketPaginatedResponse<BitbucketRepo> } = await axios.get<BitbucketPaginatedResponse<BitbucketRepo>>(
         nextUrl,
         {
           headers: {
@@ -148,7 +148,7 @@ export async function getBitbucketReadme(
 
     for (const filename of readmeFiles) {
       try {
-        const response = await axios.get(
+        const response = await axios.get<string>(
           `${BITBUCKET_API_URL}/repositories/${workspace}/${repoSlug}/src/main/${filename}`,
           {
             headers: {
@@ -163,7 +163,7 @@ export async function getBitbucketReadme(
       } catch (err) {
         // Try with master branch
         try {
-          const response = await axios.get(
+          const responseMaster = await axios.get<string>(
             `${BITBUCKET_API_URL}/repositories/${workspace}/${repoSlug}/src/master/${filename}`,
             {
               headers: {
@@ -172,8 +172,8 @@ export async function getBitbucketReadme(
             }
           );
 
-          if (response.data) {
-            return response.data;
+          if (responseMaster.data) {
+            return responseMaster.data;
           }
         } catch (err2) {
           // Try next filename

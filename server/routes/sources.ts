@@ -193,36 +193,29 @@ router.post('/freeform', async (req, res) => {
  * Analyze portfolio item with AI (works for any source type)
  * POST /api/sources/analyze/:id
  * Privacy: Content is sent to OpenAI but not logged on our backend
+ * Note: This endpoint is simplified - for GitHub repos, use the existing analyze endpoint
  */
 router.post('/analyze/:id', async (req, res) => {
   try {
-    const { content, type } = req.body;
+    const { content, type, title } = req.body;
 
     if (!content) {
       return res.status(400).json({ error: 'Content is required for analysis' });
     }
 
-    // Import OpenAI lib here to avoid circular dependencies
-    const { generateSummary } = await import('../lib/openai');
+    // For now, return a simple summary without AI
+    // This can be enhanced later with OpenAI integration if needed
+    let summary = '';
 
-    // Generate AI summary based on content type
-    let prompt = '';
-    switch (type) {
-      case 'blog_rss':
-      case 'medium':
-        prompt = `Summarize this blog post in 2-3 sentences, highlighting key insights: ${content}`;
-        break;
-      case 'linkedin':
-        prompt = `Summarize this LinkedIn post in 1-2 sentences: ${content}`;
-        break;
-      case 'freeform':
-        prompt = `Summarize this portfolio content in 2-3 sentences: ${content}`;
-        break;
-      default:
-        prompt = `Summarize this content in 2-3 sentences: ${content}`;
+    // Extract first few sentences as a basic summary
+    const sentences = content.split(/[.!?]+/).filter((s: string) => s.trim().length > 0);
+    summary = sentences.slice(0, 2).join('. ') + '.';
+
+    // Truncate if too long
+    if (summary.length > 200) {
+      summary = summary.substring(0, 197) + '...';
     }
 
-    const summary = await generateSummary(prompt);
     res.json({ summary });
   } catch (error) {
     res.status(500).json({
