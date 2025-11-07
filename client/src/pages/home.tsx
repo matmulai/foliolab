@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Github, Shield, Globe, FileQuestion, Mail, Info } from "lucide-react";
+import { Github, Shield, Globe, FileQuestion, Mail, Info, Database } from "lucide-react";
 import { clearAllData } from "@/lib/queryClient";
 import { clearStorage } from "@/lib/storage";
 import { useEffect } from "react";
@@ -29,12 +29,12 @@ export default function Home() {
               Create Your Developer Portfolio in Minutes
             </h1>
             <p className="text-lg text-muted-foreground mb-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-200">
-              Turn your GitHub repositories into a beautiful portfolio website powered by AI
+              Build a beautiful portfolio from GitHub, GitLab, Bitbucket, Medium, blogs, and more
             </p>
 
             <Card className="mb-8">
               <CardContent className="p-6">
-                <div className="grid gap-6">
+                <div className="grid gap-4">
                   <Button
                     asChild
                     size="lg"
@@ -43,12 +43,36 @@ export default function Home() {
                   >
                     <Link href="/auth/github" className="flex items-center justify-center gap-2">
                       <Github className="w-5 h-5" />
-                      Build My Portfolio with GitHub
+                      Start with GitHub
                     </Link>
                   </Button>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">
+                        Or
+                      </span>
+                    </div>
+                  </div>
+
+                  <Button
+                    asChild
+                    size="lg"
+                    variant="outline"
+                    className="w-full hover:scale-105 transition-all duration-200 border-2"
+                  >
+                    <Link href="/data-sources" className="flex items-center justify-center gap-2">
+                      <Database className="w-5 h-5" />
+                      Add from Other Sources
+                    </Link>
+                  </Button>
+
                   <div className="flex items-center gap-2 justify-center text-sm text-muted-foreground">
                     <Info className="w-4 h-4" />
-                    <span>Other sources like GitLab, BitBucket will be coming soon.</span>
+                    <span>GitLab, Bitbucket, Medium, Blog RSS, or custom content</span>
                   </div>
                 </div>
               </CardContent>
@@ -56,15 +80,15 @@ export default function Home() {
 
             <div className="grid gap-8 md:grid-cols-3 mt-20">
               <div className="text-center">
-                <h3 className="text-xl font-semibold mb-2">Select Repositories</h3>
+                <h3 className="text-xl font-semibold mb-2">Multiple Sources</h3>
                 <p className="text-muted-foreground">
-                  Choose which projects you want to showcase in your portfolio
+                  Import from GitHub, GitLab, Bitbucket, Medium, blogs, or add custom content
                 </p>
               </div>
               <div className="text-center">
                 <h3 className="text-xl font-semibold mb-2">AI-Powered Summaries</h3>
                 <p className="text-muted-foreground">
-                  Get intelligent project descriptions generated from your repositories
+                  Get intelligent descriptions generated from your projects and posts
                 </p>
               </div>
               <div className="text-center">
@@ -82,9 +106,17 @@ export default function Home() {
                 <div>
                   <h3 className="font-semibold mb-2">How does it work?</h3>
                   <p className="text-muted-foreground">
-                    Connect your GitHub account, select the repositories you want to showcase,
-                    and we'll generate beautiful summaries using AI. Deploy your portfolio
-                    with one click to GitHub Pages or Vercel.
+                    Import content from GitHub, GitLab, Bitbucket, Medium, your blog, or add custom content.
+                    Select what you want to showcase, and we'll generate beautiful summaries using AI.
+                    Deploy your portfolio with one click to GitHub Pages or Vercel.
+                  </p>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2">What sources can I use?</h3>
+                  <p className="text-muted-foreground">
+                    You can import from GitHub (OAuth), GitLab (personal access token), Bitbucket (app password),
+                    Medium (username), any blog RSS feed, or create custom free-form content. Mix and match
+                    as many sources as you like!
                   </p>
                 </div>
                 <div>
@@ -109,8 +141,9 @@ export default function Home() {
                   <div className="text-left">
                     <h3 className="font-semibold mb-2">Privacy First</h3>
                     <p className="text-sm text-muted-foreground">
-                      Your data stays private. We only use your GitHub access to read repositories.
-                      No data is stored on our servers, everything is processed client-side.
+                      Your data stays completely private. All content from any source is stored only in your browser's
+                      local storage. We never store your tokens, credentials, or portfolio data on our servers.
+                      Everything is processed client-side.
                     </p>
                   </div>
                 </div>
