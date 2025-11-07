@@ -170,6 +170,7 @@ async function getUserRepositories(
         url: repo.html_url,
         summary: null,
         selected: false,
+        source: 'github' as const,
         owner: {
           login: repoOwner,
           type: isUserRepo ? "User" : "Organization",
@@ -241,6 +242,7 @@ async function getOrganizationRepositories(
         url: repo.html_url,
         summary: null,
         selected: false,
+        source: 'github' as const,
         owner: {
           login: repoOwner,
           type: "Organization", // This should always be an organization
