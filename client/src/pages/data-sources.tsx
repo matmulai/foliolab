@@ -7,7 +7,8 @@ import {
   saveGitLabToken,
   getGitLabToken,
   saveBitbucketCredentials,
-  getBitbucketCredentials
+  getBitbucketCredentials,
+  getGitHubToken
 } from '../lib/storage';
 
 type DataSourceType = 'rss' | 'medium' | 'gitlab' | 'bitbucket' | 'freeform';
@@ -18,6 +19,9 @@ export default function DataSourcesPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Check if user came from GitHub flow
+  const hasGitHubToken = !!getGitHubToken();
 
   // RSS Form State
   const [rssFeedUrl, setRssFeedUrl] = useState('');
@@ -272,14 +276,17 @@ export default function DataSourcesPage() {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => setLocation('/repos')}
+            onClick={() => setLocation(hasGitHubToken ? '/repos' : '/')}
             className="text-gray-600 hover:text-gray-900 mb-4 flex items-center gap-2"
           >
-            ← Back to GitHub Repos
+            ← {hasGitHubToken ? 'Back to GitHub Repos' : 'Back to Home'}
           </button>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Add Data Sources</h1>
           <p className="text-gray-600">
-            Expand your portfolio by importing content from multiple sources
+            {hasGitHubToken
+              ? 'Expand your portfolio by importing content from multiple sources'
+              : 'Import content from any of these sources to build your portfolio'
+            }
           </p>
         </div>
 
@@ -602,12 +609,20 @@ export default function DataSourcesPage() {
         )}
 
         {/* Continue Button */}
-        <div className="flex justify-center">
+        <div className="flex justify-center gap-4">
+          {hasGitHubToken && (
+            <button
+              onClick={() => setLocation('/repos')}
+              className="bg-white border-2 border-gray-300 text-gray-700 py-3 px-8 rounded-lg hover:bg-gray-50 transition-all shadow-lg"
+            >
+              ← Back to GitHub Selection
+            </button>
+          )}
           <button
             onClick={() => setLocation('/preview')}
             className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-8 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg"
           >
-            Continue to Portfolio →
+            {hasGitHubToken ? 'Continue to Portfolio →' : 'Preview Portfolio →'}
           </button>
         </div>
       </div>
