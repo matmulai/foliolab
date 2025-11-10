@@ -1,5 +1,5 @@
 import { MediumPost } from '../../shared/schema';
-import { fetchRSSFeed } from './rss';
+import { fetchRSSFeed } from './rss.js';
 
 /**
  * Extracts Medium username from various URL formats
