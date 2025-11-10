@@ -1,8 +1,8 @@
 import express from 'express';
-import { getBlogPostsFromRSS } from '../lib/rss';
-import { getMediumPosts, validateMediumUsername } from '../lib/medium';
-import { getGitLabProjectsWithTitles, getGitLabUser } from '../lib/gitlab';
-import { getBitbucketRepositoriesWithTitles, validateBitbucketCredentials } from '../lib/bitbucket';
+import { getBlogPostsFromRSS } from '../lib/rss.js';
+import { getMediumPosts, validateMediumUsername } from '../lib/medium.js';
+import { getGitLabProjectsWithTitles, getGitLabUser } from '../lib/gitlab.js';
+import { getBitbucketRepositoriesWithTitles, validateBitbucketCredentials } from '../lib/bitbucket.js';
 import { FreeformContent } from '../../shared/schema';
 import crypto from 'crypto';
 
