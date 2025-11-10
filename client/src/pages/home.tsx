@@ -64,7 +64,7 @@ export default function Home() {
                     variant="outline"
                     className="w-full hover:scale-105 transition-all duration-200 border-2"
                   >
-                    <Link href="/data-sources" className="flex items-center justify-center gap-2">
+                    <Link href="/select-sources" className="flex items-center justify-center gap-2">
                       <Database className="w-5 h-5" />
                       Add from Other Sources
                     </Link>
