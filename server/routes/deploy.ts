@@ -392,9 +392,9 @@ router.get('/api/deploy/vercel/callback', async (req, res) => {
             window.opener.postMessage(
               {
                 type: 'vercel-oauth-success',
-                token: '${tokenData.access_token}',
-                teamId: '${teamId || ''}',
-                configurationId: '${configurationId}'
+                token: ${safeJsonStringify(tokenData.access_token)},
+                teamId: ${safeJsonStringify(teamId || '')},
+                configurationId: ${safeJsonStringify(configurationId)}
               },
               window.location.origin
             );
@@ -412,7 +412,7 @@ router.get('/api/deploy/vercel/callback', async (req, res) => {
         <body>
           <script>
             window.opener.postMessage(
-              { type: 'vercel-oauth-error', error: '${error instanceof Error ? error.message : 'Unknown error'}' },
+              { type: 'vercel-oauth-error', error: ${safeJsonStringify(error instanceof Error ? error.message : 'Unknown error')} },
               window.location.origin
             );
             window.close();
@@ -441,6 +441,37 @@ function isValidUrl(urlString: string | null | undefined): boolean {
   } catch (e) {
     return false;
   }
+}
+
+/**
+ * Safely stringifies an object for use within a <script> tag.
+ * It escapes characters that could be used to break out of the script tag or the string literal.
+ */
+function safeJsonStringify(obj: any): string {
+  return JSON.stringify(obj)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+function sanitizeUrl(url: string | null | undefined): string {
+  if (!url) return '';
+
+  // Basic validation to ensure the URL is http, https, or relative
+  // This prevents javascript: and other malicious protocols
+  const trimmedUrl = url.trim();
+  if (
+    trimmedUrl.toLowerCase().startsWith('javascript:') ||
+    trimmedUrl.toLowerCase().startsWith('data:') ||
+    trimmedUrl.toLowerCase().startsWith('vbscript:')
+  ) {
+    return '#';
+  }
+
+  // Escape HTML characters to prevent attribute injection
+  return escapeHtml(trimmedUrl);
 }
 
 function capitalizeFirstLetter(str: string): string {
@@ -529,7 +560,7 @@ export function generatePortfolioHtml(
                 <div class="${theme.layout.profile}">
                     ${avatarUrl ? `
                     <div class="mb-6">
-                        <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(capitalizeFirstLetter(username))}" class="w-32 h-32 rounded-full mx-auto border-4 border-gray-200 shadow-lg">
+                        <img src="${sanitizeUrl(avatarUrl)}" alt="${escapeHtml(capitalizeFirstLetter(username))}" class="w-32 h-32 rounded-full mx-auto border-4 border-gray-200 shadow-lg">
                     </div>
                     ` : ''}
                     <h1 class="text-4xl font-bold mb-6 ${theme.preview.text}">${escapeHtml(portfolioTitle)}</h1>
@@ -574,11 +605,11 @@ export function generatePortfolioHtml(
                                 </span>
                                 ` : ''}
                                 ${isValidUrl(repo.url) ? `
-                                <a href="${escapeHtml(repo.url)}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View on GitHub">
+                                <a href="${sanitizeUrl(repo.url)}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View on GitHub">
                                     <i class="fab fa-github"></i>
                                 </a>` : ''}
                                 ${isValidUrl(repo.metadata?.url) ?
-                                    `<a href="${escapeHtml(repo.metadata.url!)}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View Live Demo">
+                                    `<a href="${sanitizeUrl(repo.metadata.url!)}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View Live Demo">
                                         <i class="fas fa-external-link-alt"></i>
                                     </a>`
                                     : ''}
