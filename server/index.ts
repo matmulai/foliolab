@@ -5,8 +5,6 @@ import deployRoutes from "./routes/deploy.js";
 import userRoutes from "./routes/user.js";
 import healthRoutes from "./routes/health.js";
 import sourcesRoutes from "./routes/sources.js";
-import { logger } from "./lib/logger.js";
-import { redactSensitiveData } from "./lib/security.js";
 
 // Validate required environment variables at startup
 function validateEnvironment(): void {
@@ -19,10 +17,10 @@ function validateEnvironment(): void {
   const missing = required.filter(key => !process.env[key]);
 
   if (missing.length > 0) {
-    logger.error('❌ Missing required environment variables:');
-    missing.forEach(key => logger.error(`   - ${key}`));
-    logger.error('Please check your .env file or environment configuration.');
-    logger.error('See .env.example for reference.');
+    console.error('❌ Missing required environment variables:');
+    missing.forEach(key => console.error(`   - ${key}`));
+    console.error('\nPlease check your .env file or environment configuration.');
+    console.error('See .env.example for reference.\n');
     process.exit(1);
   }
 
@@ -31,12 +29,12 @@ function validateEnvironment(): void {
   const missingRecommended = recommended.filter(key => !process.env[key]);
 
   if (missingRecommended.length > 0) {
-    logger.warn('⚠️  Optional environment variables not set:');
-    missingRecommended.forEach(key => logger.warn(`   - ${key}`));
-    logger.warn('   Using default values.');
+    console.warn('⚠️  Optional environment variables not set:');
+    missingRecommended.forEach(key => console.warn(`   - ${key}`));
+    console.warn('   Using default values.\n');
   }
 
-  logger.info('✅ Environment validation passed');
+  console.log('✅ Environment validation passed\n');
 }
 
 // Validate environment before starting server
@@ -53,7 +51,7 @@ app.use((req, res, next) => {
                     `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   // Store on request and response
-  req.id = requestId;
+  (req as any).id = requestId;
   res.setHeader('X-Request-ID', requestId);
 
   next();
@@ -134,7 +132,7 @@ async function registerRoutes(app: Express) {
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  const requestId = req.id;
+  const requestId = (req as any).id;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
@@ -148,15 +146,14 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `[${requestId}] ${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        const sanitizedResponse = redactSensitiveData(capturedJsonResponse);
-        logLine += ` :: ${JSON.stringify(sanitizedResponse)}`;
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
 
       if (logLine.length > 80) {
         logLine = logLine.slice(0, 79) + "…";
       }
 
-      logger.info(logLine);
+      console.log(logLine);
     }
   });
 
@@ -171,7 +168,7 @@ app.use((req, res, next) => {
   server.setTimeout(REQUEST_TIMEOUT_MS);
 
   server.on('timeout', (socket) => {
-    logger.warn('Request timeout', {
+    console.warn('Request timeout', {
       remoteAddress: socket.remoteAddress,
       remotePort: socket.remotePort,
       timestamp: new Date().toISOString()
@@ -186,7 +183,7 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
 
     // Log error instead of throwing to prevent server crash
-    logger.error('Error handled:', {
+    console.error('Error handled:', {
       status,
       message,
       stack: err.stack,
@@ -209,6 +206,6 @@ app.use((req, res, next) => {
 
   const port = Number(process.env.PORT) || 5000;
   server.listen(port, "0.0.0.0", () => {
-    logger.info(`serving on port ${port}`);
+    console.log(`serving on port ${port}`);
   });
 })();

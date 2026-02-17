@@ -190,36 +190,122 @@ router.post('/freeform', async (req, res) => {
 });
 
 /**
- * Analyze portfolio item with AI (works for any source type)
- * POST /api/sources/analyze/:id
+ * Generate AI summaries for portfolio items
+ * POST /api/sources/generate-summaries
  * Privacy: Content is sent to OpenAI but not logged on our backend
- * Note: This endpoint is simplified - for GitHub repos, use the existing analyze endpoint
  */
-router.post('/analyze/:id', async (req, res) => {
+router.post('/generate-summaries', async (req, res) => {
   try {
-    const { content, type, title } = req.body;
+    const { items } = req.body;
 
-    if (!content) {
-      return res.status(400).json({ error: 'Content is required for analysis' });
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({ error: 'Items array is required' });
     }
 
-    // For now, return a simple summary without AI
-    // This can be enhanced later with OpenAI integration if needed
-    let summary = '';
-
-    // Extract first few sentences as a basic summary
-    const sentences = content.split(/[.!?]+/).filter((s: string) => s.trim().length > 0);
-    summary = sentences.slice(0, 2).join('. ') + '.';
-
-    // Truncate if too long
-    if (summary.length > 200) {
-      summary = summary.substring(0, 197) + '...';
+    const serverApiKey = process.env.OPENAI_API_KEY;
+    if (!serverApiKey) {
+      return res.status(500).json({
+        error: 'OpenAI API key not configured',
+        details: 'OPENAI_API_KEY environment variable is required'
+      });
     }
 
-    res.json({ summary });
+    // Import the generateContentSummary function
+    const { generateContentSummary, generateRepoSummary } = await import('../lib/openai.js');
+    const { getReadmeContent } = await import('../lib/github.js');
+
+    const summaries: Record<string, string> = {};
+
+    // Generate summaries for each item
+    for (const item of items) {
+      try {
+        let summary = '';
+
+        if (item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') {
+          // For repos, use the existing repo summary logic
+          // Try to fetch README if we have access token
+          let readme = '';
+          if (item.source === 'github' && req.headers.authorization) {
+            const token = req.headers.authorization.replace('Bearer ', '');
+            try {
+              readme = (await getReadmeContent(token, item.owner.login, item.name)) || '';
+            } catch (e) {
+              console.warn(`Could not fetch README for ${item.name}:`, e);
+            }
+          }
+
+          const result = await generateRepoSummary(
+            item.name,
+            item.description || '',
+            readme,
+            serverApiKey,
+            undefined,
+            item.metadata,
+            req.headers.authorization?.replace('Bearer ', ''),
+            item.owner?.login
+          );
+          summary = result.summary;
+        } else if (item.source === 'blog_rss') {
+          // For blog posts
+          const result = await generateContentSummary(
+            item.title,
+            item.description || '',
+            'blog_post',
+            serverApiKey,
+            {
+              author: item.author || undefined,
+              publishedAt: item.publishedAt,
+              tags: item.tags,
+              url: item.url
+            }
+          );
+          summary = result.summary;
+        } else if (item.source === 'medium') {
+          // For Medium posts
+          const result = await generateContentSummary(
+            item.title,
+            item.description || '',
+            'medium_post',
+            serverApiKey,
+            {
+              author: item.author || undefined,
+              publishedAt: item.publishedAt,
+              tags: item.tags,
+              url: item.url
+            }
+          );
+          summary = result.summary;
+        } else if (item.source === 'freeform') {
+          // For freeform content
+          const result = await generateContentSummary(
+            item.title,
+            item.content,
+            'freeform',
+            serverApiKey,
+            {
+              tags: item.tags,
+              url: item.url
+            }
+          );
+          summary = result.summary;
+        }
+
+        // Store summary with item ID
+        const itemId = item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket'
+          ? item.id
+          : item.id;
+        summaries[itemId] = summary;
+      } catch (itemError) {
+        console.error(`Failed to generate summary for item ${item.id}:`, itemError);
+        // Continue with other items even if one fails
+      }
+    }
+
+    res.json({ summaries });
   } catch (error) {
+    console.error('Error generating summaries:', error);
     res.status(500).json({
-      error: 'Failed to analyze content',
+      error: 'Failed to generate summaries',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }

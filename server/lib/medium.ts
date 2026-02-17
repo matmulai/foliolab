@@ -4,33 +4,21 @@ import { fetchRSSFeed } from './rss.js';
 /**
  * Extracts Medium username from various URL formats
  * Supports: @username, medium.com/@username, medium.com/feed/@username
- * Returns null if no valid username is found.
  */
-export function extractMediumUsername(input: string): string | null {
+export function extractMediumUsername(input: string): string {
   // Remove whitespace
   input = input.trim();
 
-  if (!input) {
-    return null;
+  // If it starts with @, return as-is
+  if (input.startsWith('@')) {
+    return input;
   }
 
-  // Define valid username characters (alphanumeric, underscore, dot, hyphen)
-  // This is an approximation of valid Medium usernames
-  const usernameChars = '[\\w\\.\\-]+';
-
-  // 1. Check if the input is JUST a username (with or without @)
-  // This handles "username" and "@username"
-  const exactMatchPattern = new RegExp(`^@?(${usernameChars})$`);
-  const exactMatch = input.match(exactMatchPattern);
-  if (exactMatch) {
-    return `@${exactMatch[1]}`;
-  }
-
-  // 2. Try to extract from URL or text
+  // Try to extract from URL
   const urlPatterns = [
-    /medium\.com\/@([\w\.\-]+)/,      // medium.com/@username
-    /medium\.com\/feed\/@([\w\.\-]+)/, // medium.com/feed/@username
-    /@([\w\.\-]+)/                    // @username anywhere in text
+    /medium\.com\/@([^\/\?]+)/,
+    /medium\.com\/feed\/@([^\/\?]+)/,
+    /@([^\/\?]+)/
   ];
 
   for (const pattern of urlPatterns) {
@@ -40,8 +28,8 @@ export function extractMediumUsername(input: string): string | null {
     }
   }
 
-  // If we reach here, we couldn't find a pattern and it wasn't a clean username
-  return null;
+  // If no @ symbol, assume it's just the username
+  return `@${input}`;
 }
 
 /**
