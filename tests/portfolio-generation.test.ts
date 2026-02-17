@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { themes } from '../shared/themes.js';
-import { generatePortfolioHtml } from '../server/routes/deploy.js';
+import { generatePortfolioHtml } from '../server/lib/portfolio-generator.js';
 
 // Mock repository data for testing
 const mockRepositories = [
@@ -58,18 +58,6 @@ const mockIntroduction = {
   interests: ['Open Source', 'Web Performance', 'Developer Tools'],
 };
 
-// Helper function to escape HTML to prevent XSS attacks
-function escapeHtml(unsafe: string): string {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-// Helper function to generate portfolio HTML (extracted from routes.ts)
-// Now imported directly from source
 
 describe('Portfolio Generation', () => {
   describe('HTML Generation', () => {
