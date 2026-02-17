@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Repository } from "@shared/schema";
+import { Repository, PortfolioItem } from "@shared/schema";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { themes } from "@shared/themes";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { getPortfolioItems } from "@/lib/storage";
 
 interface UserIntroduction {
   introduction: string;
@@ -37,7 +38,8 @@ const capitalizeFirstLetter = (str: string) => {
 export default function PortfolioPreview() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [selectedRepos, setSelectedRepos] = useState<Repository[]>([]);
+  const [selectedItems, setSelectedItems] = useState<PortfolioItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [userIntro, setUserIntro] = useState<UserIntroduction | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [customTitle, setCustomTitle] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export default function PortfolioPreview() {
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingRepoTitle, setEditingRepoTitle] = useState<number | null>(null);
   const [editingImage, setEditingImage] = useState(false);
-  
+
   // Temporary edit values
   const [tempIntro, setTempIntro] = useState("");
   const [tempSkills, setTempSkills] = useState<string[]>([]);
@@ -63,16 +65,10 @@ export default function PortfolioPreview() {
   const [tempImageUrl, setTempImageUrl] = useState("");
   const [newSkill, setNewSkill] = useState("");
   const [newInterest, setNewInterest] = useState("");
-  
+
   // Drag and drop state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-
-  // Get repository data from client-side cache
-  const { data, isLoading, error } = useQuery<{ repositories: Repository[] }>({
-    queryKey: ["/api/repositories"],
-    retry: 2,
-  });
 
   // Generate user introduction
   const { mutate: generateIntro, isPending: isGenerating } = useMutation({
@@ -317,7 +313,7 @@ export default function PortfolioPreview() {
       return;
     }
 
-    const newRepos = [...selectedRepos];
+    const newRepos = [...selectedItems];
     const draggedRepo = newRepos[draggedIndex];
     
     // Remove the dragged item
@@ -342,37 +338,47 @@ export default function PortfolioPreview() {
   };
 
   useEffect(() => {
-    if (data?.repositories && !isLoading) {
-      const filtered = data.repositories.filter((repo) => repo.selected);
-      setSelectedRepos(filtered);
+    // Load selected items from localStorage
+    const allItems = getPortfolioItems();
+    const filtered = allItems.filter((item) => item.selected);
+    setSelectedItems(filtered);
+    setIsLoading(false);
 
-      if (filtered.length > 0) {
-        generateIntro(filtered);
+    if (filtered.length > 0) {
+      // Only generate intro if we have GitHub repos
+      const githubRepos = filtered.filter(item => item.source === 'github') as Repository[];
+      if (githubRepos.length > 0) {
+        generateIntro(githubRepos);
       } else {
-        toast({
-          title: "No Repositories Selected",
-          description:
-            "Please go back and select repositories to include in your portfolio.",
-          variant: "destructive",
+        // For non-GitHub items, create a basic intro
+        setUserInfo({
+          username: "Portfolio",
+          avatarUrl: null
+        });
+        setUserIntro({
+          introduction: "Welcome to my portfolio! Here's a showcase of my work and writing.",
+          skills: [],
+          interests: []
         });
       }
+    } else {
+      toast({
+        title: "No Items Selected",
+        description:
+          "Please go back and select items to include in your portfolio.",
+        variant: "destructive",
+      });
     }
-  }, [data, isLoading, toast, generateIntro]);
+  }, [toast, generateIntro]);
 
-  if (error) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
         <div className="container mx-auto px-4 py-20">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">
-              Error Loading Portfolio
-            </h1>
-            <p className="text-gray-600 mb-6">
-              Failed to load repository data. Please try again.
-            </p>
-            <Button onClick={() => setLocation("/repos")}>
-              Return to Repository Selection
-            </Button>
+            <h1 className="text-2xl font-bold mb-4">Loading Portfolio...</h1>
+            <Skeleton className="h-20 mb-4" />
+            <Skeleton className="h-40" />
           </div>
         </div>
       </div>
@@ -430,7 +436,7 @@ export default function PortfolioPreview() {
             : cn(theme.layout.content, "grid grid-cols-1 gap-6") // For others, use theme styling plus grid
         }
       >
-        {selectedRepos.map((repo, index) => (
+        {selectedItems.map((repo, index) => (
           <Card
             key={repo.id}
             draggable
@@ -938,7 +944,7 @@ export default function PortfolioPreview() {
               </div>
               <div className="w-full max-w-6xl mx-auto px-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {selectedRepos.map((repo, index) => (
+                  {selectedItems.map((repo, index) => (
                     <Card
                       key={repo.id}
                       draggable
@@ -1100,7 +1106,7 @@ export default function PortfolioPreview() {
           )}
 
           <DeploymentActions
-            repositories={selectedRepos}
+            repositories={selectedItems}
             userInfo={userInfo}
             introduction={userIntro}
             theme={theme}
