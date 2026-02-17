@@ -362,7 +362,7 @@ export async function getRepositories(
         batch.map(async (repo) => {
           try {
             const readme = await getReadmeContent(
-              accessToken,
+              octokit,
               repo.owner.login,
               repo.name,
             );
@@ -452,11 +452,15 @@ export function extractTitleFromReadme(readme: string | null): string | null {
 }
 
 export async function getReadmeContent(
-  accessToken: string,
+  clientOrToken: Octokit | string,
   owner: string,
   repo: string,
 ): Promise<string | null> {
-  const octokit = new Octokit({ auth: accessToken });
+  const octokit =
+    typeof clientOrToken === "string"
+      ? new Octokit({ auth: clientOrToken })
+      : clientOrToken;
+
   try {
     const { data } = await octokit.repos.getReadme({
       owner,
