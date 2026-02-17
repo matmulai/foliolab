@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages } from '../lib/github.js';
 import { generateUserIntroduction } from '../lib/openai.js';
+import { getVercelHeaders } from '../lib/vercel.js';
 import { themes } from '../../shared/themes.js';
 import type { Repository } from '../../shared/schema.js';
 
@@ -209,10 +210,7 @@ router.post('/api/deploy/vercel', async (req, res) => {
     ], repoName);
 
     const getProjectResponse = await fetch(`https://api.vercel.com/v9/projects/${repoName}`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        ...(teamId ? { 'X-Vercel-Team-Id': teamId } : {})
-      }
+      headers: getVercelHeaders(accessToken, teamId)
     });
 
     let projectData;
@@ -220,9 +218,8 @@ router.post('/api/deploy/vercel', async (req, res) => {
       const createProjectResponse = await fetch('https://api.vercel.com/v9/projects', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          ...getVercelHeaders(accessToken, teamId),
           'Content-Type': 'application/json',
-          ...(teamId ? { 'X-Vercel-Team-Id': teamId } : {})
         },
         body: JSON.stringify({
           name: repoName,
@@ -248,10 +245,7 @@ router.post('/api/deploy/vercel', async (req, res) => {
     let connectedRepoId;
     try {
       const reposResponse = await fetch(`https://api.vercel.com/v1/projects/${repoName}/connected-repositories`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          ...(teamId ? { 'X-Vercel-Team-Id': teamId } : {})
-        }
+        headers: getVercelHeaders(accessToken, teamId)
       });
 
       if (reposResponse.ok) {
@@ -292,9 +286,8 @@ router.post('/api/deploy/vercel', async (req, res) => {
     const deploymentResponse = await fetch('https://api.vercel.com/v13/deployments', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        ...getVercelHeaders(accessToken, teamId),
         'Content-Type': 'application/json',
-        ...(teamId ? { 'X-Vercel-Team-Id': teamId } : {})
       },
       body: JSON.stringify({
         name: repoName,
@@ -340,9 +333,7 @@ router.get('/api/deploy/vercel/status/:deploymentId', async (req, res) => {
 
   try {
     const statusResponse = await fetch(`https://api.vercel.com/v13/deployments/${deploymentId}`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      }
+      headers: getVercelHeaders(accessToken)
     });
 
     const statusData = await statusResponse.json();
