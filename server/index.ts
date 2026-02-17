@@ -52,7 +52,7 @@ app.use((req, res, next) => {
                     `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   // Store on request and response
-  (req as any).id = requestId;
+  req.id = requestId;
   res.setHeader('X-Request-ID', requestId);
 
   next();
@@ -133,7 +133,7 @@ async function registerRoutes(app: Express) {
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  const requestId = (req as any).id;
+  const requestId = req.id;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
