@@ -578,3 +578,7 @@ export async function deployToGitHubPages(
     throw error;
   }
 }
+
+// Aliases for backward compatibility with different naming conventions
+export { getGithubUser as getGitHubUser };
+export { getRepositories as getGitHubRepositoriesWithTitles };
