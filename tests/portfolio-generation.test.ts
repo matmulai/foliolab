@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { themes } from '../shared/themes.js';
+import { generatePortfolioHtml } from '../server/routes/deploy.js';
 
 // Mock repository data for testing
 const mockRepositories = [
@@ -11,6 +12,7 @@ const mockRepositories = [
     url: 'https://github.com/testuser/awesome-project',
     summary: 'This project demonstrates modern web development practices with React and TypeScript.',
     selected: true,
+    source: 'github' as const,
     owner: {
       login: 'testuser',
       type: 'User' as const,
@@ -33,6 +35,7 @@ const mockRepositories = [
     url: 'https://github.com/testuser/api-server',
     summary: 'A scalable REST API server with authentication, rate limiting, and comprehensive documentation.',
     selected: true,
+    source: 'github' as const,
     owner: {
       login: 'testuser',
       type: 'User' as const,
@@ -66,88 +69,7 @@ function escapeHtml(unsafe: string): string {
 }
 
 // Helper function to generate portfolio HTML (extracted from routes.ts)
-function generatePortfolioHtml(
-  username: string,
-  repositories: typeof mockRepositories,
-  introduction?: typeof mockIntroduction,
-  avatarUrl?: string | null,
-  theme: typeof themes[0] = themes[1] // Default to modern theme
-): string {
-  if (!repositories || repositories.length === 0) {
-    throw new Error("No repositories provided for portfolio generation");
-  }
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${escapeHtml(username)}'s Portfolio</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-</head>
-<body class="${theme.preview.background}">
-    <div class="container mx-auto px-4 py-20">
-        <div class="${theme.layout.container}">
-            <header class="${theme.layout.header}">
-                <div class="${theme.layout.profile}">
-                    ${avatarUrl ? `
-                    <div class="mb-6">
-                        <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(username)}" class="w-32 h-32 rounded-full mx-auto border-4 border-gray-200 shadow-lg">
-                    </div>
-                    ` : ''}
-                    <h1 class="text-4xl font-bold mb-6 ${theme.preview.text}">${escapeHtml(username)}'s Portfolio</h1>
-                    ${introduction ? `
-                    <div class="max-w-2xl ${theme.id === 'modern' ? 'text-center' : 'text-left'}">
-                        <p class="${theme.preview.text} mb-8 leading-relaxed">${escapeHtml(introduction.introduction)}</p>
-                        <div class="flex flex-wrap gap-3 ${theme.id === 'modern' ? 'justify-center' : ''} mb-8">
-                            ${introduction.skills.map(skill =>
-                              `<span class="${theme.preview.accent} px-3 py-1 rounded-full text-sm font-medium">${escapeHtml(skill)}</span>`
-                            ).join('')}
-                        </div>
-                        <p class="${theme.preview.text} text-sm mb-8">
-                            <span class="font-medium">Interests:</span> ${introduction.interests.map(interest => escapeHtml(interest)).join(', ')}
-                        </p>
-                    </div>
-                    ` : ''}
-                </div>
-            </header>
-
-            <div class="${theme.layout.content}">
-                ${repositories.map(repo => `
-                    <article class="${theme.preview.card} p-6 relative">
-                        <div class="flex justify-between items-start">
-                            <h2 class="text-2xl font-semibold mb-2 ${theme.preview.text}">${escapeHtml(repo.displayName || repo.name)}</h2>
-                            <div class="flex items-center gap-2">
-                                ${repo.metadata?.stars > 0 ? `
-                                <span class="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">
-                                    ★ ${repo.metadata.stars}
-                                </span>
-                                ` : ''}
-                                <a href="${repo.url}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View on GitHub">
-                                    <i class="fab fa-github"></i>
-                                </a>
-                                ${repo.metadata?.url ?
-                                    `<a href="${repo.metadata.url}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View Live Demo">
-                                        <i class="fas fa-external-link-alt"></i>
-                                    </a>`
-                                    : ''}
-                            </div>
-                        </div>
-                        <p class="${theme.preview.text} mb-4">${escapeHtml(repo.summary || repo.description || '')}</p>
-                        <div class="flex gap-2 flex-wrap">
-                            ${(repo.metadata?.topics || []).map(topic =>
-                                `<span class="${theme.preview.accent} px-2 py-1 rounded-full text-sm">${escapeHtml(topic)}</span>`
-                            ).join('')}
-                        </div>
-                    </article>
-                `).join('')}
-            </div>
-        </div>
-    </div>
-</body>
-</html>`;
-}
+// Now imported directly from source
 
 describe('Portfolio Generation', () => {
   describe('HTML Generation', () => {
@@ -156,7 +78,7 @@ describe('Portfolio Generation', () => {
       
       expect(html).toContain('<!DOCTYPE html>');
       expect(html).toContain('<html lang="en">');
-      expect(html).toContain("testuser's Portfolio");
+      expect(html).toContain("Testuser&#039;s Portfolio");
       expect(html).toContain('Awesome Project');
       expect(html).toContain('REST API Server');
     });
@@ -175,7 +97,7 @@ describe('Portfolio Generation', () => {
       const html = generatePortfolioHtml('testuser', mockRepositories, undefined, avatarUrl);
       
       expect(html).toContain(`<img src="${avatarUrl}"`);
-      expect(html).toContain('alt="testuser"');
+      expect(html).toContain('alt="Testuser"');
     });
 
     it('should throw error when no repositories provided', () => {
@@ -300,6 +222,28 @@ describe('Portfolio Generation', () => {
       const html = generatePortfolioHtml('testuser', repoWithoutDescription as any);
       expect(html).toContain(mockRepositories[0].name);
       // Should not crash, even with missing content
+    });
+
+    it('should prevent XSS in repository URLs', () => {
+      const repoWithXss = [{
+        ...mockRepositories[0],
+        url: 'javascript:alert("xss")',
+        metadata: {
+          ...mockRepositories[0].metadata,
+          url: 'javascript:alert("xss")',
+        },
+      }];
+
+      const html = generatePortfolioHtml('testuser', repoWithXss as any);
+
+      // Should not contain the malicious URL in href
+      expect(html).not.toContain('href="javascript:alert(&quot;xss&quot;)"');
+      expect(html).not.toContain('href="javascript:alert(\'xss\')"');
+      expect(html).not.toContain('href="javascript:alert("xss")"');
+
+      // Should handle it by omitting or cleaning
+      // Our implementation omits the link if invalid
+      expect(html).not.toContain('class="icon-button border border-gray-200 bg-white"');
     });
   });
 });

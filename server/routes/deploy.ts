@@ -442,11 +442,21 @@ function escapeHtml(unsafe: string): string {
     .replace(/'/g, '&#039;');
 }
 
+function isValidUrl(urlString: string | null | undefined): boolean {
+  if (!urlString) return false;
+  try {
+    const url = new URL(urlString);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch (e) {
+    return false;
+  }
+}
+
 function capitalizeFirstLetter(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-function generatePortfolioHtml(
+export function generatePortfolioHtml(
   username: string,
   repositories: Repository[],
   introduction?: {
@@ -572,11 +582,12 @@ function generatePortfolioHtml(
                                     ★ ${repo.metadata.stars}
                                 </span>
                                 ` : ''}
-                                <a href="${repo.url}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View on GitHub">
+                                ${isValidUrl(repo.url) ? `
+                                <a href="${escapeHtml(repo.url)}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View on GitHub">
                                     <i class="fab fa-github"></i>
-                                </a>
-                                ${repo.metadata?.url ?
-                                    `<a href="${repo.metadata.url}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View Live Demo">
+                                </a>` : ''}
+                                ${isValidUrl(repo.metadata?.url) ?
+                                    `<a href="${escapeHtml(repo.metadata.url!)}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View Live Demo">
                                         <i class="fas fa-external-link-alt"></i>
                                     </a>`
                                     : ''}
