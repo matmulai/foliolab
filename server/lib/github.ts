@@ -23,11 +23,21 @@ interface OctokitError extends Error {
  * @param error - The error to check
  * @returns True if the error is an OctokitError
  */
-function isOctokitError(error: unknown): error is OctokitError {
-  return (
-    error instanceof Error &&
-    ('status' in error || ('response' in error && typeof (error as any).response === 'object'))
-  );
+export function isOctokitError(error: unknown): error is OctokitError {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  if ('status' in error) {
+    return true;
+  }
+
+  if ('response' in error) {
+    const err = error as { response: unknown };
+    return typeof err.response === 'object' && err.response !== null;
+  }
+
+  return false;
 }
 
 /**
