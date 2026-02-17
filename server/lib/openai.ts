@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { cleanReadmeContent } from "./readme-cleaner.js";
 import { analyzeProjectStructure, generateProjectSummary, type ProjectStructure } from "./project-analyzer.js";
+import { type PortfolioItem } from "@shared/schema";
 
 interface RepoSummary {
   summary: string;
@@ -279,14 +280,14 @@ ${JSON_FORMAT_SUFFIX}`;
 }
 
 async function generateUserIntroduction(
-  items: Array<any>,
+  items: PortfolioItem[],
   apiKey: string,
 ): Promise<UserIntroduction> {
   try {
     // Extract information from all portfolio items
     const portfolioInfo = items.map((item) => {
       const baseInfo: any = {
-        title: item.title || item.name,
+        title: (item as any).title || (item as any).name,
         type: item.source,
         summary: item.summary,
       };
@@ -379,29 +380,31 @@ async function generateContentSummary(
   }
 ): Promise<RepoSummary> {
   try {
-    let userContent = `Title: ${title}`;
+    const userContentParts: string[] = [`Title: ${title}`];
 
     if (metadata) {
       if (metadata.author) {
-        userContent += `\nAuthor: ${metadata.author}`;
+        userContentParts.push(`Author: ${metadata.author}`);
       }
 
       if (metadata.publishedAt) {
-        userContent += `\nPublished: ${new Date(metadata.publishedAt).toLocaleDateString()}`;
+        userContentParts.push(`Published: ${new Date(metadata.publishedAt).toLocaleDateString()}`);
       }
 
       if (metadata.tags && metadata.tags.length > 0) {
-        userContent += `\nTags: ${metadata.tags.join(', ')}`;
+        userContentParts.push(`Tags: ${metadata.tags.join(', ')}`);
       }
 
       if (metadata.url) {
-        userContent += `\nURL: ${metadata.url}`;
+        userContentParts.push(`URL: ${metadata.url}`);
       }
     }
 
     // Truncate content intelligently
     const trimmedContent = intelligentTruncate(content, LLM_CONFIG.README_MAX_LENGTH);
-    userContent += `\nContent:\n${trimmedContent}`;
+    userContentParts.push(`Content:\n${trimmedContent}`);
+
+    const userContent = userContentParts.join('\n');
 
     const contentTypeLabel = contentType === 'blog_post' ? 'blog post' :
                             contentType === 'medium_post' ? 'Medium article' :
