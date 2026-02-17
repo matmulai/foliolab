@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Repository } from "@shared/schema";
-import { Search, SearchX, ExternalLink } from "lucide-react";
+import { Search, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toggleRepositorySelection, saveRepositories, getRepositories, getGitHubToken } from "@/lib/storage";
 import { AnalysisProgress } from "@/components/analysis-progress";
@@ -268,7 +268,6 @@ export default function RepoSelect() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search repositories..."
-                aria-label="Search repositories"
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -315,7 +314,7 @@ export default function RepoSelect() {
                 Array.from({ length: 3 }).map((_, i) => (
                   <Skeleton key={i} className="h-32" />
                 ))
-              ) : paginatedRepos.length > 0 ? (
+              ) : (
                 paginatedRepos.map((repo) => (
                   <Card key={repo.id} className="transition-shadow hover:shadow-md">
                     <CardHeader className="flex flex-row items-start gap-4 p-4">
@@ -377,16 +376,6 @@ export default function RepoSelect() {
                     </CardHeader>
                   </Card>
                 ))
-              ) : (
-                <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground bg-muted/20 rounded-lg border-2 border-dashed">
-                  <div className="w-12 h-12 mb-3 rounded-full bg-muted flex items-center justify-center">
-                    <SearchX className="w-6 h-6" />
-                  </div>
-                  <p className="font-medium">No repositories found</p>
-                  <p className="text-sm text-center mt-1 px-4">
-                    Try adjusting your search or owner filter
-                  </p>
-                </div>
               )}
             </div>
 

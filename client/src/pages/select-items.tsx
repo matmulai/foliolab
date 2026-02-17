@@ -4,6 +4,40 @@ import { PortfolioItem, SourceType } from '@shared/schema';
 import { getPortfolioItems, togglePortfolioItemSelection, savePortfolioItems } from '../lib/storage';
 import { clearWizardState } from '../lib/wizard-state';
 
+// Helper functions to safely access properties across different item types
+const getItemTitle = (item: PortfolioItem): string => {
+  if (item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') {
+    return (item as any).displayName || (item as any).name;
+  }
+  if ('title' in item) {
+    return item.title || 'Untitled';
+  }
+  return 'Untitled';
+};
+
+const getItemDescription = (item: PortfolioItem): string | null => {
+  if ('description' in item && item.description !== null) {
+    return item.description;
+  }
+  if (item.source === 'linkedin' && 'content' in item) {
+    return item.content || null;
+  }
+  if (item.source === 'freeform' && 'content' in item) {
+    return (item as any).description || item.content;
+  }
+  return null;
+};
+
+const getItemTags = (item: PortfolioItem): string[] => {
+  if ('tags' in item && Array.isArray(item.tags)) {
+    return item.tags;
+  }
+  if ((item.source === 'github' || item.source === 'gitlab') && 'metadata' in item) {
+    return (item as any).metadata?.topics || [];
+  }
+  return [];
+};
+
 export default function SelectItemsPage() {
   const [, setLocation] = useLocation();
   const [items, setItems] = useState<PortfolioItem[]>([]);
@@ -70,8 +104,8 @@ export default function SelectItemsPage() {
     medium: { label: 'Medium', icon: '📝', color: 'bg-green-100 text-green-800' },
     gitlab: { label: 'GitLab', icon: '🦊', color: 'bg-purple-100 text-purple-800' },
     bitbucket: { label: 'Bitbucket', icon: '🪣', color: 'bg-blue-100 text-blue-800' },
-    freeform: { label: 'Custom', icon: '✍️', color: 'bg-pink-100 text-pink-800' },
-    linkedin: { label: 'LinkedIn', icon: '💼', color: 'bg-blue-100 text-blue-800' }
+    linkedin: { label: 'LinkedIn', icon: '💼', color: 'bg-blue-100 text-blue-800' },
+    freeform: { label: 'Custom', icon: '✍️', color: 'bg-pink-100 text-pink-800' }
   };
 
   const uniqueSources = Array.from(new Set(items.map(item => item.source)));
@@ -206,34 +240,17 @@ export default function SelectItemsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  {sourceItems.map(item => {
-                    const itemId = (item.source === 'github' || item.source === 'gitlab')
+                  {sourceItems.map((item, itemIndex) => {
+                    const itemId = item.source === 'github' || item.source === 'gitlab'
                       ? (item as any).id
                       : item.id;
 
-                    // Extract common fields based on item type
-                    let title = '';
-                    let description: string | null = null;
-                    let tags: string[] = [];
-
-                    if (item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') {
-                      title = item.displayName || item.name;
-                      description = item.description;
-                      tags = item.metadata.topics || [];
-                    } else if (item.source === 'linkedin') {
-                      title = item.title || 'LinkedIn Post';
-                      description = item.summary || item.content;
-                      tags = [];
-                    } else {
-                      // blog_rss, medium, freeform
-                      title = item.title;
-                      description = item.description;
-                      tags = item.tags || [];
-                    }
+                    // Use composite key to ensure uniqueness
+                    const itemKey = `${item.source}-${itemId}`;
 
                     return (
                       <div
-                        key={itemId}
+                        key={itemKey}
                         onClick={() => handleToggleSelection(itemId)}
                         className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
                           item.selected
@@ -257,9 +274,9 @@ export default function SelectItemsPage() {
 
                           {/* Content */}
                           <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900 mb-1">{title}</h3>
-                            {description && (
-                              <p className="text-sm text-gray-600 line-clamp-2">{description}</p>
+                            <h3 className="font-semibold text-gray-900 mb-1">{getItemTitle(item)}</h3>
+                            {getItemDescription(item) && (
+                              <p className="text-sm text-gray-600 line-clamp-2">{getItemDescription(item)}</p>
                             )}
 
                             {/* Meta Info */}
@@ -267,16 +284,16 @@ export default function SelectItemsPage() {
                               <span className={`text-xs px-2 py-1 rounded ${sourceInfo.color}`}>
                                 {sourceInfo.label}
                               </span>
-                              {tags && tags.length > 0 && (
+                              {getItemTags(item).length > 0 && (
                                 <>
-                                  {tags.slice(0, 3).map((tag: string) => (
+                                  {getItemTags(item).slice(0, 3).map(tag => (
                                     <span key={tag} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
                                       {tag}
                                     </span>
                                   ))}
-                                  {tags.length > 3 && (
+                                  {getItemTags(item).length > 3 && (
                                     <span className="text-xs text-gray-500 px-2 py-1">
-                                      +{tags.length - 3} more
+                                      +{getItemTags(item).length - 3} more
                                     </span>
                                   )}
                                 </>

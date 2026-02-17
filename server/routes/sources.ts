@@ -228,7 +228,7 @@ router.post('/generate-summaries', async (req, res) => {
           if (item.source === 'github' && req.headers.authorization) {
             const token = req.headers.authorization.replace('Bearer ', '');
             try {
-              readme = await getReadmeContent(token, item.owner.login, item.name);
+              readme = (await getReadmeContent(token, item.owner.login, item.name)) || '';
             } catch (e) {
               console.warn(`Could not fetch README for ${item.name}:`, e);
             }
@@ -253,7 +253,7 @@ router.post('/generate-summaries', async (req, res) => {
             'blog_post',
             serverApiKey,
             {
-              author: item.author,
+              author: item.author || undefined,
               publishedAt: item.publishedAt,
               tags: item.tags,
               url: item.url
@@ -268,7 +268,7 @@ router.post('/generate-summaries', async (req, res) => {
             'medium_post',
             serverApiKey,
             {
-              author: item.author,
+              author: item.author || undefined,
               publishedAt: item.publishedAt,
               tags: item.tags,
               url: item.url

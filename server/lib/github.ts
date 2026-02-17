@@ -1,6 +1,5 @@
 import { Octokit } from "@octokit/rest";
 import { Repository, Organization } from "@shared/schema";
-import { logger } from "./logger.js";
 
 interface GithubUser {
   githubId: string;
@@ -24,21 +23,11 @@ interface OctokitError extends Error {
  * @param error - The error to check
  * @returns True if the error is an OctokitError
  */
-export function isOctokitError(error: unknown): error is OctokitError {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  if ('status' in error) {
-    return true;
-  }
-
-  if ('response' in error) {
-    const err = error as { response: unknown };
-    return typeof err.response === 'object' && err.response !== null;
-  }
-
-  return false;
+function isOctokitError(error: unknown): error is OctokitError {
+  return (
+    error instanceof Error &&
+    ('status' in error || ('response' in error && typeof (error as any).response === 'object'))
+  );
 }
 
 /**
@@ -127,10 +116,10 @@ export async function getUserOrganizations(
       avatarUrl: org.avatar_url || null,
     }));
 
-    logger.info(`Fetched ${organizations.length} organizations for user`);
+    console.log(`Fetched ${organizations.length} organizations for user`);
     return organizations;
   } catch (error) {
-    logger.error("Failed to fetch user organizations:", error);
+    console.error("Failed to fetch user organizations:", error);
     // Don't return empty array - let the caller know there was an error
     throw new Error(`Failed to fetch organizations: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -164,7 +153,7 @@ async function getUserRepositories(
       );
     });
 
-    logger.info(`Fetched ${allRepos.length} repositories for user ${user.login}, ${filteredRepos.length} after filtering`);
+    console.log(`Fetched ${allRepos.length} repositories for user ${user.login}, ${filteredRepos.length} after filtering`);
 
     return filteredRepos.map((repo) => {
       // Extract the actual owner from the repository URL
@@ -201,7 +190,7 @@ async function getUserRepositories(
       };
     });
   } catch (error) {
-    logger.error(
+    console.error(
       `Failed to fetch repositories for user ${user.login}:`,
       error,
     );
@@ -239,7 +228,7 @@ async function getOrganizationRepositories(
       );
     });
 
-    logger.info(`Fetched ${allRepos.length} repositories for org ${org.login}, ${filteredRepos.length} after filtering`);
+    console.log(`Fetched ${allRepos.length} repositories for org ${org.login}, ${filteredRepos.length} after filtering`);
 
     return filteredRepos.map((repo) => {
       // Extract the actual owner from the repository URL
@@ -273,7 +262,7 @@ async function getOrganizationRepositories(
       };
     });
   } catch (error) {
-    logger.error(`Failed to fetch repositories for org ${org.login}:`, error);
+    console.error(`Failed to fetch repositories for org ${org.login}:`, error);
     // Don't return empty array - let the caller handle the error
     throw new Error(`Failed to fetch repositories for org ${org.login}: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -298,7 +287,7 @@ export async function getRepositories(
     try {
       userRepos = await getUserRepositories(octokit, userInfo);
     } catch (error) {
-      logger.warn("Failed to fetch user repositories, continuing with organizations only:", error);
+      console.warn("Failed to fetch user repositories, continuing with organizations only:", error);
       userRepos = [];
     }
 
@@ -307,7 +296,7 @@ export async function getRepositories(
     try {
       orgs = await getUserOrganizations(accessToken);
     } catch (error) {
-      logger.warn("Failed to fetch organizations, continuing with user repos only:", error);
+      console.warn("Failed to fetch organizations, continuing with user repos only:", error);
       orgs = [];
     }
 
@@ -321,7 +310,7 @@ export async function getRepositories(
         });
         orgRepos.push(...repos);
       } catch (error) {
-        logger.warn(`Failed to fetch repositories for organization ${org.login}, skipping:`, error);
+        console.warn(`Failed to fetch repositories for organization ${org.login}, skipping:`, error);
         // Continue with other organizations
       }
     }
@@ -329,7 +318,7 @@ export async function getRepositories(
     // Combine user and organization repositories, but deduplicate based on repo ID
     const allRepos = [...userRepos, ...orgRepos];
     
-    logger.info(`Repository Summary:
+    console.log(`Repository Summary:
       - User repositories: ${userRepos.length}
       - Organization repositories: ${orgRepos.length}
       - Total before deduplication: ${allRepos.length}
@@ -345,7 +334,7 @@ export async function getRepositories(
     }
 
     const repositories = Array.from(uniqueReposMap.values());
-    logger.info(`Final repository count after deduplication: ${repositories.length}`);
+    console.log(`Final repository count after deduplication: ${repositories.length}`);
 
     // Fetch READMEs and extract titles (in batches to avoid rate limiting)
     const BATCH_SIZE = parseInt(process.env.GITHUB_BATCH_SIZE || '10');
@@ -356,7 +345,7 @@ export async function getRepositories(
       const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
       const totalBatches = Math.ceil(repositories.length / BATCH_SIZE);
 
-      logger.info(`Processing README batch ${batchNumber}/${totalBatches} (${batch.length} repos)`);
+      console.log(`Processing README batch ${batchNumber}/${totalBatches} (${batch.length} repos)`);
 
       const results = await Promise.allSettled(
         batch.map(async (repo) => {
@@ -373,7 +362,7 @@ export async function getRepositories(
               repo.displayName = displayName;
             }
           } catch (error) {
-            logger.warn(
+            console.warn(
               `Failed to process README for ${repo.owner.login}/${repo.name}:`,
               error,
             );
@@ -386,7 +375,7 @@ export async function getRepositories(
       // Log batch results for monitoring
       const failures = results.filter(r => r.status === 'rejected');
       if (failures.length > 0) {
-        logger.warn(`Batch ${batchNumber}: ${failures.length}/${batch.length} failures`);
+        console.warn(`Batch ${batchNumber}: ${failures.length}/${batch.length} failures`);
       }
 
       // Add delay between batches to avoid rate limiting (except for last batch)
@@ -397,7 +386,7 @@ export async function getRepositories(
 
     return repositories;
   } catch (error) {
-    logger.error("Failed to fetch repositories:", error);
+    console.error("Failed to fetch repositories:", error);
     throw error;
   }
 }
@@ -430,7 +419,7 @@ export async function createPortfolioRepository(
       return { repoUrl: repo.html_url, wasCreated: false };
     }
   } catch (error) {
-    logger.error("Failed to handle portfolio repository:", error);
+    console.error("Failed to handle portfolio repository:", error);
     throw error;
   }
 }
@@ -465,7 +454,7 @@ export async function getReadmeContent(
     });
     return data.toString();
   } catch (error) {
-    logger.warn(`Failed to fetch README for ${owner}/${repo}:`);
+    console.warn(`Failed to fetch README for ${owner}/${repo}:`);
     return null;
   }
 }
@@ -512,7 +501,7 @@ export async function commitPortfolioFiles(
       sha: commit.sha,
     });
   } catch (error) {
-    logger.error("Failed to commit portfolio files:", error);
+    console.error("Failed to commit portfolio files:", error);
     throw error;
   }
 }
@@ -581,7 +570,7 @@ export async function deployToGitHubPages(
       wasCreated,
     };
   } catch (error) {
-    logger.error("Failed to deploy to GitHub Pages:", error);
+    console.error("Failed to deploy to GitHub Pages:", error);
     throw error;
   }
 }

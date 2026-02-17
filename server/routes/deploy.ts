@@ -1,11 +1,20 @@
 import { Router } from 'express';
 import { getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages } from '../lib/github.js';
 import { generateUserIntroduction } from '../lib/openai.js';
-import { getVercelHeaders } from '../lib/vercel.js';
 import { generatePortfolioHtml } from '../lib/portfolio-generator.js';
 import { themes } from '../../shared/themes.js';
 
 const router = Router();
+
+// Helper to safely stringify JSON for script injection
+function safeJsonStringify(obj: any): string {
+  return JSON.stringify(obj)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
 
 router.post('/api/deploy/github', async (req, res) => {
   const { accessToken, downloadOnly, repositories, themeId, userInfo, introduction, customTitle } = req.body;
@@ -210,7 +219,10 @@ router.post('/api/deploy/vercel', async (req, res) => {
     ], repoName);
 
     const getProjectResponse = await fetch(`https://api.vercel.com/v9/projects/${repoName}`, {
-      headers: getVercelHeaders(accessToken, teamId)
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        ...(teamId ? { 'X-Vercel-Team-Id': teamId } : {})
+      }
     });
 
     let projectData;
@@ -218,8 +230,9 @@ router.post('/api/deploy/vercel', async (req, res) => {
       const createProjectResponse = await fetch('https://api.vercel.com/v9/projects', {
         method: 'POST',
         headers: {
-          ...getVercelHeaders(accessToken, teamId),
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
+          ...(teamId ? { 'X-Vercel-Team-Id': teamId } : {})
         },
         body: JSON.stringify({
           name: repoName,
@@ -245,7 +258,10 @@ router.post('/api/deploy/vercel', async (req, res) => {
     let connectedRepoId;
     try {
       const reposResponse = await fetch(`https://api.vercel.com/v1/projects/${repoName}/connected-repositories`, {
-        headers: getVercelHeaders(accessToken, teamId)
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          ...(teamId ? { 'X-Vercel-Team-Id': teamId } : {})
+        }
       });
 
       if (reposResponse.ok) {
@@ -286,8 +302,9 @@ router.post('/api/deploy/vercel', async (req, res) => {
     const deploymentResponse = await fetch('https://api.vercel.com/v13/deployments', {
       method: 'POST',
       headers: {
-        ...getVercelHeaders(accessToken, teamId),
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
+        ...(teamId ? { 'X-Vercel-Team-Id': teamId } : {})
       },
       body: JSON.stringify({
         name: repoName,
@@ -333,7 +350,9 @@ router.get('/api/deploy/vercel/status/:deploymentId', async (req, res) => {
 
   try {
     const statusResponse = await fetch(`https://api.vercel.com/v13/deployments/${deploymentId}`, {
-      headers: getVercelHeaders(accessToken)
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      }
     });
 
     const statusData = await statusResponse.json();
@@ -390,12 +409,12 @@ router.get('/api/deploy/vercel/callback', async (req, res) => {
         <body>
           <script>
             window.opener.postMessage(
-              {
+              ${safeJsonStringify({
                 type: 'vercel-oauth-success',
-                token: ${safeJsonStringify(tokenData.access_token)},
-                teamId: ${safeJsonStringify(teamId || '')},
-                configurationId: ${safeJsonStringify(configurationId)}
-              },
+                token: tokenData.access_token,
+                teamId: teamId || '',
+                configurationId: configurationId
+              })},
               window.location.origin
             );
             window.close();
@@ -412,7 +431,10 @@ router.get('/api/deploy/vercel/callback', async (req, res) => {
         <body>
           <script>
             window.opener.postMessage(
-              { type: 'vercel-oauth-error', error: ${safeJsonStringify(error instanceof Error ? error.message : 'Unknown error')} },
+              ${safeJsonStringify({
+                type: 'vercel-oauth-error',
+                error: error instanceof Error ? error.message : 'Unknown error'
+              })},
               window.location.origin
             );
             window.close();
@@ -423,6 +445,5 @@ router.get('/api/deploy/vercel/callback', async (req, res) => {
       `);
   }
 });
-
 
 export default router;

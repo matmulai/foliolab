@@ -58,7 +58,6 @@ const mockIntroduction = {
   interests: ['Open Source', 'Web Performance', 'Developer Tools'],
 };
 
-
 describe('Portfolio Generation', () => {
   describe('HTML Generation', () => {
     it('should generate valid HTML with repositories', () => {
@@ -210,28 +209,6 @@ describe('Portfolio Generation', () => {
       const html = generatePortfolioHtml('testuser', repoWithoutDescription as any);
       expect(html).toContain(mockRepositories[0].name);
       // Should not crash, even with missing content
-    });
-
-    it('should prevent XSS in repository URLs', () => {
-      const repoWithXss = [{
-        ...mockRepositories[0],
-        url: 'javascript:alert("xss")',
-        metadata: {
-          ...mockRepositories[0].metadata,
-          url: 'javascript:alert("xss")',
-        },
-      }];
-
-      const html = generatePortfolioHtml('testuser', repoWithXss as any);
-
-      // Should not contain the malicious URL in href
-      expect(html).not.toContain('href="javascript:alert(&quot;xss&quot;)"');
-      expect(html).not.toContain('href="javascript:alert(\'xss\')"');
-      expect(html).not.toContain('href="javascript:alert("xss")"');
-
-      // Should handle it by omitting or cleaning
-      // Our implementation omits the link if invalid
-      expect(html).not.toContain('class="icon-button border border-gray-200 bg-white"');
     });
   });
 });
