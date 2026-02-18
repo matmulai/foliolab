@@ -351,7 +351,7 @@ export async function getRepositories(
         batch.map(async (repo) => {
           try {
             const readme = await getReadmeContent(
-              octokit,
+              accessToken,
               repo.owner.login,
               repo.name,
             );
@@ -441,15 +441,11 @@ export function extractTitleFromReadme(readme: string | null): string | null {
 }
 
 export async function getReadmeContent(
-  clientOrToken: Octokit | string,
+  accessToken: string,
   owner: string,
   repo: string,
 ): Promise<string | null> {
-  const octokit =
-    typeof clientOrToken === "string"
-      ? new Octokit({ auth: clientOrToken })
-      : clientOrToken;
-
+  const octokit = new Octokit({ auth: accessToken });
   try {
     const { data } = await octokit.repos.getReadme({
       owner,
@@ -578,7 +574,3 @@ export async function deployToGitHubPages(
     throw error;
   }
 }
-
-// Aliases for backward compatibility with different naming conventions
-export { getGithubUser as getGitHubUser };
-export { getRepositories as getGitHubRepositoriesWithTitles };

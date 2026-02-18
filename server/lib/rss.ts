@@ -109,6 +109,3 @@ export async function getBlogPostsFromRSS(
   const feed = await fetchRSSFeed(feedUrl);
   return convertRSSItemsToBlogPosts(feedUrl, feed.items, author);
 }
-
-// Alias for consistency with other library functions
-export { getBlogPostsFromRSS as parseRSSFeed };

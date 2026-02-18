@@ -1,7 +1,6 @@
 import OpenAI from "openai";
 import { cleanReadmeContent } from "./readme-cleaner.js";
 import { analyzeProjectStructure, generateProjectSummary, type ProjectStructure } from "./project-analyzer.js";
-import { type PortfolioItem } from "@shared/schema";
 
 interface RepoSummary {
   summary: string;
@@ -34,7 +33,7 @@ const DEFAULT_PROMPT =
 const JSON_FORMAT_SUFFIX =
   "Respond with JSON in this format: { 'summary': string }";
 const USER_INTRO_PROMPT =
-  "Based on the portfolio items (including repositories, blog posts, articles, and projects), generate a compelling professional introduction for a developer portfolio. The introduction should be 150-200 words, showcasing the developer's expertise, technical journey, and what drives their work. Highlight their strongest technical skills, preferred technologies, and areas of specialization based on ALL their work including code repositories, technical writing, and projects. Make it personal yet professional, demonstrating both technical competence and passion for development. Include 8-12 primary skills and 4-6 areas of interest that reflect their technical focus and career direction across all their portfolio items.";
+  "Based on the repository information, generate a compelling professional introduction for a developer portfolio. The introduction should be 150-200 words, showcasing the developer's expertise, technical journey, and what drives their work. Highlight their strongest technical skills, preferred technologies, and areas of specialization. Make it personal yet professional, demonstrating both technical competence and passion for development. Include 8-12 primary skills and 4-6 areas of interest that reflect their technical focus and career direction.";
 const USER_INTRO_FORMAT =
   "Respond with JSON in this format: { 'introduction': string, 'skills': string[], 'interests': string[] }";
 
@@ -280,37 +279,28 @@ ${JSON_FORMAT_SUFFIX}`;
 }
 
 async function generateUserIntroduction(
-  items: PortfolioItem[],
+  repositories: Array<{
+    name: string;
+    description: string;
+    metadata: {
+      language: string | null;
+      topics: string[];
+    };
+    summary?: string;
+  }>,
   apiKey: string,
 ): Promise<UserIntroduction> {
   try {
-    // Extract information from all portfolio items
-    const portfolioInfo = items.map((item) => {
-      const baseInfo: any = {
-        title: (item as any).title || (item as any).name,
-        type: item.source,
-        summary: item.summary,
-      };
-
-      if (item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') {
-        baseInfo.description = item.description;
-        baseInfo.language = item.metadata?.language;
-        baseInfo.topics = item.metadata?.topics;
-      } else if (item.source === 'blog_rss' || item.source === 'medium') {
-        baseInfo.description = item.description;
-        baseInfo.tags = item.tags;
-        baseInfo.author = item.author;
-      } else if (item.source === 'freeform') {
-        baseInfo.contentType = item.contentType;
-        baseInfo.tags = item.tags;
-        baseInfo.description = item.description;
-      }
-
-      return baseInfo;
-    });
+    const repoInfo = repositories.map((repo) => ({
+      name: repo.name,
+      description: repo.description,
+      language: repo.metadata.language,
+      topics: repo.metadata.topics,
+      summary: repo.summary,
+    }));
 
     const prompt = `${USER_INTRO_PROMPT} ${USER_INTRO_FORMAT}`;
-    const userContent = JSON.stringify(portfolioInfo, null, 2);
+    const userContent = JSON.stringify(repoInfo, null, 2);
 
     const openai = getOpenAIClient(apiKey);
 
@@ -365,66 +355,9 @@ async function generateUserIntroduction(
   }
 }
 
-async function generateContentSummary(
-  title: string,
-  content: string,
-  contentType: 'blog_post' | 'medium_post' | 'freeform',
-  apiKey: string,
-  metadata?: {
-    author?: string | null;
-    publishedAt?: string;
-    tags?: string[];
-    url?: string;
-  }
-): Promise<RepoSummary> {
-  try {
-    const userContentParts: string[] = [`Title: ${title}`];
-
-    if (metadata) {
-      if (metadata.author) {
-        userContentParts.push(`Author: ${metadata.author}`);
-      }
-
-      if (metadata.publishedAt) {
-        userContentParts.push(`Published: ${new Date(metadata.publishedAt).toLocaleDateString()}`);
-      }
-
-      if (metadata.tags && metadata.tags.length > 0) {
-        userContentParts.push(`Tags: ${metadata.tags.join(', ')}`);
-      }
-
-      if (metadata.url) {
-        userContentParts.push(`URL: ${metadata.url}`);
-      }
-    }
-
-    // Truncate content intelligently
-    const trimmedContent = intelligentTruncate(content, LLM_CONFIG.README_MAX_LENGTH);
-    userContentParts.push(`Content:\n${trimmedContent}`);
-
-    const userContent = userContentParts.join('\n');
-
-    const contentTypeLabel = contentType === 'blog_post' ? 'blog post' :
-                            contentType === 'medium_post' ? 'Medium article' :
-                            'portfolio content';
-
-    const prompt = `Generate a compelling summary for this ${contentTypeLabel} for a developer portfolio. The summary should be 150-250 words, highlighting the key insights, technical concepts, or achievements discussed. Make it engaging and showcase the author's expertise and thought process. Focus on what makes this content valuable and what readers will learn or gain from it.
-
-${JSON_FORMAT_SUFFIX}`;
-
-    const result = await generateWithOpenAI(prompt, userContent, apiKey);
-    return result;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("Failed to generate content summary:", errorMessage);
-    throw new Error("Failed to generate content summary: " + errorMessage);
-  }
-}
-
 export {
   generateRepoSummary,
   generateUserIntroduction,
-  generateContentSummary,
   type RepoSummary,
   type UserIntroduction,
 };
