@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { themes } from '../shared/themes.js';
-import { generatePortfolioHtml } from '../server/lib/portfolio-generator.js';
+import { generatePortfolioHtml, capitalizeFirstLetter, escapeHtml } from '../server/lib/portfolio-generator.js';
 
 // Mock repository data for testing
 const mockRepositories = [
@@ -209,6 +209,46 @@ describe('Portfolio Generation', () => {
       const html = generatePortfolioHtml('testuser', repoWithoutDescription as any);
       expect(html).toContain(mockRepositories[0].name);
       // Should not crash, even with missing content
+    });
+  });
+
+  describe('Utility Functions', () => {
+    describe('capitalizeFirstLetter', () => {
+      it('should capitalize the first letter of a lowercase string', () => {
+        expect(capitalizeFirstLetter('testuser')).toBe('Testuser');
+      });
+
+      it('should preserve already capitalized strings', () => {
+        expect(capitalizeFirstLetter('TestUser')).toBe('TestUser');
+      });
+
+      it('should handle single character strings', () => {
+        expect(capitalizeFirstLetter('a')).toBe('A');
+      });
+
+      it('should handle empty strings', () => {
+        expect(capitalizeFirstLetter('')).toBe('');
+      });
+    });
+
+    describe('escapeHtml', () => {
+      it('should escape HTML special characters', () => {
+        expect(escapeHtml('<script>alert("xss")</script>')).toBe(
+          '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;'
+        );
+      });
+
+      it('should escape ampersands', () => {
+        expect(escapeHtml('Tom & Jerry')).toBe('Tom &amp; Jerry');
+      });
+
+      it('should escape apostrophes', () => {
+        expect(escapeHtml("user's portfolio")).toBe("user&#039;s portfolio");
+      });
+
+      it('should handle strings without special characters', () => {
+        expect(escapeHtml('Hello World')).toBe('Hello World');
+      });
     });
   });
 });

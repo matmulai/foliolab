@@ -176,18 +176,31 @@ app.use((req, res, next) => {
     socket.destroy();
   });
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
+    const requestId = req.headers['x-request-id'] || 'unknown';
 
-    res.status(status).json({ message });
-
-    // Log error instead of throwing to prevent server crash
-    console.error('Error handled:', {
+    // Log error with full context for debugging and monitoring
+    // In production, consider integrating with error tracking services (e.g., Sentry)
+    console.error('Unhandled error:', {
+      requestId,
       status,
       message,
+      method: req.method,
+      url: req.originalUrl,
+      userAgent: req.headers['user-agent'],
       stack: err.stack,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      // Include error name and code if available
+      errorName: err.name,
+      errorCode: err.code,
+    });
+
+    // Send sanitized error response to client (don't expose internal details)
+    res.status(status).json({
+      message: status >= 500 ? 'Internal Server Error' : message,
+      requestId,
     });
   });
 

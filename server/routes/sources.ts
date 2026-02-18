@@ -1,4 +1,5 @@
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { getBlogPostsFromRSS } from '../lib/rss.js';
 import { getMediumPosts, validateMediumUsername } from '../lib/medium.js';
 import { getGitLabProjectsWithTitles, getGitLabUser } from '../lib/gitlab.js';
@@ -7,6 +8,21 @@ import { FreeformContent } from '../../shared/schema';
 import crypto from 'crypto';
 
 const router = express.Router();
+
+/**
+ * Rate limiter for source endpoints to prevent abuse
+ * Limits each IP to 30 requests per minute
+ */
+const sourcesRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // 30 requests per minute per IP
+  message: { error: 'Too many requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiting to all source routes
+router.use(sourcesRateLimiter);
 
 /**
  * Fetch blog posts from RSS feed
@@ -291,10 +307,7 @@ router.post('/generate-summaries', async (req, res) => {
         }
 
         // Store summary with item ID
-        const itemId = item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket'
-          ? item.id
-          : item.id;
-        summaries[itemId] = summary;
+        summaries[item.id] = summary;
       } catch (itemError) {
         console.error(`Failed to generate summary for item ${item.id}:`, itemError);
         // Continue with other items even if one fails

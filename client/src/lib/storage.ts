@@ -39,6 +39,9 @@ export function removeGitHubToken() {
 }
 
 // GitLab Token Management
+// SECURITY NOTE: Tokens are stored in browser localStorage without encryption.
+// Users should use tokens with minimal required scopes (read_api for GitLab).
+// Tokens persist until explicitly cleared or browser data is deleted.
 export function saveGitLabToken(token: string) {
   localStorage.setItem(STORAGE_KEYS.GITLAB_TOKEN, token);
 }
@@ -51,7 +54,11 @@ export function removeGitLabToken() {
   localStorage.removeItem(STORAGE_KEYS.GITLAB_TOKEN);
 }
 
-// Bitbucket Credentials Management (stored encrypted in browser)
+// Bitbucket Credentials Management
+// SECURITY NOTE: Credentials are stored in browser localStorage without encryption.
+// Users should create app passwords with minimal required permissions (repository:read).
+// Credentials persist until explicitly cleared or browser data is deleted.
+// Consider using session-based storage for enhanced security in sensitive environments.
 export function saveBitbucketCredentials(username: string, appPassword: string) {
   const credentials = { username, appPassword };
   localStorage.setItem(STORAGE_KEYS.BITBUCKET_CREDENTIALS, JSON.stringify(credentials));
@@ -70,6 +77,24 @@ export function getBitbucketCredentials(): { username: string; appPassword: stri
 
 export function removeBitbucketCredentials() {
   localStorage.removeItem(STORAGE_KEYS.BITBUCKET_CREDENTIALS);
+}
+
+/**
+ * Clear all stored credentials (GitHub, GitLab, Bitbucket)
+ * Use this when user wants to logout or clear sensitive data
+ */
+export function clearAllCredentials() {
+  removeGitHubToken();
+  removeGitLabToken();
+  removeBitbucketCredentials();
+}
+
+/**
+ * Check if any third-party credentials are stored
+ * Useful for displaying security warnings to users
+ */
+export function hasStoredCredentials(): boolean {
+  return !!(getGitHubToken() || getGitLabToken() || getBitbucketCredentials());
 }
 
 // Data Sources Configuration

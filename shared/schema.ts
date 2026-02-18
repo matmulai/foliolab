@@ -22,7 +22,7 @@ export const repositorySchema = z.object({
   url: z.string(),
   summary: z.string().nullable(),
   selected: z.boolean(),
-  source: z.literal("github").default("github"),
+  source: z.literal("github"),
   owner: z.object({
     login: z.string(),
     type: z.enum(["User", "Organization"]),
