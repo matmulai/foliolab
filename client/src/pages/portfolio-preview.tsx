@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Repository, PortfolioItem } from "@shared/schema";
+import { Repository } from "@shared/schema";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,6 @@ import { themes } from "@shared/themes";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { getPortfolioItems } from "@/lib/storage";
 
 interface UserIntroduction {
   introduction: string;
@@ -35,39 +34,10 @@ const capitalizeFirstLetter = (str: string) => {
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
-const getItemTitle = (item: PortfolioItem): string => {
-  if (item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') {
-    return item.displayName || item.name;
-  }
-  return item.title || 'Untitled';
-};
-
-const getItemSummary = (item: PortfolioItem): string => {
-  if (item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') {
-    return item.summary || '';
-  }
-  if (item.source === 'linkedin') {
-    return item.summary || '';
-  }
-  if (item.source === 'freeform') {
-    return item.description || '';
-  }
-  return item.summary || item.description || '';
-};
-
-const getItemUrl = (item: PortfolioItem): string | undefined => {
-  if (item.url) return item.url;
-  if (item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') {
-    return item.metadata.url || undefined;
-  }
-  return undefined;
-};
-
 export default function PortfolioPreview() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [selectedItems, setSelectedItems] = useState<PortfolioItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [selectedRepos, setSelectedRepos] = useState<Repository[]>([]);
   const [userIntro, setUserIntro] = useState<UserIntroduction | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [customTitle, setCustomTitle] = useState<string | null>(null);
@@ -78,18 +48,18 @@ export default function PortfolioPreview() {
   const [editingIntro, setEditingIntro] = useState(false);
   const [editingSkills, setEditingSkills] = useState(false);
   const [editingInterests, setEditingInterests] = useState(false);
-  const [editingItem, setEditingItem] = useState<string | number | null>(null);
+  const [editingRepo, setEditingRepo] = useState<number | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
-  const [editingItemTitle, setEditingItemTitle] = useState<string | number | null>(null);
+  const [editingRepoTitle, setEditingRepoTitle] = useState<number | null>(null);
   const [editingImage, setEditingImage] = useState(false);
 
   // Temporary edit values
   const [tempIntro, setTempIntro] = useState("");
   const [tempSkills, setTempSkills] = useState<string[]>([]);
   const [tempInterests, setTempInterests] = useState<string[]>([]);
-  const [tempItemSummary, setTempItemSummary] = useState("");
+  const [tempRepoSummary, setTempRepoSummary] = useState("");
   const [tempTitle, setTempTitle] = useState("");
-  const [tempItemTitle, setTempItemTitle] = useState("");
+  const [tempRepoTitle, setTempRepoTitle] = useState("");
   const [tempImageUrl, setTempImageUrl] = useState("");
   const [newSkill, setNewSkill] = useState("");
   const [newInterest, setNewInterest] = useState("");
@@ -97,6 +67,12 @@ export default function PortfolioPreview() {
   // Drag and drop state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // Get repository data from client-side cache
+  const { data, isLoading, error } = useQuery<{ repositories: Repository[] }>({
+    queryKey: ["/api/repositories"],
+    retry: 2,
+  });
 
   // Generate user introduction
   const { mutate: generateIntro, isPending: isGenerating } = useMutation({
@@ -144,9 +120,9 @@ export default function PortfolioPreview() {
     }
   };
 
-  const startEditingItem = (itemId: string | number, summary: string) => {
-    setTempItemSummary(summary);
-    setEditingItem(itemId);
+  const startEditingRepo = (repoId: number, summary: string) => {
+    setTempRepoSummary(summary);
+    setEditingRepo(repoId);
   };
 
   const startEditingTitle = () => {
@@ -156,9 +132,9 @@ export default function PortfolioPreview() {
     }
   };
 
-  const startEditingItemTitle = (itemId: string | number, title: string) => {
-    setTempItemTitle(title);
-    setEditingItemTitle(itemId);
+  const startEditingRepoTitle = (repoId: number, title: string) => {
+    setTempRepoTitle(title);
+    setEditingRepoTitle(repoId);
   };
 
   const startEditingImage = () => {
@@ -199,23 +175,19 @@ export default function PortfolioPreview() {
     }
   };
 
-  const saveItemSummary = () => {
-    if (editingItem !== null) {
-      setSelectedItems(items =>
-        items.map(item => {
-          if (item.id === editingItem) {
-            if (item.source === 'freeform') {
-              return { ...item, description: tempItemSummary };
-            }
-            return { ...item, summary: tempItemSummary } as PortfolioItem;
-          }
-          return item;
-        })
+  const saveRepoSummary = () => {
+    if (editingRepo !== null) {
+      setSelectedRepos(repos =>
+        repos.map(repo =>
+          repo.id === editingRepo
+            ? { ...repo, summary: tempRepoSummary }
+            : repo
+        )
       );
-      setEditingItem(null);
+      setEditingRepo(null);
       toast({
-        title: "Item Summary Updated",
-        description: "The item summary has been updated successfully.",
+        title: "Repository Summary Updated",
+        description: "The repository summary has been updated successfully.",
       });
     }
   };
@@ -229,24 +201,19 @@ export default function PortfolioPreview() {
     });
   };
 
-  const saveItemTitle = () => {
-    if (editingItemTitle !== null) {
-      setSelectedItems(items =>
-        items.map(item => {
-          if (item.id === editingItemTitle) {
-            if (item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') {
-              return { ...item, displayName: tempItemTitle };
-            } else if (item.source === 'blog_rss' || item.source === 'medium' || item.source === 'freeform' || item.source === 'linkedin') {
-              return { ...item, title: tempItemTitle };
-            }
-          }
-          return item;
-        })
+  const saveRepoTitle = () => {
+    if (editingRepoTitle !== null) {
+      setSelectedRepos(repos =>
+        repos.map(repo =>
+          repo.id === editingRepoTitle
+            ? { ...repo, displayName: tempRepoTitle }
+            : repo
+        )
       );
-      setEditingItemTitle(null);
+      setEditingRepoTitle(null);
       toast({
-        title: "Item Title Updated",
-        description: "The item title has been updated successfully.",
+        title: "Repository Title Updated",
+        description: "The repository title has been updated successfully.",
       });
     }
   };
@@ -266,16 +233,16 @@ export default function PortfolioPreview() {
     setEditingIntro(false);
     setEditingSkills(false);
     setEditingInterests(false);
-    setEditingItem(null);
+    setEditingRepo(null);
     setEditingTitle(false);
-    setEditingItemTitle(null);
+    setEditingRepoTitle(null);
     setEditingImage(false);
     setTempIntro("");
     setTempSkills([]);
     setTempInterests([]);
-    setTempItemSummary("");
+    setTempRepoSummary("");
     setTempTitle("");
-    setTempItemTitle("");
+    setTempRepoTitle("");
     setTempImageUrl("");
     setNewSkill("");
     setNewInterest("");
@@ -303,25 +270,25 @@ export default function PortfolioPreview() {
     setTempInterests(tempInterests.filter((_, i) => i !== index));
   };
 
-  const deleteItemSummary = (itemId: string | number) => {
-    setSelectedItems(items =>
-      items.map(item =>
-        item.id === itemId
-          ? { ...item, summary: "" }
-          : item
+  const deleteRepoSummary = (repoId: number) => {
+    setSelectedRepos(repos =>
+      repos.map(repo =>
+        repo.id === repoId
+          ? { ...repo, summary: "" }
+          : repo
       )
     );
     toast({
-      title: "Summary Deleted",
-      description: "The item summary has been removed.",
+      title: "Repository Summary Deleted",
+      description: "The repository summary has been removed.",
     });
   };
 
-  const deleteItem = (itemId: string | number) => {
-    setSelectedItems(items => items.filter(item => item.id !== itemId));
+  const deleteRepository = (repoId: number) => {
+    setSelectedRepos(repos => repos.filter(repo => repo.id !== repoId));
     toast({
-      title: "Item Removed",
-      description: "The item has been removed from your portfolio.",
+      title: "Repository Removed",
+      description: "The repository has been removed from your portfolio.",
     });
   };
 
@@ -350,22 +317,22 @@ export default function PortfolioPreview() {
       return;
     }
 
-    const newItems = [...selectedItems];
-    const draggedItem = newItems[draggedIndex];
+    const newRepos = [...selectedRepos];
+    const draggedRepo = newRepos[draggedIndex];
     
     // Remove the dragged item
-    newItems.splice(draggedIndex, 1);
+    newRepos.splice(draggedIndex, 1);
     
     // Insert at the new position
-    newItems.splice(dropIndex, 0, draggedItem);
+    newRepos.splice(dropIndex, 0, draggedRepo);
     
-    setSelectedItems(newItems);
+    setSelectedRepos(newRepos);
     setDraggedIndex(null);
     setDragOverIndex(null);
     
     toast({
-      title: "Item Reordered",
-      description: "The item order has been updated.",
+      title: "Repository Reordered",
+      description: "The repository order has been updated.",
     });
   };
 
@@ -375,47 +342,37 @@ export default function PortfolioPreview() {
   };
 
   useEffect(() => {
-    // Load selected items from localStorage
-    const allItems = getPortfolioItems();
-    const filtered = allItems.filter((item) => item.selected);
-    setSelectedItems(filtered);
-    setIsLoading(false);
+    if (data?.repositories && !isLoading) {
+      const filtered = data.repositories.filter((repo) => repo.selected);
+      setSelectedRepos(filtered);
 
-    if (filtered.length > 0) {
-      // Only generate intro if we have GitHub repos
-      const githubRepos = filtered.filter(item => item.source === 'github') as Repository[];
-      if (githubRepos.length > 0) {
-        generateIntro(githubRepos);
+      if (filtered.length > 0) {
+        generateIntro(filtered);
       } else {
-        // For non-GitHub items, create a basic intro
-        setUserInfo({
-          username: "Portfolio",
-          avatarUrl: null
-        });
-        setUserIntro({
-          introduction: "Welcome to my portfolio! Here's a showcase of my work and writing.",
-          skills: [],
-          interests: []
+        toast({
+          title: "No Repositories Selected",
+          description:
+            "Please go back and select repositories to include in your portfolio.",
+          variant: "destructive",
         });
       }
-    } else {
-      toast({
-        title: "No Items Selected",
-        description:
-          "Please go back and select items to include in your portfolio.",
-        variant: "destructive",
-      });
     }
-  }, [toast, generateIntro]);
+  }, [data, isLoading, toast, generateIntro]);
 
-  if (isLoading) {
+  if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
         <div className="container mx-auto px-4 py-20">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-2xl font-bold mb-4">Loading Portfolio...</h1>
-            <Skeleton className="h-20 mb-4" />
-            <Skeleton className="h-40" />
+            <h1 className="text-2xl font-bold text-red-600 mb-4">
+              Error Loading Portfolio
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Failed to load repository data. Please try again.
+            </p>
+            <Button onClick={() => setLocation("/repos")}>
+              Return to Repository Selection
+            </Button>
           </div>
         </div>
       </div>
@@ -473,9 +430,9 @@ export default function PortfolioPreview() {
             : cn(theme.layout.content, "grid grid-cols-1 gap-6") // For others, use theme styling plus grid
         }
       >
-        {selectedItems.map((item, index) => (
+        {selectedRepos.map((repo, index) => (
           <Card
-            key={item.id}
+            key={repo.id}
             draggable
             onDragStart={(e) => handleDragStart(e, index)}
             onDragOver={(e) => handleDragOver(e, index)}
@@ -496,16 +453,16 @@ export default function PortfolioPreview() {
                 <div className="flex items-start gap-2 flex-1">
                   <GripVertical className="h-5 w-5 text-gray-400 mt-1 cursor-grab active:cursor-grabbing" />
                   <div className="relative group flex-1">
-                    {editingItemTitle === item.id ? (
+                    {editingRepoTitle === repo.id ? (
                       <div className="space-y-2">
                         <Input
-                          value={tempItemTitle}
-                          onChange={(e) => setTempItemTitle(e.target.value)}
+                          value={tempRepoTitle}
+                          onChange={(e) => setTempRepoTitle(e.target.value)}
                           className="text-2xl font-semibold"
-                          placeholder="Enter title..."
+                          placeholder="Enter repository title..."
                         />
                         <div className="flex gap-2">
-                          <Button size="sm" onClick={saveItemTitle}>
+                          <Button size="sm" onClick={saveRepoTitle}>
                             <Check className="h-4 w-4" />
                           </Button>
                           <Button size="sm" variant="outline" onClick={cancelEdit}>
@@ -518,13 +475,13 @@ export default function PortfolioPreview() {
                         <h2
                           className={cn("text-2xl font-semibold", theme.preview.text)}
                         >
-                          {getItemTitle(item)}
+                          {repo.displayName || repo.name}
                         </h2>
                         <Button
                           size="sm"
                           variant="ghost"
                           className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => startEditingItemTitle(item.id, getItemTitle(item))}
+                          onClick={() => startEditingRepoTitle(repo.id, repo.displayName || repo.name)}
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
@@ -533,26 +490,24 @@ export default function PortfolioPreview() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 ml-2">
-                  {(item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') && item.metadata.stars > 0 && (
+                  {repo.metadata.stars > 0 && (
                     <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">
-                      ★ {item.metadata.stars}
+                      ★ {repo.metadata.stars}
                     </span>
                   )}
-                  {item.url && (
+                  <Button variant="outline" size="icon" asChild>
+                    <a
+                      href={repo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Github className="h-4 w-4" />
+                    </a>
+                  </Button>
+                  {repo.metadata.url && (
                     <Button variant="outline" size="icon" asChild>
                       <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {item.source === 'github' ? <Github className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
-                      </a>
-                    </Button>
-                  )}
-                  {(item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') && item.metadata.url && (
-                    <Button variant="outline" size="icon" asChild>
-                      <a
-                        href={item.metadata.url}
+                        href={repo.metadata.url}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -564,19 +519,18 @@ export default function PortfolioPreview() {
               </div>
             </CardHeader>
             <CardContent>
-              {/* Item summary or description */}
-              {getItemSummary(item) ? (
+              {repo.summary ? (
                 <div className="relative group">
-                  {editingItem === item.id ? (
+                  {editingRepo === repo.id ? (
                     <div className="space-y-3">
                       <Textarea
-                        value={tempItemSummary}
-                        onChange={(e) => setTempItemSummary(e.target.value)}
+                        value={tempRepoSummary}
+                        onChange={(e) => setTempRepoSummary(e.target.value)}
                         className="min-h-[100px]"
-                        placeholder="Enter summary..."
+                        placeholder="Enter repository summary..."
                       />
                       <div className="flex gap-2">
-                        <Button size="sm" onClick={saveItemSummary}>
+                        <Button size="sm" onClick={saveRepoSummary}>
                           <Check className="h-4 w-4" />
                         </Button>
                         <Button size="sm" variant="outline" onClick={cancelEdit}>
@@ -587,62 +541,42 @@ export default function PortfolioPreview() {
                   ) : (
                     <>
                       <p className={cn("mb-4", theme.preview.text)}>
-                        {getItemSummary(item)}
+                        {repo.summary}
                       </p>
                       <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => startEditingItem(item.id, getItemSummary(item))}
+                          onClick={() => startEditingRepo(repo.id, repo.summary || "")}
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => deleteItem(item.id)}
+                          onClick={() => deleteRepository(repo.id)}
                           className="text-red-500 hover:text-red-700"
-                          title="Remove from portfolio"
+                          title="Remove repository from portfolio"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </>
                   )}
-                  {/* Topics for repos */}
-                  {(item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') && item.metadata.topics.length > 0 && (
-                    <div className="flex gap-2 flex-wrap">
-                      {item.metadata.topics.map((topic) => (
-                        <span
-                          key={topic}
-                          className={
-                            isModern
-                              ? "px-2 py-1 rounded-full text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
-                              : "px-2 py-1 rounded-full text-sm bg-slate-800 text-white" // Explicit styling for Minimal theme
-                          }
-                        >
-                          {topic}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {/* Tags for other types */}
-                  {(item.source === 'blog_rss' || item.source === 'medium' || item.source === 'freeform') && item.tags && (
-                    <div className="flex gap-2 flex-wrap">
-                      {item.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className={
-                            isModern
-                              ? "px-2 py-1 rounded-full text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
-                              : "px-2 py-1 rounded-full text-sm bg-slate-800 text-white"
-                          }
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <div className="flex gap-2 flex-wrap">
+                    {repo.metadata.topics.map((topic) => (
+                      <span
+                        key={topic}
+                        className={
+                          isModern
+                            ? "px-2 py-1 rounded-full text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
+                            : "px-2 py-1 rounded-full text-sm bg-slate-800 text-white" // Explicit styling for Minimal theme
+                        }
+                      >
+                        {topic}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1004,9 +938,9 @@ export default function PortfolioPreview() {
               </div>
               <div className="w-full max-w-6xl mx-auto px-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {selectedItems.map((item, index) => (
+                  {selectedRepos.map((repo, index) => (
                     <Card
-                      key={item.id}
+                      key={repo.id}
                       draggable
                       onDragStart={(e) => handleDragStart(e, index)}
                       onDragOver={(e) => handleDragOver(e, index)}
@@ -1024,16 +958,16 @@ export default function PortfolioPreview() {
                           <div className="flex items-start gap-2 flex-1">
                             <GripVertical className="h-5 w-5 text-gray-400 mt-1 cursor-grab active:cursor-grabbing" />
                             <div className="relative group flex-1">
-                              {editingItemTitle === item.id ? (
+                              {editingRepoTitle === repo.id ? (
                                 <div className="space-y-2">
                                   <Input
-                                    value={tempItemTitle}
-                                    onChange={(e) => setTempItemTitle(e.target.value)}
+                                    value={tempRepoTitle}
+                                    onChange={(e) => setTempRepoTitle(e.target.value)}
                                     className="text-2xl font-semibold"
-                                    placeholder="Enter title..."
+                                    placeholder="Enter repository title..."
                                   />
                                   <div className="flex gap-2">
-                                    <Button size="sm" onClick={saveItemTitle}>
+                                    <Button size="sm" onClick={saveRepoTitle}>
                                       <Check className="h-4 w-4" />
                                     </Button>
                                     <Button size="sm" variant="outline" onClick={cancelEdit}>
@@ -1049,13 +983,13 @@ export default function PortfolioPreview() {
                                       theme.preview.text,
                                     )}
                                   >
-                                    {getItemTitle(item)}
+                                    {repo.displayName || repo.name}
                                   </h2>
                                   <Button
                                     size="sm"
                                     variant="ghost"
                                     className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => startEditingItemTitle(item.id, getItemTitle(item))}
+                                    onClick={() => startEditingRepoTitle(repo.id, repo.displayName || repo.name)}
                                   >
                                     <Edit2 className="h-4 w-4" />
                                   </Button>
@@ -1064,26 +998,24 @@ export default function PortfolioPreview() {
                             </div>
                          </div>
                          <div className="flex items-center gap-2 ml-2">
-                            {(item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') && item.metadata.stars > 0 && (
+                            {repo.metadata.stars > 0 && (
                               <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">
-                                ★ {item.metadata.stars}
+                                ★ {repo.metadata.stars}
                               </span>
                             )}
-                            {item.url && (
+                            <Button variant="outline" size="icon" asChild>
+                              <a
+                                href={repo.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Github className="h-4 w-4" />
+                              </a>
+                            </Button>
+                            {repo.metadata.url && (
                               <Button variant="outline" size="icon" asChild>
                                 <a
-                                  href={item.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  {item.source === 'github' ? <Github className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
-                                </a>
-                              </Button>
-                            )}
-                            {(item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') && item.metadata.url && (
-                              <Button variant="outline" size="icon" asChild>
-                                <a
-                                  href={item.metadata.url}
+                                  href={repo.metadata.url}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                 >
@@ -1095,55 +1027,53 @@ export default function PortfolioPreview() {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        {/* Item summary or description */}
-                        {getItemSummary(item) ? (
-                          <div className="relative group">
-                            {editingItem === item.id ? (
-                              <div className="space-y-3">
-                                <Textarea
-                                  value={tempItemSummary}
-                                  onChange={(e) => setTempItemSummary(e.target.value)}
-                                  className="min-h-[100px]"
-                                  placeholder="Enter summary..."
-                                />
-                                <div className="flex gap-2">
-                                  <Button size="sm" onClick={saveItemSummary}>
-                                    <Check className="h-4 w-4" />
-                                  </Button>
-                                  <Button size="sm" variant="outline" onClick={cancelEdit}>
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
+                        <div className="relative group">
+                          {editingRepo === repo.id ? (
+                            <div className="space-y-3">
+                              <Textarea
+                                value={tempRepoSummary}
+                                onChange={(e) => setTempRepoSummary(e.target.value)}
+                                className="min-h-[100px]"
+                                placeholder="Enter repository summary..."
+                              />
+                              <div className="flex gap-2">
+                                <Button size="sm" onClick={saveRepoSummary}>
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={cancelEdit}>
+                                  <X className="h-4 w-4" />
+                                </Button>
                               </div>
-                            ) : (
-                              <>
-                                <p className={cn("mb-4", theme.preview.text)}>
-                                  {getItemSummary(item)}
-                                </p>
-                                <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => startEditingItem(item.id, getItemSummary(item))}
-                                  >
-                                    <Edit2 className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => deleteItem(item.id)}
-                                    className="text-red-500 hover:text-red-700"
-                                    title="Remove from portfolio"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </>
-                            )}
-                            {/* Topics for repos */}
-                            {(item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') && item.metadata.topics.length > 0 && (
+                            </div>
+                          ) : (
+                            <>
+                              <p className={cn("mb-4", theme.preview.text)}>
+                                {repo.summary || repo.description}
+                              </p>
+                              <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => startEditingRepo(repo.id, repo.summary || repo.description || "")}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => deleteRepository(repo.id)}
+                                  className="text-red-500 hover:text-red-700"
+                                  title="Remove repository from portfolio"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </>
+                          )}
+                          {repo.metadata.topics &&
+                            repo.metadata.topics.length > 0 && (
                               <div className="flex flex-wrap gap-2">
-                                {item.metadata.topics.map((topic) => (
+                                {repo.metadata.topics.map((topic) => (
                                   <Badge
                                     key={topic}
                                     variant="outline"
@@ -1154,30 +1084,7 @@ export default function PortfolioPreview() {
                                 ))}
                               </div>
                             )}
-                            {/* Tags for other types */}
-                            {(item.source === 'blog_rss' || item.source === 'medium' || item.source === 'freeform') && item.tags && (
-                              <div className="flex flex-wrap gap-2">
-                                {item.tags.map((tag) => (
-                                  <Badge
-                                    key={tag}
-                                    variant="outline"
-                                    className="bg-stone-900 text-stone-50"
-                                  >
-                                    {tag}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="space-y-4">
-                            <Skeleton className="h-24" />
-                            <div className="flex gap-2">
-                              <Skeleton className="h-6 w-20" />
-                              <Skeleton className="h-6 w-20" />
-                            </div>
-                          </div>
-                        )}
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
@@ -1193,7 +1100,7 @@ export default function PortfolioPreview() {
           )}
 
           <DeploymentActions
-            repositories={selectedItems.filter(item => item.source === 'github') as Repository[]}
+            repositories={selectedRepos}
             userInfo={userInfo}
             introduction={userIntro}
             theme={theme}
