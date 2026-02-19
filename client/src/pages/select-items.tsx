@@ -214,8 +214,17 @@ export default function SelectItemsPage() {
                     return (
                       <div
                         key={itemId}
+                        role="checkbox"
+                        aria-checked={item.selected}
+                        tabIndex={0}
                         onClick={() => handleToggleSelection(itemId)}
-                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleToggleSelection(itemId);
+                          }
+                        }}
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                           item.selected
                             ? 'border-blue-500 bg-blue-50'
                             : 'border-gray-200 hover:border-gray-300 bg-white'
