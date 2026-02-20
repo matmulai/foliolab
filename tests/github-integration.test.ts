@@ -253,7 +253,10 @@ Content here.`;
 
     it('should validate OAuth state parameter', () => {
       // State should be a UUID-like string for security
-      const validState = crypto.randomUUID();
+      const validState = globalThis.crypto?.randomUUID?.() || 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      });
       const invalidState = '';
 
       expect(validState).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);

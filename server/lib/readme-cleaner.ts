@@ -14,47 +14,47 @@ export function removeBadges(readme: string): string {
   const badgePatterns = [
     // Shield.io badges - [![text](shield-url)](link-url)
     /\[\!\[([^\]]*)\]\([^)]*shields\.io[^)]*\)\]\([^)]*\)/g,
-    
+
     // PyPI badges
     /\[\!\[PyPI[^\]]*\]\([^)]*pypi\.org[^)]*\)\]\([^)]*\)/g,
-    
+
     // GitHub workflow/action badges
     /\[\!\[([^\]]*)\]\([^)]*github\.com[^)]*workflows[^)]*\)\]\([^)]*\)/g,
     /\[\!\[([^\]]*)\]\([^)]*github\.com[^)]*actions[^)]*\)\]\([^)]*\)/g,
-    
+
     // License badges
     /\[\!\[License[^\]]*\]\([^)]*badge[^)]*license[^)]*\)\]\([^)]*\)/g,
     /\[\!\[([^\]]*license[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-    
+
     // Version/Release badges
     /\[\!\[([^\]]*version[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
     /\[\!\[([^\]]*release[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
     /\[\!\[Changelog[^\]]*\]\([^)]*\)\]\([^)]*\)/g,
-    
+
     // Test/CI badges
     /\[\!\[([^\]]*test[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
     /\[\!\[([^\]]*build[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
     /\[\!\[([^\]]*ci[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-    
+
     // Coverage badges
     /\[\!\[([^\]]*coverage[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
     /\[\!\[([^\]]*codecov[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-    
+
     // Documentation badges
     /\[\!\[([^\]]*docs[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
     /\[\!\[([^\]]*documentation[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-    
+
     // Download/Install badges
     /\[\!\[([^\]]*download[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
     /\[\!\[([^\]]*install[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-    
+
     // Generic img.shields.io badges
     /\[\!\[([^\]]*)\]\([^)]*img\.shields\.io[^)]*\)\]\([^)]*\)/g,
-    
+
     // Standalone shield images without links
     /\!\[([^\]]*)\]\([^)]*shields\.io[^)]*\)/g,
     /\!\[([^\]]*)\]\([^)]*img\.shields\.io[^)]*\)/g,
-    
+
     // Common badge hosting services
     /\[\!\[([^\]]*)\]\([^)]*badge\.fury\.io[^)]*\)\]\([^)]*\)/g,
     /\[\!\[([^\]]*)\]\([^)]*badgen\.net[^)]*\)\]\([^)]*\)/g,

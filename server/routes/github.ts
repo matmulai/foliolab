@@ -2,13 +2,20 @@ import { Router } from 'express';
 import { getRepositories, getReadmeContent, getGithubUser, extractTitleFromReadme } from '../lib/github.js';
 import { generateRepoSummary } from '../lib/openai.js';
 import { cleanReadmeContent } from '../lib/readme-cleaner.js';
+import { createErrorResponse, ErrorCodes } from '../lib/error-responses.js';
 
 const router = Router();
 
 router.get('/api/repositories', async (req, res) => {
   const accessToken = req.headers.authorization?.replace('Bearer ', '');
   if (!accessToken) {
-    return res.status(401).json({ error: 'No access token provided' });
+    return res.status(401).json(
+      createErrorResponse(
+        'No access token provided',
+        'Authorization header is missing or invalid',
+        ErrorCodes.MISSING_TOKEN
+      )
+    );
   }
 
   try {
@@ -16,10 +23,13 @@ router.get('/api/repositories', async (req, res) => {
     res.json({ repositories: repos });
   } catch (error) {
     console.error('Failed to fetch repositories:', error);
-    res.status(500).json({
-      error: 'Failed to fetch repositories',
-      details: error instanceof Error ? error.message : String(error)
-    });
+    res.status(500).json(
+      createErrorResponse(
+        'Failed to fetch repositories',
+        error instanceof Error ? error.message : String(error),
+        ErrorCodes.GITHUB_API_ERROR
+      )
+    );
   }
 });
 
@@ -28,19 +38,25 @@ router.post('/api/fetch-repos', async (req, res) => {
   
   try {
     if (!code) {
-      return res.status(400).json({
-        error: 'Authorization code is required',
-        details: 'No authorization code provided in request body'
-      });
+      return res.status(400).json(
+        createErrorResponse(
+          'Authorization code is required',
+          'No authorization code provided in request body',
+          ErrorCodes.MISSING_REQUIRED_FIELD
+        )
+      );
     }
 
     // Validate environment variables
     if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
       console.error('Missing GitHub OAuth configuration');
-      return res.status(500).json({
-        error: 'Server configuration error',
-        details: 'GitHub OAuth credentials not properly configured'
-      });
+      return res.status(500).json(
+        createErrorResponse(
+          'Server configuration error',
+          'GitHub OAuth credentials not properly configured',
+          ErrorCodes.INTERNAL_ERROR
+        )
+      );
     }
 
     console.log('Exchanging authorization code for access token...');
@@ -143,8 +159,25 @@ router.post('/api/repositories/:id/analyze', async (req, res) => {
   const { accessToken, username } = req.body;
   const repoId = parseInt(id);
 
+  // Validate repository ID is a valid number
+  if (isNaN(repoId) || repoId <= 0) {
+    return res.status(400).json(
+      createErrorResponse(
+        'Invalid repository ID',
+        'Repository ID must be a valid positive number',
+        ErrorCodes.INVALID_INPUT
+      )
+    );
+  }
+
   if (!accessToken || !username) {
-    return res.status(400).json({ error: 'Access token and username are required' });
+    return res.status(400).json(
+      createErrorResponse(
+        'Access token and username are required',
+        'Missing required fields in request body',
+        ErrorCodes.MISSING_REQUIRED_FIELD
+      )
+    );
   }
 
   try {
@@ -152,10 +185,13 @@ router.post('/api/repositories/:id/analyze', async (req, res) => {
     const repo = repos.find(r => r.id === repoId);
 
     if (!repo) {
-      return res.status(404).json({
-        error: 'Repository not found',
-        details: `No repository found with ID ${repoId}`
-      });
+      return res.status(404).json(
+        createErrorResponse(
+          'Repository not found',
+          `No repository found with ID ${repoId}`,
+          ErrorCodes.REPO_NOT_FOUND
+        )
+      );
     }
 
     let readme = '';
@@ -172,10 +208,13 @@ router.post('/api/repositories/:id/analyze', async (req, res) => {
     const serverApiKey = process.env.OPENAI_API_KEY;
 
     if (!serverApiKey) {
-      return res.status(500).json({
-        error: 'OpenAI API key not configured',
-        details: 'OPENAI_API_KEY environment variable is required'
-      });
+      return res.status(500).json(
+        createErrorResponse(
+          'OpenAI API key not configured',
+          'OPENAI_API_KEY environment variable is required',
+          ErrorCodes.OPENAI_API_KEY_MISSING
+        )
+      );
     }
 
 
@@ -204,10 +243,13 @@ router.post('/api/repositories/:id/analyze', async (req, res) => {
     });
   } catch (error) {
     console.error('Failed to analyze repository:', error);
-    res.status(500).json({
-      error: 'Failed to analyze repository',
-      details: error instanceof Error ? error.message : String(error)
-    });
+    res.status(500).json(
+      createErrorResponse(
+        'Failed to analyze repository',
+        error instanceof Error ? error.message : String(error),
+        ErrorCodes.OPENAI_API_ERROR
+      )
+    );
   }
 });
 
