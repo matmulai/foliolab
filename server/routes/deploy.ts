@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages } from '../lib/github.js';
 import { generateUserIntroduction } from '../lib/openai.js';
 import { generatePortfolioHtml } from '../lib/portfolio-generator.js';
+import { safeJsonStringify } from '../lib/security.js';
 import { themes } from '../../shared/themes.js';
 
 const router = Router();
@@ -399,12 +400,12 @@ router.get('/api/deploy/vercel/callback', async (req, res) => {
         <body>
           <script>
             window.opener.postMessage(
-              {
+              ${safeJsonStringify({
                 type: 'vercel-oauth-success',
-                token: '${tokenData.access_token}',
-                teamId: '${teamId || ''}',
-                configurationId: '${configurationId}'
-              },
+                token: tokenData.access_token,
+                teamId: teamId || '',
+                configurationId: configurationId
+              })},
               window.location.origin
             );
             window.close();
@@ -421,7 +422,10 @@ router.get('/api/deploy/vercel/callback', async (req, res) => {
         <body>
           <script>
             window.opener.postMessage(
-              { type: 'vercel-oauth-error', error: '${error instanceof Error ? error.message : 'Unknown error'}' },
+              ${safeJsonStringify({
+                type: 'vercel-oauth-error',
+                error: error instanceof Error ? error.message : 'Unknown error'
+              })},
               window.location.origin
             );
             window.close();
