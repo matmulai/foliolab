@@ -354,8 +354,22 @@ function analyzeGoMod(content: string): PackageInfo {
   };
 }
 
-function detectFrameworks(structure: ProjectStructure): FrameworkInfo[] {
+export function detectFrameworks(structure: ProjectStructure): FrameworkInfo[] {
   const frameworks: FrameworkInfo[] = [];
+
+  const rootFilesSet = new Set(structure.rootFiles);
+  const directoriesSet = new Set(structure.directories);
+
+  // Flatten dependencies for faster lookup
+  const allDependencies = new Set<string>();
+  for (const pkg of structure.packageFiles) {
+    if (pkg.dependencies) {
+      for (const dep of pkg.dependencies) {
+        allDependencies.add(dep);
+      }
+    }
+  }
+  const uniqueDependencies = Array.from(allDependencies);
 
   for (const [frameworkName, patterns] of Object.entries(FRAMEWORK_PATTERNS)) {
     let confidence = 0;
@@ -364,7 +378,7 @@ function detectFrameworks(structure: ProjectStructure): FrameworkInfo[] {
     // Check for required files
     if (patterns.files) {
       for (const file of patterns.files) {
-        if (structure.rootFiles.includes(file)) {
+        if (rootFilesSet.has(file)) {
           confidence += 30;
           indicators.push(`Has ${file}`);
         }
@@ -373,14 +387,12 @@ function detectFrameworks(structure: ProjectStructure): FrameworkInfo[] {
 
     // Check for dependencies
     if (patterns.dependencies) {
-      for (const packageFile of structure.packageFiles) {
-        if (packageFile.dependencies) {
-          for (const dep of patterns.dependencies) {
-            if (packageFile.dependencies.some(d => d.includes(dep))) {
-              confidence += 40;
-              indicators.push(`Uses ${dep}`);
-            }
-          }
+      for (const dep of patterns.dependencies) {
+        // Check if ANY installed dependency includes the target framework dependency
+        // We preserve the original substring matching logic
+        if (uniqueDependencies.some(d => d.includes(dep))) {
+          confidence += 40;
+          indicators.push(`Uses ${dep}`);
         }
       }
     }
@@ -388,7 +400,7 @@ function detectFrameworks(structure: ProjectStructure): FrameworkInfo[] {
     // Check for config files
     if (patterns.configs) {
       for (const config of patterns.configs) {
-        if (structure.rootFiles.includes(config)) {
+        if (rootFilesSet.has(config)) {
           confidence += 20;
           indicators.push(`Has ${config}`);
         }
@@ -401,13 +413,13 @@ function detectFrameworks(structure: ProjectStructure): FrameworkInfo[] {
         if (pattern.endsWith('/')) {
           // Directory pattern
           const dirName = pattern.slice(0, -1);
-          if (structure.directories.includes(dirName)) {
+          if (directoriesSet.has(dirName)) {
             confidence += 15;
             indicators.push(`Has ${dirName}/ directory`);
           }
         } else {
           // File pattern
-          if (structure.rootFiles.includes(pattern)) {
+          if (rootFilesSet.has(pattern)) {
             confidence += 25;
             indicators.push(`Has ${pattern}`);
           }
