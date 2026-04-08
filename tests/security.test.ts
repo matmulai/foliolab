@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { safeJsonStringify } from '../server/lib/security';
+import { safeJsonStringify, redactSensitiveData } from '../server/lib/security';
 
 describe('safeJsonStringify', () => {
   it('should stringify simple objects correctly', () => {
@@ -56,5 +56,73 @@ describe('safeJsonStringify', () => {
     const result = safeJsonStringify(complex);
     expect(result).toContain('\\u003cscript\\u003e');
     expect(JSON.parse(result)).toEqual(complex);
+  });
+});
+
+describe('redactSensitiveData', () => {
+  it('should not modify null or undefined', () => {
+    expect(redactSensitiveData(null)).toBeNull();
+    expect(redactSensitiveData(undefined)).toBeUndefined();
+  });
+
+  it('should not modify primitive types', () => {
+    expect(redactSensitiveData('string')).toBe('string');
+    expect(redactSensitiveData(123)).toBe(123);
+    expect(redactSensitiveData(true)).toBe(true);
+  });
+
+  it('should preserve Date objects', () => {
+    const d = new Date();
+    expect(redactSensitiveData(d)).toBe(d);
+  });
+
+  it('should redact sensitive keys in flat objects', () => {
+    const input = {
+      username: 'jules',
+      accessToken: 'secret_token_123',
+      email: 'jules@example.com',
+      publicInfo: 'hello'
+    };
+    const expected = {
+      username: 'jules',
+      accessToken: '[REDACTED]',
+      email: '[REDACTED]',
+      publicInfo: 'hello'
+    };
+    expect(redactSensitiveData(input)).toEqual(expected);
+  });
+
+  it('should redact sensitive keys in nested objects', () => {
+    const input = {
+      user: {
+        name: 'jules',
+        password: 'supersecretpassword',
+        profile: {
+          apiKey: 'api_key_123'
+        }
+      }
+    };
+    const expected = {
+      user: {
+        name: 'jules',
+        password: '[REDACTED]',
+        profile: {
+          apiKey: '[REDACTED]'
+        }
+      }
+    };
+    expect(redactSensitiveData(input)).toEqual(expected);
+  });
+
+  it('should redact sensitive keys in arrays', () => {
+    const input = [
+      { id: 1, token: 'token1' },
+      { id: 2, authorization: 'token2' }
+    ];
+    const expected = [
+      { id: 1, token: '[REDACTED]' },
+      { id: 2, authorization: '[REDACTED]' }
+    ];
+    expect(redactSensitiveData(input)).toEqual(expected);
   });
 });
