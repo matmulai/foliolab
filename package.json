@@ -47,7 +47,7 @@
     "@tanstack/query-sync-storage-persister": "^5.66.3",
     "@tanstack/react-query": "^5.60.5",
     "@tanstack/react-query-persist-client": "^5.66.3",
-    "axios": "^1.13.2",
+    "axios": "^1.15.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
