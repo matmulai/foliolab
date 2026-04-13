@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import express, { type Request, Response, NextFunction, Router, type Express } from "express";
 import { createServer } from "http";
 import githubRoutes from "./routes/github.js";
@@ -49,7 +50,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use((req, res, next) => {
   // Use existing request ID from header or generate new one
   const requestId = req.headers['x-request-id'] as string ||
-                    `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    `req_${Date.now()}_${crypto.randomUUID()}`;
 
   // Store on request and response
   (req as any).id = requestId;
