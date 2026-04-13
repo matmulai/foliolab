@@ -482,6 +482,7 @@ export default function PortfolioPreview() {
                           variant="ghost"
                           className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => startEditingRepoTitle(repo.id, repo.displayName || repo.name)}
+                          aria-label="Edit repository title"
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
@@ -495,7 +496,7 @@ export default function PortfolioPreview() {
                       ★ {repo.metadata.stars}
                     </span>
                   )}
-                  <Button variant="outline" size="icon" asChild>
+                  <Button variant="outline" size="icon" asChild aria-label="View repository on GitHub">
                     <a
                       href={repo.url}
                       target="_blank"
@@ -505,7 +506,7 @@ export default function PortfolioPreview() {
                     </a>
                   </Button>
                   {repo.metadata.url && (
-                    <Button variant="outline" size="icon" asChild>
+                    <Button variant="outline" size="icon" asChild aria-label="View repository website">
                       <a
                         href={repo.metadata.url}
                         target="_blank"
@@ -548,6 +549,7 @@ export default function PortfolioPreview() {
                           size="sm"
                           variant="ghost"
                           onClick={() => startEditingRepo(repo.id, repo.summary || "")}
+                          aria-label="Edit repository summary"
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
@@ -557,6 +559,7 @@ export default function PortfolioPreview() {
                           onClick={() => deleteRepository(repo.id)}
                           className="text-red-500 hover:text-red-700"
                           title="Remove repository from portfolio"
+                          aria-label="Remove repository from portfolio"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -695,6 +698,7 @@ export default function PortfolioPreview() {
                     variant="ghost"
                     className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={startEditingTitle}
+                    aria-label="Edit portfolio title"
                   >
                     <Edit2 className="h-4 w-4" />
                   </Button>
@@ -740,6 +744,7 @@ export default function PortfolioPreview() {
                     variant="ghost"
                     className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={startEditingIntro}
+                    aria-label="Edit introduction"
                   >
                     <Edit2 className="h-4 w-4" />
                   </Button>
@@ -816,6 +821,7 @@ export default function PortfolioPreview() {
                     variant="ghost"
                     className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={startEditingSkills}
+                    aria-label="Edit skills"
                   >
                     <Edit2 className="h-4 w-4" />
                   </Button>
@@ -875,6 +881,7 @@ export default function PortfolioPreview() {
                     variant="ghost"
                     className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={startEditingInterests}
+                    aria-label="Edit interests"
                   >
                     <Edit2 className="h-4 w-4" />
                   </Button>
@@ -990,6 +997,7 @@ export default function PortfolioPreview() {
                                     variant="ghost"
                                     className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
                                     onClick={() => startEditingRepoTitle(repo.id, repo.displayName || repo.name)}
+                                    aria-label="Edit repository title"
                                   >
                                     <Edit2 className="h-4 w-4" />
                                   </Button>
@@ -1003,7 +1011,7 @@ export default function PortfolioPreview() {
                                 ★ {repo.metadata.stars}
                               </span>
                             )}
-                            <Button variant="outline" size="icon" asChild>
+                            <Button variant="outline" size="icon" asChild aria-label="View repository on GitHub">
                               <a
                                 href={repo.url}
                                 target="_blank"
@@ -1013,7 +1021,7 @@ export default function PortfolioPreview() {
                               </a>
                             </Button>
                             {repo.metadata.url && (
-                              <Button variant="outline" size="icon" asChild>
+                              <Button variant="outline" size="icon" asChild aria-label="View repository website">
                                 <a
                                   href={repo.metadata.url}
                                   target="_blank"
@@ -1055,6 +1063,7 @@ export default function PortfolioPreview() {
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => startEditingRepo(repo.id, repo.summary || repo.description || "")}
+                                  aria-label="Edit repository summary"
                                 >
                                   <Edit2 className="h-4 w-4" />
                                 </Button>
@@ -1064,6 +1073,7 @@ export default function PortfolioPreview() {
                                   onClick={() => deleteRepository(repo.id)}
                                   className="text-red-500 hover:text-red-700"
                                   title="Remove repository from portfolio"
+                                  aria-label="Remove repository from portfolio"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
