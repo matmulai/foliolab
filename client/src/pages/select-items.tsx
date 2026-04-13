@@ -1,8 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { PortfolioItem, SourceType } from '@shared/schema';
 import { getPortfolioItems, togglePortfolioItemSelection, savePortfolioItems } from '../lib/storage';
 import { clearWizardState } from '../lib/wizard-state';
+
+const sourceLabels: Record<SourceType, { label: string; icon: string; color: string }> = {
+  github: { label: 'GitHub', icon: '🐙', color: 'bg-gray-100 text-gray-800' },
+  blog_rss: { label: 'Blog Posts', icon: '📰', color: 'bg-orange-100 text-orange-800' },
+  medium: { label: 'Medium', icon: '📝', color: 'bg-green-100 text-green-800' },
+  gitlab: { label: 'GitLab', icon: '🦊', color: 'bg-purple-100 text-purple-800' },
+  bitbucket: { label: 'Bitbucket', icon: '🪣', color: 'bg-blue-100 text-blue-800' },
+  linkedin: { label: 'LinkedIn', icon: '🔗', color: 'bg-cyan-100 text-cyan-800' },
+  freeform: { label: 'Custom', icon: '✍️', color: 'bg-pink-100 text-pink-800' }
+};
 
 export default function SelectItemsPage() {
   const [, setLocation] = useLocation();
@@ -48,33 +58,31 @@ export default function SelectItemsPage() {
     setLocation('/preview');
   };
 
-  const filteredItems = filter === 'all'
+  const filteredItems = useMemo(() => filter === 'all'
     ? items
-    : items.filter(item => item.source === filter);
+    : items.filter(item => item.source === filter), [items, filter]);
 
-  const groupedItems = filteredItems.reduce((acc, item) => {
+  const groupedItems = useMemo(() => filteredItems.reduce((acc, item) => {
     const source = item.source;
     if (!acc[source]) {
       acc[source] = [];
     }
     acc[source].push(item);
     return acc;
-  }, {} as Record<string, PortfolioItem[]>);
+  }, {} as Record<string, PortfolioItem[]>), [filteredItems]);
 
   const selectedCount = items.filter(item => item.selected).length;
   const totalCount = items.length;
 
-  const sourceLabels: Record<SourceType, { label: string; icon: string; color: string }> = {
-    github: { label: 'GitHub', icon: '🐙', color: 'bg-gray-100 text-gray-800' },
-    blog_rss: { label: 'Blog Posts', icon: '📰', color: 'bg-orange-100 text-orange-800' },
-    medium: { label: 'Medium', icon: '📝', color: 'bg-green-100 text-green-800' },
-    gitlab: { label: 'GitLab', icon: '🦊', color: 'bg-purple-100 text-purple-800' },
-    bitbucket: { label: 'Bitbucket', icon: '🪣', color: 'bg-blue-100 text-blue-800' },
-    linkedin: { label: 'LinkedIn', icon: '🔗', color: 'bg-cyan-100 text-cyan-800' },
-    freeform: { label: 'Custom', icon: '✍️', color: 'bg-pink-100 text-pink-800' }
-  };
+  const uniqueSources = useMemo(() => Array.from(new Set(items.map(item => item.source))), [items]);
 
-  const uniqueSources = Array.from(new Set(items.map(item => item.source)));
+  const sourceCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    items.forEach(item => {
+        counts[item.source] = (counts[item.source] || 0) + 1;
+    });
+    return counts;
+  }, [items]);
 
   if (totalCount === 0) {
     return (
@@ -175,7 +183,7 @@ export default function SelectItemsPage() {
             All ({totalCount})
           </button>
           {uniqueSources.map(source => {
-            const count = items.filter(item => item.source === source).length;
+            const count = sourceCounts[source] || 0;
             const sourceInfo = sourceLabels[source];
             return (
               <button
