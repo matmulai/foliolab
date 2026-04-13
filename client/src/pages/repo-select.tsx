@@ -471,6 +471,7 @@ export default function RepoSelect() {
                             onClick={() => repo.id && toggleRepo({ id: repo.id, selected: false })}
                             className="ml-2 h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                             title="Remove from selection"
+                            aria-label={`Remove ${repo.displayName || repo.name} from selection`}
                           >
                             ×
                           </Button>
