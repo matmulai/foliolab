@@ -2,6 +2,116 @@
  * Utility functions for cleaning README content before LLM processing
  */
 
+// ⚡ Bolt Optimization: Extracted RegExps to module level to avoid redundant compilation overhead on every execution
+const badgePatterns = [
+  // Shield.io badges - [![text](shield-url)](link-url)
+  /\[\!\[([^\]]*)\]\([^)]*shields\.io[^)]*\)\]\([^)]*\)/g,
+
+  // PyPI badges
+  /\[\!\[PyPI[^\]]*\]\([^)]*pypi\.org[^)]*\)\]\([^)]*\)/g,
+
+  // GitHub workflow/action badges
+  /\[\!\[([^\]]*)\]\([^)]*github\.com[^)]*workflows[^)]*\)\]\([^)]*\)/g,
+  /\[\!\[([^\]]*)\]\([^)]*github\.com[^)]*actions[^)]*\)\]\([^)]*\)/g,
+
+  // License badges
+  /\[\!\[License[^\]]*\]\([^)]*badge[^)]*license[^)]*\)\]\([^)]*\)/g,
+  /\[\!\[([^\]]*license[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+
+  // Version/Release badges
+  /\[\!\[([^\]]*version[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[\!\[([^\]]*release[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[\!\[Changelog[^\]]*\]\([^)]*\)\]\([^)]*\)/g,
+
+  // Test/CI badges
+  /\[\!\[([^\]]*test[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[\!\[([^\]]*build[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[\!\[([^\]]*ci[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+
+  // Coverage badges
+  /\[\!\[([^\]]*coverage[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[\!\[([^\]]*codecov[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+
+  // Documentation badges
+  /\[\!\[([^\]]*docs[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[\!\[([^\]]*documentation[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+
+  // Download/Install badges
+  /\[\!\[([^\]]*download[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[\!\[([^\]]*install[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+
+  // Generic img.shields.io badges
+  /\[\!\[([^\]]*)\]\([^)]*img\.shields\.io[^)]*\)\]\([^)]*\)/g,
+
+  // Standalone shield images without links
+  /\!\[([^\]]*)\]\([^)]*shields\.io[^)]*\)/g,
+  /\!\[([^\]]*)\]\([^)]*img\.shields\.io[^)]*\)/g,
+
+  // Common badge hosting services
+  /\[\!\[([^\]]*)\]\([^)]*badge\.fury\.io[^)]*\)\]\([^)]*\)/g,
+  /\[\!\[([^\]]*)\]\([^)]*badgen\.net[^)]*\)\]\([^)]*\)/g,
+  /\[\!\[([^\]]*)\]\([^)]*flat\.badgen\.net[^)]*\)\]\([^)]*\)/g,
+];
+
+const sectionsToRemove = [
+  // License sections
+  /^#+\s*(License|Licensing)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+
+  // Code of Conduct sections
+  /^#+\s*(Code of Conduct|Contributor Code of Conduct|Contributing Guidelines)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+
+  // Security sections (often boilerplate)
+  /^#+\s*(Security|Security Policy|Reporting Security Issues)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+
+  // Changelog sections (version history not relevant for portfolio)
+  /^#+\s*(Changelog|Change Log|Release Notes|Version History)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+
+  // Support/Help sections
+  /^#+\s*(Support|Getting Help|Help|Community)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+
+  // Acknowledgments/Credits (unless very brief)
+  /^#+\s*(Acknowledgments?|Credits?|Thanks?)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+
+  // Detailed contributing sections
+  /^#+\s*(Contributing|How to Contribute|Contribution Guidelines)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+
+  // FAQ sections (often too detailed for portfolio)
+  /^#+\s*(FAQ|Frequently Asked Questions)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+
+  // Detailed troubleshooting sections
+  /^#+\s*(Troubleshooting|Common Issues|Known Issues)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+
+  // Table of contents (not needed for LLM)
+  /^#+\s*(Table of Contents?|Contents?|TOC)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+];
+
+const prioritySections = [
+  /^#+\s*(Description|About|Overview|What is|Introduction|Summary)/i,
+  /^#+\s*(Features|Key Features|Highlights|What it does)/i,
+  /^#+\s*(Quick Start|Getting Started|Quickstart)/i,
+  /^#+\s*(Installation|Setup|Install)/i,
+  /^#+\s*(Usage|How to use|Examples?|Demo)/i,
+  /^#+\s*(API|Documentation|Docs)/i,
+  /^#+\s*(Architecture|Design|How it works)/i,
+  /^#+\s*(Requirements|Prerequisites|Dependencies)/i,
+  /^#+\s*(Configuration|Config|Settings)/i,
+];
+
+const noisePatterns = [
+  // Remove standalone horizontal rules
+  /^---+$/gm,
+  /^===+$/gm,
+
+  // Remove empty badge sections
+  /^\s*\[!\[.*?\]\(.*?\)\]\(.*?\)\s*$/gm,
+
+  // Remove excessive code block markers without content
+  /```\s*\n\s*```/g,
+
+  // Remove table of contents links
+  /^\s*[-*]\s*\[.*?\]\(#.*?\)\s*$/gm,
+];
+
 /**
  * Removes common badges and shields from README content
  * @param readme - Raw README content
@@ -9,57 +119,6 @@
  */
 export function removeBadges(readme: string): string {
   if (!readme) return readme;
-
-  // Common badge patterns to remove
-  const badgePatterns = [
-    // Shield.io badges - [![text](shield-url)](link-url)
-    /\[\!\[([^\]]*)\]\([^)]*shields\.io[^)]*\)\]\([^)]*\)/g,
-
-    // PyPI badges
-    /\[\!\[PyPI[^\]]*\]\([^)]*pypi\.org[^)]*\)\]\([^)]*\)/g,
-
-    // GitHub workflow/action badges
-    /\[\!\[([^\]]*)\]\([^)]*github\.com[^)]*workflows[^)]*\)\]\([^)]*\)/g,
-    /\[\!\[([^\]]*)\]\([^)]*github\.com[^)]*actions[^)]*\)\]\([^)]*\)/g,
-
-    // License badges
-    /\[\!\[License[^\]]*\]\([^)]*badge[^)]*license[^)]*\)\]\([^)]*\)/g,
-    /\[\!\[([^\]]*license[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-
-    // Version/Release badges
-    /\[\!\[([^\]]*version[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-    /\[\!\[([^\]]*release[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-    /\[\!\[Changelog[^\]]*\]\([^)]*\)\]\([^)]*\)/g,
-
-    // Test/CI badges
-    /\[\!\[([^\]]*test[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-    /\[\!\[([^\]]*build[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-    /\[\!\[([^\]]*ci[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-
-    // Coverage badges
-    /\[\!\[([^\]]*coverage[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-    /\[\!\[([^\]]*codecov[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-
-    // Documentation badges
-    /\[\!\[([^\]]*docs[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-    /\[\!\[([^\]]*documentation[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-
-    // Download/Install badges
-    /\[\!\[([^\]]*download[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-    /\[\!\[([^\]]*install[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-
-    // Generic img.shields.io badges
-    /\[\!\[([^\]]*)\]\([^)]*img\.shields\.io[^)]*\)\]\([^)]*\)/g,
-
-    // Standalone shield images without links
-    /\!\[([^\]]*)\]\([^)]*shields\.io[^)]*\)/g,
-    /\!\[([^\]]*)\]\([^)]*img\.shields\.io[^)]*\)/g,
-
-    // Common badge hosting services
-    /\[\!\[([^\]]*)\]\([^)]*badge\.fury\.io[^)]*\)\]\([^)]*\)/g,
-    /\[\!\[([^\]]*)\]\([^)]*badgen\.net[^)]*\)\]\([^)]*\)/g,
-    /\[\!\[([^\]]*)\]\([^)]*flat\.badgen\.net[^)]*\)\]\([^)]*\)/g,
-  ];
 
   let cleanedReadme = readme;
 
@@ -98,38 +157,6 @@ export function cleanReadmeContent(readme: string | null | undefined): string {
  * Removes common boilerplate sections that don't add project context
  */
 function removeBoilerplateSections(content: string): string {
-  const sectionsToRemove = [
-    // License sections
-    /^#+\s*(License|Licensing)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
-    
-    // Code of Conduct sections
-    /^#+\s*(Code of Conduct|Contributor Code of Conduct|Contributing Guidelines)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
-    
-    // Security sections (often boilerplate)
-    /^#+\s*(Security|Security Policy|Reporting Security Issues)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
-    
-    // Changelog sections (version history not relevant for portfolio)
-    /^#+\s*(Changelog|Change Log|Release Notes|Version History)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
-    
-    // Support/Help sections
-    /^#+\s*(Support|Getting Help|Help|Community)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
-    
-    // Acknowledgments/Credits (unless very brief)
-    /^#+\s*(Acknowledgments?|Credits?|Thanks?)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
-    
-    // Detailed contributing sections
-    /^#+\s*(Contributing|How to Contribute|Contribution Guidelines)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
-    
-    // FAQ sections (often too detailed for portfolio)
-    /^#+\s*(FAQ|Frequently Asked Questions)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
-    
-    // Detailed troubleshooting sections
-    /^#+\s*(Troubleshooting|Common Issues|Known Issues)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
-    
-    // Table of contents (not needed for LLM)
-    /^#+\s*(Table of Contents?|Contents?|TOC)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
-  ];
-
   let cleaned = content;
   sectionsToRemove.forEach(pattern => {
     cleaned = cleaned.replace(pattern, '');
@@ -150,19 +177,6 @@ function extractRelevantSections(content: string): string {
   if (sections[0]) {
     relevantSections.push(sections[0]);
   }
-
-  // Priority sections that provide project context
-  const prioritySections = [
-    /^#+\s*(Description|About|Overview|What is|Introduction|Summary)/i,
-    /^#+\s*(Features|Key Features|Highlights|What it does)/i,
-    /^#+\s*(Quick Start|Getting Started|Quickstart)/i,
-    /^#+\s*(Installation|Setup|Install)/i,
-    /^#+\s*(Usage|How to use|Examples?|Demo)/i,
-    /^#+\s*(API|Documentation|Docs)/i,
-    /^#+\s*(Architecture|Design|How it works)/i,
-    /^#+\s*(Requirements|Prerequisites|Dependencies)/i,
-    /^#+\s*(Configuration|Config|Settings)/i,
-  ];
 
   // Add sections that match priority patterns
   sections.slice(1).forEach(section => {
@@ -233,22 +247,6 @@ function limitSectionLength(section: string, maxLength: number): string {
  */
 function cleanupWhitespace(content: string): string {
   let cleaned = content;
-  
-  // Remove common noise patterns
-  const noisePatterns = [
-    // Remove standalone horizontal rules
-    /^---+$/gm,
-    /^===+$/gm,
-    
-    // Remove empty badge sections
-    /^\s*\[!\[.*?\]\(.*?\)\]\(.*?\)\s*$/gm,
-    
-    // Remove excessive code block markers without content
-    /```\s*\n\s*```/g,
-    
-    // Remove table of contents links
-    /^\s*[-*]\s*\[.*?\]\(#.*?\)\s*$/gm,
-  ];
 
   noisePatterns.forEach(pattern => {
     cleaned = cleaned.replace(pattern, '');
