@@ -14,6 +14,40 @@ const sourceLabels: Record<SourceType, { label: string; icon: string; color: str
   freeform: { label: 'Custom', icon: '✍️', color: 'bg-pink-100 text-pink-800' }
 };
 
+// Helper functions to safely access properties across different item types
+const getItemTitle = (item: PortfolioItem): string => {
+  if (item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') {
+    return (item as any).displayName || (item as any).name;
+  }
+  if ('title' in item) {
+    return item.title || 'Untitled';
+  }
+  return 'Untitled';
+};
+
+const getItemDescription = (item: PortfolioItem): string | null => {
+  if ('description' in item && item.description !== null) {
+    return item.description;
+  }
+  if (item.source === 'linkedin' && 'content' in item) {
+    return item.content || null;
+  }
+  if (item.source === 'freeform' && 'content' in item) {
+    return (item as any).description || item.content;
+  }
+  return null;
+};
+
+const getItemTags = (item: PortfolioItem): string[] => {
+  if ('tags' in item && Array.isArray(item.tags)) {
+    return item.tags;
+  }
+  if ((item.source === 'github' || item.source === 'gitlab') && 'metadata' in item) {
+    return (item as any).metadata?.topics || [];
+  }
+  return [];
+};
+
 export default function SelectItemsPage() {
   const [, setLocation] = useLocation();
   const [items, setItems] = useState<PortfolioItem[]>([]);
@@ -214,14 +248,17 @@ export default function SelectItemsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  {sourceItems.map(item => {
+                  {sourceItems.map((item, itemIndex) => {
                     const itemId = item.source === 'github' || item.source === 'gitlab'
                       ? (item as any).id
                       : item.id;
 
+                    // Use composite key to ensure uniqueness
+                    const itemKey = `${item.source}-${itemId}`;
+
                     return (
                       <div
-                        key={itemId}
+                        key={itemKey}
                         role="checkbox"
                         aria-checked={item.selected}
                         tabIndex={0}
@@ -254,9 +291,9 @@ export default function SelectItemsPage() {
 
                           {/* Content */}
                           <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900 mb-1">{(item as any).title || (item as any).name || 'Untitled'}</h3>
-                            {((item as any).description || (item as any).content) && (
-                              <p className="text-sm text-gray-600 line-clamp-2">{(item as any).description || (item as any).content}</p>
+                            <h3 className="font-semibold text-gray-900 mb-1">{getItemTitle(item)}</h3>
+                            {getItemDescription(item) && (
+                              <p className="text-sm text-gray-600 line-clamp-2">{getItemDescription(item)}</p>
                             )}
 
                             {/* Meta Info */}
@@ -264,16 +301,16 @@ export default function SelectItemsPage() {
                               <span className={`text-xs px-2 py-1 rounded ${sourceInfo.color}`}>
                                 {sourceInfo.label}
                               </span>
-                              {(item as any).tags && (item as any).tags.length > 0 && (
+                              {getItemTags(item).length > 0 && (
                                 <>
-                                  {(item as any).tags.slice(0, 3).map((tag: string) => (
+                                  {getItemTags(item).slice(0, 3).map(tag => (
                                     <span key={tag} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
                                       {tag}
                                     </span>
                                   ))}
-                                  {(item as any).tags.length > 3 && (
+                                  {getItemTags(item).length > 3 && (
                                     <span className="text-xs text-gray-500 px-2 py-1">
-                                      +{(item as any).tags.length - 3} more
+                                      +{getItemTags(item).length - 3} more
                                     </span>
                                   )}
                                 </>

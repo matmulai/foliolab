@@ -449,6 +449,7 @@ export async function getReadmeContent(
   const octokit = typeof clientOrToken === 'string'
     ? new Octokit({ auth: clientOrToken })
     : clientOrToken;
+
   try {
     const { data } = await octokit.repos.getReadme({
       owner,
