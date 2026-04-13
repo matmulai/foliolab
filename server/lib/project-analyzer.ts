@@ -129,11 +129,18 @@ const FRAMEWORK_PATTERNS: Record<string, FrameworkPattern> = {
   }
 };
 
-const ENTRY_POINT_PATTERNS = [
-  'main.js', 'main.ts', 'index.js', 'index.ts', 'app.js', 'app.ts',
-  'server.js', 'server.ts', 'main.py', 'app.py', 'main.go',
-  'main.rs', 'lib.rs', 'Main.java', 'Application.java'
-];
+const ENTRY_POINT_REGEX = /main\.js|main\.ts|index\.js|index\.ts|app\.js|app\.ts|server\.js|server\.ts|main\.py|app\.py|main\.go|main\.rs|lib\.rs|main\.java|application\.java/i;
+
+const CONFIG_REGEX = /webpack\.config|vite\.config|rollup\.config|babel\.config|eslint|prettier|tsconfig|jest\.config|cypress\.config|docker|nginx\.conf|apache\.conf|\.env|config\.yml|config\.yaml/;
+
+const PACKAGE_FILES = new Set([
+  'package.json', 'requirements.txt', 'cargo.toml', 'go.mod', 'go.sum',
+  'pom.xml', 'build.gradle', 'gemfile', 'composer.json', 'pubspec.yaml'
+]);
+
+const SOURCE_EXT_REGEX = /\.(?:js|ts|jsx|tsx|py|java|go|rs|rb|php|cpp|c|cs|swift|kt|dart|vue|svelte)$/;
+
+const MAJOR_TECH_REGEX = /react|vue|angular|express|django|flask|spring|rails|laravel|mongodb|postgresql|mysql|redis|docker|kubernetes|aws|azure|gcp|firebase|graphql|apollo|prisma|typeorm|sequelize/i;
 
 export async function analyzeProjectStructure(
   accessToken: string,
@@ -470,28 +477,15 @@ function extractTechStack(structure: ProjectStructure): string[] {
 }
 
 function isPackageFile(fileName: string): boolean {
-  const packageFiles = [
-    'package.json', 'requirements.txt', 'cargo.toml', 'go.mod', 'go.sum',
-    'pom.xml', 'build.gradle', 'gemfile', 'composer.json', 'pubspec.yaml'
-  ];
-  return packageFiles.includes(fileName);
+  return PACKAGE_FILES.has(fileName);
 }
 
 function isConfigFile(fileName: string): boolean {
-  const configPatterns = [
-    'webpack.config', 'vite.config', 'rollup.config', 'babel.config',
-    'eslint', 'prettier', 'tsconfig', 'jest.config', 'cypress.config',
-    'docker', 'nginx.conf', 'apache.conf', '.env', 'config.yml', 'config.yaml'
-  ];
-  return configPatterns.some(pattern => fileName.includes(pattern));
+  return CONFIG_REGEX.test(fileName);
 }
 
 function isSourceFile(fileName: string): boolean {
-  const sourceExtensions = [
-    '.js', '.ts', '.jsx', '.tsx', '.py', '.java', '.go', '.rs', '.rb',
-    '.php', '.cpp', '.c', '.cs', '.swift', '.kt', '.dart', '.vue', '.svelte'
-  ];
-  return sourceExtensions.some(ext => fileName.endsWith(ext));
+  return SOURCE_EXT_REGEX.test(fileName);
 }
 
 function getConfigType(fileName: string): 'config' | 'build' | 'deployment' | 'testing' | 'linting' {
@@ -548,9 +542,7 @@ function getLanguageFromExtension(extension: string): string {
 }
 
 function isEntryPoint(fileName: string): boolean {
-  return ENTRY_POINT_PATTERNS.some(pattern => 
-    fileName.toLowerCase().includes(pattern.toLowerCase())
-  );
+  return ENTRY_POINT_REGEX.test(fileName);
 }
 
 function getMostCommonLanguage(languages: string[]): string | null {
@@ -566,13 +558,7 @@ function getMostCommonLanguage(languages: string[]): string | null {
 }
 
 function isMajorTechnology(dependency: string): boolean {
-  const majorTechs = [
-    'react', 'vue', 'angular', 'express', 'django', 'flask', 'spring',
-    'rails', 'laravel', 'mongodb', 'postgresql', 'mysql', 'redis',
-    'docker', 'kubernetes', 'aws', 'azure', 'gcp', 'firebase',
-    'graphql', 'apollo', 'prisma', 'typeorm', 'sequelize'
-  ];
-  return majorTechs.some(tech => dependency.toLowerCase().includes(tech));
+  return MAJOR_TECH_REGEX.test(dependency);
 }
 
 export function generateProjectSummary(structure: ProjectStructure): string {
