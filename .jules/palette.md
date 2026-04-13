@@ -1,3 +1,0 @@
-## 2024-04-13 - Added ARIA labels to icon-only buttons
-**Learning:** Icon-only buttons using Lucide react components like `<Edit2>` and `<Trash2>` within Radix UI's `<Button>` components in `portfolio-preview.tsx` lacked accessible labels. When using Radix UI's `asChild` pattern with nested elements like `<a>` tags for GitHub links, `aria-label` attributes must be placed on the parent `<Button asChild>` element so they are correctly delegated to the underlying element.
-**Action:** Always verify that every icon-only button, especially dynamically generated ones in maps/loops, has a descriptive `aria-label`. Apply `aria-label` to the parent component when using `asChild`.

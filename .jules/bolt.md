@@ -1,3 +1,0 @@
-## 2024-10-24 - Module-Level Extraction over Repeated In-Function Allocation
-**Learning:** In heavily used analyzer functions like `isSourceFile` or `isConfigFile` inside `server/lib/project-analyzer.ts`, instantiating new arrays (e.g. `const sourceExtensions = ['.js', '.ts', ...]`) and calling `Array.prototype.some()` on every invocation causes massive unnecessary garbage collection overhead and slower lookup times compared to module-level Sets or regular expressions.
-**Action:** When a function repeatedly matches static strings or file extensions against a known list, extract the list into a module-level constant (using `Set` for exact matches or `RegExp` for substring/suffix matches).
