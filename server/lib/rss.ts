@@ -1,7 +1,40 @@
 import Parser from 'rss-parser';
 import { BlogPost } from '../../shared/schema';
+import dns from 'dns';
+import net from 'net';
+
+// Check for private / local IP addresses to prevent SSRF
+const isPrivateIP = (ip: string) => {
+  const cleanIp = ip.replace(/^\[(.*)\]$/, '$1');
+  if (!net.isIP(cleanIp)) return false;
+  // Blocks loopback, private IPv4, unspecified, IPv6 loopback, and cloud metadata
+  return /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|169\.254\.|0\.0\.0\.0|::1)/.test(cleanIp);
+};
+
+// Custom DNS lookup to prevent DNS rebinding attacks pointing to local IPs
+const customLookup = (
+  hostname: string,
+  options: dns.LookupOptions | number,
+  callback: (err: NodeJS.ErrnoException | null, address: string | dns.LookupAddress[], family: number) => void
+) => {
+  dns.lookup(hostname, options as dns.LookupOptions, (err, address, family) => {
+    if (err) return callback(err, address, family);
+
+    const addresses = Array.isArray(address) ? address : [{ address }];
+    for (const addr of addresses) {
+      if (isPrivateIP(addr.address)) {
+        return callback(new Error(`Access to private IP ${addr.address} is blocked`), address, family);
+      }
+    }
+    callback(err, address, family);
+  });
+};
 
 const parser = new Parser({
+  maxRedirects: 0, // Prevent redirects to IP literals to bypass dns.lookup
+  requestOptions: {
+    lookup: customLookup
+  },
   customFields: {
     item: [
       ['content:encoded', 'contentEncoded'],
@@ -37,6 +70,12 @@ export interface RSSFeed {
  */
 export async function fetchRSSFeed(feedUrl: string): Promise<RSSFeed> {
   try {
+    // Pre-flight check: prevent direct IP access to private network
+    const url = new URL(feedUrl);
+    if (isPrivateIP(url.hostname)) {
+      throw new Error(`Direct access to private network is blocked`);
+    }
+
     const feed = await parser.parseURL(feedUrl);
 
     return {
