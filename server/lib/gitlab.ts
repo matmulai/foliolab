@@ -231,7 +231,7 @@ function convertGitLabProjectToRepository(project: GitLabProject): GitLabReposit
  */
 export async function getGitLabProjectsWithTitles(
   accessToken: string,
-  username?: string
+  username: string
 ): Promise<GitLabRepository[]> {
   const projects = await getGitLabProjects(accessToken, username);
 
