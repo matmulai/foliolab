@@ -5,6 +5,7 @@ import deployRoutes from "./routes/deploy.js";
 import userRoutes from "./routes/user.js";
 import healthRoutes from "./routes/health.js";
 import sourcesRoutes from "./routes/sources.js";
+import { redactSensitiveData } from "./lib/security.js";
 
 // Validate required environment variables at startup
 function validateEnvironment(): void {
@@ -146,7 +147,8 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `[${requestId}] ${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        const redactedResponse = redactSensitiveData(capturedJsonResponse);
+        logLine += ` :: ${JSON.stringify(redactedResponse)}`;
       }
 
       if (logLine.length > 80) {
