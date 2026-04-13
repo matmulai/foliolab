@@ -259,9 +259,10 @@ export async function getBitbucketRepositoriesWithTitles(
         await new Promise(resolve => setTimeout(resolve, 200));
       }
 
-      // Extract workspace from URL or use owner login
-      const workspace = repo.owner.login;
-      const repoSlug = repo.name.toLowerCase().replace(/\s+/g, '-');
+      // Extract workspace and slug from the repo URL (https://bitbucket.org/{workspace}/{slug})
+      const urlParts = new URL(repo.url).pathname.split('/').filter(Boolean);
+      const workspace = urlParts[0] || repo.owner.login;
+      const repoSlug = urlParts[1] || repo.name.toLowerCase().replace(/\s+/g, '-');
 
       const readme = await getBitbucketReadme(workspace, repoSlug, username, appPassword);
       const displayName = extractTitleFromReadme(readme);

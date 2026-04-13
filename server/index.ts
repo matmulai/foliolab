@@ -19,11 +19,9 @@ function validateEnvironment(): void {
   const missing = required.filter(key => !process.env[key]);
 
   if (missing.length > 0) {
-    console.error('❌ Missing required environment variables:');
-    missing.forEach(key => console.error(`   - ${key}`));
-    console.error('\nPlease check your .env file or environment configuration.');
-    console.error('See .env.example for reference.\n');
-    process.exit(1);
+    console.warn('⚠️  Missing environment variables (some features will be unavailable):');
+    missing.forEach(key => console.warn(`   - ${key}`));
+    console.warn('   See .env.example for reference.\n');
   }
 
   // Validate optional but recommended variables
@@ -101,15 +99,22 @@ app.use((req, res, next) => {
   // Check if request origin is allowed
   if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
     res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
   } else if (process.env.NODE_ENV === 'development') {
-    // In development, allow any origin for flexibility
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // In development, echo back the request origin (or allow any)
+    // Use the specific origin to remain compatible with credentials
+    if (requestOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    } else {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
   }
   // In production, if origin not allowed, don't set the header (request will be rejected)
 
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Vary', 'Origin');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -182,7 +187,7 @@ app.use((req, res, next) => {
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-    const requestId = req.headers['x-request-id'] || 'unknown';
+    const requestId = (req as any).id || res.getHeader('X-Request-ID') || req.headers['x-request-id'] || 'unknown';
 
     // Log error with full context for debugging and monitoring
     // In production, consider integrating with error tracking services (e.g., Sentry)

@@ -64,8 +64,12 @@ export async function getGitLabUser(accessToken: string): Promise<GitLabUser> {
  */
 export async function getGitLabProjects(
   accessToken: string,
-  username?: string
+  username: string
 ): Promise<GitLabRepository[]> {
+  if (!username) {
+    throw new Error('GitLab username is required');
+  }
+
   try {
     let projects: GitLabProject[] = [];
     let page = 1;
@@ -117,27 +121,30 @@ export async function getGitLabReadme(
 ): Promise<string | null> {
   try {
     const readmeFiles = ['README.md', 'readme.md', 'Readme.md', 'README', 'readme'];
+    const branches = ['main', 'master'];
 
-    for (const filename of readmeFiles) {
-      try {
-        const response = await axios.get(
-          `${GITLAB_API_URL}/projects/${projectId}/repository/files/${encodeURIComponent(filename)}/raw`,
-          {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`
-            },
-            params: {
-              ref: 'main'
+    for (const ref of branches) {
+      for (const filename of readmeFiles) {
+        try {
+          const response = await axios.get(
+            `${GITLAB_API_URL}/projects/${projectId}/repository/files/${encodeURIComponent(filename)}/raw`,
+            {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`
+              },
+              params: {
+                ref
+              }
             }
-          }
-        );
+          );
 
-        if (response.data) {
-          return response.data;
+          if (response.data) {
+            return response.data;
+          }
+        } catch (err) {
+          // Try next filename / branch
+          continue;
         }
-      } catch (err) {
-        // Try next filename
-        continue;
       }
     }
 

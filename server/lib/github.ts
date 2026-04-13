@@ -348,8 +348,8 @@ export async function getRepositories(
 
       console.log(`Processing README batch ${batchNumber}/${totalBatches} (${batch.length} repos)`);
 
-      const results = await Promise.allSettled(
-        batch.map(async (repo) => {
+      const results = await Promise.all(
+        batch.map(async (repo): Promise<{ repo: string; success: boolean }> => {
           try {
             const readme = await getReadmeContent(
               octokit,
@@ -362,6 +362,7 @@ export async function getRepositories(
             if (displayName) {
               repo.displayName = displayName;
             }
+            return { repo: `${repo.owner.login}/${repo.name}`, success: true };
           } catch (error) {
             console.warn(
               `Failed to process README for ${repo.owner.login}/${repo.name}:`,
@@ -369,12 +370,13 @@ export async function getRepositories(
             );
             // Continue with other repositories, don't set displayName
             repo.displayName = null;
+            return { repo: `${repo.owner.login}/${repo.name}`, success: false };
           }
         }),
       );
 
       // Log batch results for monitoring
-      const failures = results.filter(r => r.status === 'rejected');
+      const failures = results.filter(r => !r.success);
       if (failures.length > 0) {
         console.warn(`Batch ${batchNumber}: ${failures.length}/${batch.length} failures`);
       }

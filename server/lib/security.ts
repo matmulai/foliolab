@@ -4,7 +4,8 @@
  * escapes <, >, and & to prevent XSS attacks when the JSON is embedded in HTML.
  */
 export function safeJsonStringify(value: unknown): string {
-  return JSON.stringify(value)
+  const json = JSON.stringify(value) ?? 'null';
+  return json
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e')
     .replace(/&/g, '\\u0026')

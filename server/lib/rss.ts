@@ -4,11 +4,27 @@ import dns from 'dns';
 import net from 'net';
 
 // Check for private / local IP addresses to prevent SSRF
-const isPrivateIP = (ip: string) => {
+const isPrivateIP = (ip: string): boolean => {
   const cleanIp = ip.replace(/^\[(.*)\]$/, '$1');
-  if (!net.isIP(cleanIp)) return false;
-  // Blocks loopback, private IPv4, unspecified, IPv6 loopback, and cloud metadata
-  return /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|169\.254\.|0\.0\.0\.0|::1)/.test(cleanIp);
+  const ipVersion = net.isIP(cleanIp);
+  if (!ipVersion) return false;
+
+  // IPv4: loopback, private ranges, link-local, unspecified, cloud metadata
+  if (ipVersion === 4) {
+    return /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|169\.254\.|0\.0\.0\.0)/.test(cleanIp);
+  }
+
+  // IPv6: loopback (::1), unspecified (::), unique-local (fc00::/7),
+  // link-local (fe80::/10), and IPv4-mapped (::ffff:private)
+  const lowerIp = cleanIp.toLowerCase();
+  if (lowerIp === '::1' || lowerIp === '::') return true;
+  if (/^f[cd]/i.test(lowerIp)) return true;  // fc00::/7 unique-local
+  if (/^fe[89ab]/i.test(lowerIp)) return true; // fe80::/10 link-local
+  // IPv4-mapped IPv6 (::ffff:10.x.x.x, etc.)
+  const v4Mapped = cleanIp.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  if (v4Mapped) return isPrivateIP(v4Mapped[1]);
+
+  return false;
 };
 
 // Custom DNS lookup to prevent DNS rebinding attacks pointing to local IPs
