@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Repository } from "@shared/schema";
-import { Search, ExternalLink } from "lucide-react";
+import { Search, ExternalLink, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toggleRepositorySelection, saveRepositories, getRepositories, getGitHubToken } from "@/lib/storage";
 import { AnalysisProgress } from "@/components/analysis-progress";
@@ -273,8 +273,21 @@ export default function RepoSelect() {
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="pl-9"
+                className="pl-9 pr-9"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setCurrentPage(1);
+                  }}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-ring"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -473,7 +486,7 @@ export default function RepoSelect() {
                             title="Remove from selection"
                             aria-label={`Remove ${repo.displayName || repo.name} from selection`}
                           >
-                            ×
+                            <X className="h-4 w-4" />
                           </Button>
                         </div>
                       </CardHeader>
