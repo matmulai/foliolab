@@ -156,10 +156,21 @@ export function extractTitleFromReadme(readme: string | null): string | null {
   if (!readme) return null;
 
   const lines = readme.split('\n');
-  for (const line of lines) {
-    const match = line.match(/^#\s+(.+)/);
-    if (match) {
-      return match[1].trim();
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Check for ATX-style H1 (# Title)
+    const atxMatch = line.match(/^\s*#(?![#])\s*(.+)/);
+    if (atxMatch) {
+      return atxMatch[1].trim();
+    }
+
+    // Check for Setext-style H1 (Title\n=====)
+    if (i < lines.length - 1) {
+      const nextLine = lines[i + 1];
+      if (nextLine.trim().match(/^={3,}$/) && line.trim() !== '') {
+        return line.trim();
+      }
     }
   }
 

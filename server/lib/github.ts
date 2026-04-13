@@ -300,20 +300,21 @@ export async function getRepositories(
       orgs = [];
     }
 
-    // Get repositories for each organization with individual error handling
-    const orgRepos: Repository[] = [];
-    for (const org of orgs) {
+    // Get repositories for each organization concurrently with individual error handling
+    const orgReposPromises = orgs.map(async (org) => {
       try {
-        const repos = await getOrganizationRepositories(octokit, {
+        return await getOrganizationRepositories(octokit, {
           login: org.login,
           avatarUrl: org.avatarUrl,
         });
-        orgRepos.push(...repos);
       } catch (error) {
         console.warn(`Failed to fetch repositories for organization ${org.login}, skipping:`, error);
-        // Continue with other organizations
+        return [];
       }
-    }
+    });
+
+    const orgReposResults = await Promise.all(orgReposPromises);
+    const orgRepos = orgReposResults.flat();
 
     // Combine user and organization repositories, but deduplicate based on repo ID
     const allRepos = [...userRepos, ...orgRepos];
@@ -445,11 +446,9 @@ export async function getReadmeContent(
   owner: string,
   repo: string,
 ): Promise<string | null> {
-  const octokit =
-    typeof clientOrToken === "string"
-      ? new Octokit({ auth: clientOrToken })
-      : clientOrToken;
-
+  const octokit = typeof clientOrToken === 'string'
+    ? new Octokit({ auth: clientOrToken })
+    : clientOrToken;
   try {
     const { data } = await octokit.repos.getReadme({
       owner,

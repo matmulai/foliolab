@@ -174,27 +174,27 @@ async function generateRepoSummary(
 ): Promise<RepoSummary> {
   try {
     // Build enhanced context with metadata
-    let userContent = `Repository Name: ${name}`;
+    const userContentParts: string[] = [`Repository Name: ${name}`];
     
     if (description) {
-      userContent += `\nDescription: ${description}`;
+      userContentParts.push(`Description: ${description}`);
     }
     
     if (metadata) {
       if (metadata.language) {
-        userContent += `\nPrimary Language: ${metadata.language}`;
+        userContentParts.push(`Primary Language: ${metadata.language}`);
       }
       
       if (metadata.topics && metadata.topics.length > 0) {
-        userContent += `\nTopics/Tags: ${metadata.topics.join(', ')}`;
+        userContentParts.push(`Topics/Tags: ${metadata.topics.join(', ')}`);
       }
       
       if (metadata.stars > 0) {
-        userContent += `\nStars: ${metadata.stars}`;
+        userContentParts.push(`Stars: ${metadata.stars}`);
       }
       
       if (metadata.url) {
-        userContent += `\nProject URL: ${metadata.url}`;
+        userContentParts.push(`Project URL: ${metadata.url}`);
       }
     }
 
@@ -204,52 +204,54 @@ async function generateRepoSummary(
       const cleanedReadme = cleanReadmeContent(readme);
       const trimmedReadme = intelligentTruncate(cleanedReadme, LLM_CONFIG.README_MAX_LENGTH);
 
-      userContent += `\nREADME:\n${trimmedReadme}`;
+      userContentParts.push(`README:\n${trimmedReadme}`);
     } else if (accessToken && owner) {
       try {
         // Analyze project structure when README is not available
         const projectStructure = await analyzeProjectStructure(accessToken, owner, name);
         const structureSummary = generateProjectSummary(projectStructure);
         
-        userContent += `\nProject Structure Analysis:\n${structureSummary}`;
+        userContentParts.push(`Project Structure Analysis:\n${structureSummary}`);
         
         // Add detailed structure information
         if (projectStructure.frameworkIndicators.length > 0) {
-          userContent += `\nDetected Frameworks: ${projectStructure.frameworkIndicators.map(f => f.framework).join(', ')}`;
+          userContentParts.push(`Detected Frameworks: ${projectStructure.frameworkIndicators.map(f => f.framework).join(', ')}`);
         }
         
         if (projectStructure.techStack.length > 0) {
-          userContent += `\nTech Stack: ${projectStructure.techStack.join(', ')}`;
+          userContentParts.push(`Tech Stack: ${projectStructure.techStack.join(', ')}`);
         }
         
         if (projectStructure.sourceFiles.length > 0) {
           const entryPoints = projectStructure.sourceFiles.filter(f => f.isEntryPoint);
           if (entryPoints.length > 0) {
-            userContent += `\nEntry Points: ${entryPoints.map(f => f.name).join(', ')}`;
+            userContentParts.push(`Entry Points: ${entryPoints.map(f => f.name).join(', ')}`);
           }
           
           const languages = Array.from(new Set(projectStructure.sourceFiles.map(f => f.language)));
-          userContent += `\nLanguages Used: ${languages.join(', ')}`;
+          userContentParts.push(`Languages Used: ${languages.join(', ')}`);
         }
         
         if (projectStructure.packageFiles.length > 0) {
           const packageInfo = projectStructure.packageFiles[0];
           if (packageInfo.description) {
-            userContent += `\nPackage Description: ${packageInfo.description}`;
+            userContentParts.push(`Package Description: ${packageInfo.description}`);
           }
           if (packageInfo.dependencies && packageInfo.dependencies.length > 0) {
             const majorDeps = packageInfo.dependencies.slice(0, 10); // Limit to avoid token overflow
-            userContent += `\nKey Dependencies: ${majorDeps.join(', ')}`;
+            userContentParts.push(`Key Dependencies: ${majorDeps.join(', ')}`);
           }
         }
         
       } catch (error) {
         console.warn("Failed to analyze project structure:", error);
-        userContent += `\nNote: No README available and project structure analysis failed. Analysis based on repository metadata only.`;
+        userContentParts.push(`Note: No README available and project structure analysis failed. Analysis based on repository metadata only.`);
       }
     } else {
-      userContent += `\nNote: No README available. Analysis based on repository metadata only.`;
+      userContentParts.push(`Note: No README available. Analysis based on repository metadata only.`);
     }
+
+    const userContent = userContentParts.join('\n');
 
     const prompt = `${customPrompt || DEFAULT_PROMPT}
     
@@ -277,39 +279,28 @@ ${JSON_FORMAT_SUFFIX}`;
 }
 
 async function generateUserIntroduction(
-  items: Array<any>,
+  repositories: Array<{
+    name: string;
+    description: string;
+    metadata: {
+      language: string | null;
+      topics: string[];
+    };
+    summary?: string;
+  }>,
   apiKey: string,
 ): Promise<UserIntroduction> {
   try {
-    // Extract information from all portfolio items
-    const portfolioInfo = items.map((item) => {
-      const baseInfo: any = {
-        title: item.title || item.name,
-        type: item.source,
-        summary: item.summary,
-      };
+    const repoInfo = repositories.map((repo) => ({
+      name: repo.name,
+      description: repo.description,
+      language: repo.metadata.language,
+      topics: repo.metadata.topics,
+      summary: repo.summary,
+    }));
 
-      if (item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') {
-        baseInfo.description = item.description;
-        baseInfo.language = item.metadata?.language;
-        baseInfo.topics = item.metadata?.topics;
-      } else if (item.source === 'blog_rss' || item.source === 'medium') {
-        baseInfo.description = item.description;
-        baseInfo.tags = item.tags;
-        baseInfo.author = item.author;
-      } else if (item.source === 'freeform') {
-        baseInfo.contentType = item.contentType;
-        baseInfo.tags = item.tags;
-        baseInfo.description = item.description;
-      }
-
-      return baseInfo;
-    });
-
-    const prompt = `Based on the portfolio items (including repositories, blog posts, articles, and projects), generate a compelling professional introduction for a developer portfolio. The introduction should be 150-200 words, showcasing the developer's expertise, technical journey, and what drives their work. Highlight their strongest technical skills, preferred technologies, and areas of specialization based on ALL their work including code repositories, technical writing, and projects. Make it personal yet professional, demonstrating both technical competence and passion for development. Include 8-12 primary skills and 4-6 areas of interest that reflect their technical focus and career direction across all their portfolio items.
-
-${USER_INTRO_FORMAT}`;
-    const userContent = JSON.stringify(portfolioInfo, null, 2);
+    const prompt = `${USER_INTRO_PROMPT} ${USER_INTRO_FORMAT}`;
+    const userContent = JSON.stringify(repoInfo, null, 2);
 
     const openai = getOpenAIClient(apiKey);
 
@@ -364,64 +355,9 @@ ${USER_INTRO_FORMAT}`;
   }
 }
 
-async function generateContentSummary(
-  title: string,
-  content: string,
-  contentType: 'blog_post' | 'medium_post' | 'freeform',
-  apiKey: string,
-  metadata?: {
-    author?: string | null;
-    publishedAt?: string;
-    tags?: string[];
-    url?: string;
-  }
-): Promise<RepoSummary> {
-  try {
-    let userContent = `Title: ${title}`;
-
-    if (metadata) {
-      if (metadata.author) {
-        userContent += `\nAuthor: ${metadata.author}`;
-      }
-
-      if (metadata.publishedAt) {
-        userContent += `\nPublished: ${new Date(metadata.publishedAt).toLocaleDateString()}`;
-      }
-
-      if (metadata.tags && metadata.tags.length > 0) {
-        userContent += `\nTags: ${metadata.tags.join(', ')}`;
-      }
-
-      if (metadata.url) {
-        userContent += `\nURL: ${metadata.url}`;
-      }
-    }
-
-    // Truncate content intelligently
-    const trimmedContent = intelligentTruncate(content, LLM_CONFIG.README_MAX_LENGTH);
-    userContent += `\nContent:\n${trimmedContent}`;
-
-    const contentTypeLabel = contentType === 'blog_post' ? 'blog post' :
-                            contentType === 'medium_post' ? 'Medium article' :
-                            'portfolio content';
-
-    const prompt = `Generate a compelling summary for this ${contentTypeLabel} for a developer portfolio. The summary should be 150-250 words, highlighting the key insights, technical concepts, or achievements discussed. Make it engaging and showcase the author's expertise and thought process. Focus on what makes this content valuable and what readers will learn or gain from it.
-
-${JSON_FORMAT_SUFFIX}`;
-
-    const result = await generateWithOpenAI(prompt, userContent, apiKey);
-    return result;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("Failed to generate content summary:", errorMessage);
-    throw new Error("Failed to generate content summary: " + errorMessage);
-  }
-}
-
 export {
   generateRepoSummary,
   generateUserIntroduction,
-  generateContentSummary,
   type RepoSummary,
   type UserIntroduction,
 };
