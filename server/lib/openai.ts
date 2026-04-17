@@ -355,8 +355,48 @@ async function generateUserIntroduction(
   }
 }
 
+async function generateContentSummary(
+  title: string,
+  content: string,
+  contentType: 'blog_post' | 'medium_post' | 'freeform',
+  apiKey: string,
+  metadata?: {
+    author?: string;
+    publishedAt?: string;
+    tags?: string[];
+    url?: string;
+  }
+): Promise<RepoSummary> {
+  try {
+    const userContentParts = [`Title: ${title}`];
+    if (metadata?.author) userContentParts.push(`Author: ${metadata.author}`);
+    if (metadata?.publishedAt) userContentParts.push(`Published: ${metadata.publishedAt}`);
+    if (metadata?.url) userContentParts.push(`URL: ${metadata.url}`);
+    if (metadata?.tags && metadata.tags.length > 0) userContentParts.push(`Tags: ${metadata.tags.join(', ')}`);
+
+    const truncatedContent = intelligentTruncate(content, LLM_CONFIG.README_MAX_LENGTH);
+    userContentParts.push(`Content:\n${truncatedContent}`);
+
+    const userContent = userContentParts.join('\n');
+    let prompt = DEFAULT_PROMPT;
+
+    if (contentType === 'blog_post' || contentType === 'medium_post') {
+      prompt = `You are a professional technical writer and developer advocate. Analyze the provided blog/article content and generate a concise, engaging summary for a developer's portfolio. Focus on the main topics covered, key insights shared, and the value it provides to readers. Highlight any specific technologies or concepts discussed.\n\n${JSON_FORMAT_SUFFIX}`;
+    } else {
+      prompt = `You are a professional technical writer and developer advocate. Analyze the provided custom content and generate a concise, engaging summary for a developer's portfolio. Focus on the main achievements, skills demonstrated, or key points of the content.\n\n${JSON_FORMAT_SUFFIX}`;
+    }
+
+    return await generateWithOpenAI(prompt, userContent, apiKey);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Failed to generate content summary:", errorMessage);
+    throw new Error("Failed to generate content summary: " + errorMessage);
+  }
+}
+
 export {
   generateRepoSummary,
+  generateContentSummary,
   generateUserIntroduction,
   type RepoSummary,
   type UserIntroduction,
