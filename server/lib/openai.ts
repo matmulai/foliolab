@@ -355,9 +355,59 @@ async function generateUserIntroduction(
   }
 }
 
+async function generateContentSummary(
+  title: string,
+  content: string,
+  contentType: string,
+  apiKey: string,
+  metadata?: {
+    author?: string;
+    publishedAt?: string;
+    tags?: string[];
+    url?: string;
+  }
+): Promise<{ summary: string }> {
+  try {
+    // Build enhanced context with metadata
+    const userContentParts: string[] = [`Title: ${title}`];
+
+    if (metadata) {
+      if (metadata.author) {
+        userContentParts.push(`Author: ${metadata.author}`);
+      }
+      if (metadata.publishedAt) {
+        userContentParts.push(`Published At: ${metadata.publishedAt}`);
+      }
+      if (metadata.tags && metadata.tags.length > 0) {
+        userContentParts.push(`Tags: ${metadata.tags.join(', ')}`);
+      }
+      if (metadata.url) {
+        userContentParts.push(`URL: ${metadata.url}`);
+      }
+    }
+
+    userContentParts.push(`Content Type: ${contentType}`);
+    userContentParts.push(`Content:\n${content}`);
+
+    const userContent = userContentParts.join('\n');
+
+    const prompt = `Based on the provided content, generate a brief professional summary suitable for a developer portfolio. Ensure the response is in JSON format with a "summary" field.\n\n${JSON_FORMAT_SUFFIX}`;
+
+    const result = await generateWithOpenAI(prompt, userContent, apiKey);
+
+    // Cast appropriately since generateWithOpenAI parses the JSON
+    return result as unknown as { summary: string };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Failed to generate content summary:", errorMessage);
+    throw new Error("Failed to generate content summary: " + errorMessage);
+  }
+}
+
 export {
   generateRepoSummary,
   generateUserIntroduction,
+  generateContentSummary,
   type RepoSummary,
   type UserIntroduction,
 };
