@@ -53,36 +53,43 @@ const badgePatterns = [
   /\[\!\[([^\]]*)\]\([^)]*flat\.badgen\.net[^)]*\)\]\([^)]*\)/g,
 ];
 
+// ⚡ Bolt Optimization: Combine badge patterns into a single RegExp to avoid looping over multiple patterns.
+// This allows the RegExp engine to perform a single O(N) pass over the text instead of M * O(N) passes.
+const combinedBadgePattern = new RegExp(
+  badgePatterns.map((p) => p.source).join("|"),
+  "gi",
+);
+
 const sectionsToRemove = [
   // License sections
-  /^#+\s*(License|Licensing)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+  /^#+\s*(License|Licensing)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gim,
 
   // Code of Conduct sections
-  /^#+\s*(Code of Conduct|Contributor Code of Conduct|Contributing Guidelines)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+  /^#+\s*(Code of Conduct|Contributor Code of Conduct|Contributing Guidelines)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gim,
 
   // Security sections (often boilerplate)
-  /^#+\s*(Security|Security Policy|Reporting Security Issues)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+  /^#+\s*(Security|Security Policy|Reporting Security Issues)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gim,
 
   // Changelog sections (version history not relevant for portfolio)
-  /^#+\s*(Changelog|Change Log|Release Notes|Version History)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+  /^#+\s*(Changelog|Change Log|Release Notes|Version History)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gim,
 
   // Support/Help sections
-  /^#+\s*(Support|Getting Help|Help|Community)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+  /^#+\s*(Support|Getting Help|Help|Community)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gim,
 
   // Acknowledgments/Credits (unless very brief)
-  /^#+\s*(Acknowledgments?|Credits?|Thanks?)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+  /^#+\s*(Acknowledgments?|Credits?|Thanks?)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gim,
 
   // Detailed contributing sections
-  /^#+\s*(Contributing|How to Contribute|Contribution Guidelines)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+  /^#+\s*(Contributing|How to Contribute|Contribution Guidelines)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gim,
 
   // FAQ sections (often too detailed for portfolio)
-  /^#+\s*(FAQ|Frequently Asked Questions)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+  /^#+\s*(FAQ|Frequently Asked Questions)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gim,
 
   // Detailed troubleshooting sections
-  /^#+\s*(Troubleshooting|Common Issues|Known Issues)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+  /^#+\s*(Troubleshooting|Common Issues|Known Issues)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gim,
 
   // Table of contents (not needed for LLM)
-  /^#+\s*(Table of Contents?|Contents?|TOC)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gmi,
+  /^#+\s*(Table of Contents?|Contents?|TOC)\s*\n[\s\S]*?(?=\n#+|\n\n---|\n\n===|$)/gim,
 ];
 
 const prioritySections = [
@@ -123,12 +130,10 @@ export function removeBadges(readme: string): string {
   let cleanedReadme = readme;
 
   // Apply all badge removal patterns
-  badgePatterns.forEach(pattern => {
-    cleanedReadme = cleanedReadme.replace(pattern, '');
-  });
+  cleanedReadme = cleanedReadme.replace(combinedBadgePattern, "");
 
   // Remove multiple consecutive newlines left by badge removal
-  cleanedReadme = cleanedReadme.replace(/\n{3,}/g, '\n\n');
+  cleanedReadme = cleanedReadme.replace(/\n{3,}/g, "\n\n");
 
   // Remove leading/trailing whitespace
   cleanedReadme = cleanedReadme.trim();
@@ -158,8 +163,8 @@ export function cleanReadmeContent(readme: string | null | undefined): string {
  */
 function removeBoilerplateSections(content: string): string {
   let cleaned = content;
-  sectionsToRemove.forEach(pattern => {
-    cleaned = cleaned.replace(pattern, '');
+  sectionsToRemove.forEach((pattern) => {
+    cleaned = cleaned.replace(pattern, "");
   });
 
   return cleaned;
@@ -172,17 +177,19 @@ function extractRelevantSections(content: string): string {
   // Split content into sections
   const sections = content.split(/\n(?=#+\s)/);
   const relevantSections: string[] = [];
-  
+
   // Always include the title/header section (first section)
   if (sections[0]) {
     relevantSections.push(sections[0]);
   }
 
   // Add sections that match priority patterns
-  sections.slice(1).forEach(section => {
-    const sectionHeader = section.split('\n')[0];
-    const isPriority = prioritySections.some(pattern => pattern.test(sectionHeader));
-    
+  sections.slice(1).forEach((section) => {
+    const sectionHeader = section.split("\n")[0];
+    const isPriority = prioritySections.some((pattern) =>
+      pattern.test(sectionHeader),
+    );
+
     if (isPriority) {
       // Limit section length to avoid overly detailed content
       const limitedSection = limitSectionLength(section, 500);
@@ -191,24 +198,25 @@ function extractRelevantSections(content: string): string {
   });
 
   // If we don't have enough content, add other sections but with stricter limits
-  if (relevantSections.join('\n\n').length < 800) {
-    sections.slice(1).forEach(section => {
-      const sectionHeader = section.split('\n')[0];
-      const isAlreadyIncluded = relevantSections.some(existing =>
-        existing.includes(sectionHeader)
+  if (relevantSections.join("\n\n").length < 800) {
+    sections.slice(1).forEach((section) => {
+      const sectionHeader = section.split("\n")[0];
+      const isAlreadyIncluded = relevantSections.some((existing) =>
+        existing.includes(sectionHeader),
       );
-      
+
       if (!isAlreadyIncluded) {
         // Add with very strict length limit
         const limitedSection = limitSectionLength(section, 200);
-        if (limitedSection.length > 50) { // Only add if it has meaningful content
+        if (limitedSection.length > 50) {
+          // Only add if it has meaningful content
           relevantSections.push(limitedSection);
         }
       }
     });
   }
 
-  return relevantSections.join('\n\n');
+  return relevantSections.join("\n\n");
 }
 
 /**
@@ -216,29 +224,33 @@ function extractRelevantSections(content: string): string {
  */
 function limitSectionLength(section: string, maxLength: number): string {
   if (section.length <= maxLength) return section;
-  
-  const lines = section.split('\n');
+
+  const lines = section.split("\n");
   const header = lines[0];
-  let content = '';
+  let content = "";
   let currentLength = header.length;
-  
+
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
     if (currentLength + line.length + 1 > maxLength) {
       // Try to end at a natural break point
-      if (content.includes('.') || content.includes('!') || content.includes('?')) {
+      if (
+        content.includes(".") ||
+        content.includes("!") ||
+        content.includes("?")
+      ) {
         break;
       }
       // Otherwise, add this line if it's not too long
       if (currentLength + line.length + 1 < maxLength + 100) {
-        content += '\n' + line;
+        content += "\n" + line;
       }
       break;
     }
-    content += '\n' + line;
+    content += "\n" + line;
     currentLength += line.length + 1;
   }
-  
+
   return header + content;
 }
 
@@ -248,12 +260,12 @@ function limitSectionLength(section: string, maxLength: number): string {
 function cleanupWhitespace(content: string): string {
   let cleaned = content;
 
-  noisePatterns.forEach(pattern => {
-    cleaned = cleaned.replace(pattern, '');
+  noisePatterns.forEach((pattern) => {
+    cleaned = cleaned.replace(pattern, "");
   });
 
   // Final cleanup of excessive whitespace
-  cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n").trim();
 
   return cleaned;
 }
