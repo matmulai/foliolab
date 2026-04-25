@@ -5,7 +5,13 @@ import net from 'net';
 
 // Check for private / local IP addresses to prevent SSRF
 const isPrivateIP = (ip: string) => {
-  const cleanIp = ip.replace(/^\[(.*)\]$/, '$1');
+  let cleanIp = ip.replace(/^\[(.*)\]$/, '$1');
+
+  // Normalize IPv4-mapped IPv6 addresses (e.g., ::ffff:127.0.0.1)
+  if (cleanIp.toLowerCase().startsWith('::ffff:')) {
+    cleanIp = cleanIp.substring(7);
+  }
+
   if (!net.isIP(cleanIp)) return false;
   // Blocks loopback, private IPv4, unspecified, IPv6 loopback, and cloud metadata
   return /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|169\.254\.|0\.0\.0\.0|::1)/.test(cleanIp);
