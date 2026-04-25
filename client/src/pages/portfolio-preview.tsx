@@ -462,10 +462,10 @@ export default function PortfolioPreview() {
                           placeholder="Enter repository title..."
                         />
                         <div className="flex gap-2">
-                          <Button size="sm" onClick={saveRepoTitle} aria-label="Save repository title">
+                          <Button size="sm" onClick={saveRepoTitle}>
                             <Check className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="outline" onClick={cancelEdit} aria-label="Cancel editing">
+                          <Button size="sm" variant="outline" onClick={cancelEdit}>
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
@@ -531,10 +531,10 @@ export default function PortfolioPreview() {
                         placeholder="Enter repository summary..."
                       />
                       <div className="flex gap-2">
-                        <Button size="sm" onClick={saveRepoSummary} aria-label="Save repository summary">
+                        <Button size="sm" onClick={saveRepoSummary}>
                           <Check className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="outline" onClick={cancelEdit} aria-label="Cancel editing">
+                        <Button size="sm" variant="outline" onClick={cancelEdit}>
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
@@ -680,10 +680,10 @@ export default function PortfolioPreview() {
                     placeholder="Enter portfolio title..."
                   />
                   <div className="flex gap-2 justify-center">
-                    <Button size="sm" onClick={saveTitle} aria-label="Save portfolio title">
+                    <Button size="sm" onClick={saveTitle}>
                       <Check className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={cancelEdit} aria-label="Cancel editing">
+                    <Button size="sm" variant="outline" onClick={cancelEdit}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -726,10 +726,10 @@ export default function PortfolioPreview() {
                     placeholder="Enter your introduction..."
                   />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={saveIntro} aria-label="Save introduction">
+                    <Button size="sm" onClick={saveIntro}>
                       <Check className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={cancelEdit} aria-label="Cancel editing">
+                    <Button size="sm" variant="outline" onClick={cancelEdit}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -780,15 +780,15 @@ export default function PortfolioPreview() {
                       onKeyPress={(e) => e.key === 'Enter' && addSkill()}
                       className="flex-1"
                     />
-                    <Button size="sm" onClick={addSkill} aria-label="Add skill">
+                    <Button size="sm" onClick={addSkill}>
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={saveSkills} aria-label="Save skills">
+                    <Button size="sm" onClick={saveSkills}>
                       <Check className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={cancelEdit} aria-label="Cancel editing">
+                    <Button size="sm" variant="outline" onClick={cancelEdit}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -857,15 +857,15 @@ export default function PortfolioPreview() {
                       onKeyPress={(e) => e.key === 'Enter' && addInterest()}
                       className="flex-1"
                     />
-                    <Button size="sm" onClick={addInterest} aria-label="Add interest">
+                    <Button size="sm" onClick={addInterest}>
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={saveInterests} aria-label="Save interests">
+                    <Button size="sm" onClick={saveInterests}>
                       <Check className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={cancelEdit} aria-label="Cancel editing">
+                    <Button size="sm" variant="outline" onClick={cancelEdit}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -974,10 +974,10 @@ export default function PortfolioPreview() {
                                     placeholder="Enter repository title..."
                                   />
                                   <div className="flex gap-2">
-                                    <Button size="sm" onClick={saveRepoTitle} aria-label="Save repository title">
+                                    <Button size="sm" onClick={saveRepoTitle}>
                                       <Check className="h-4 w-4" />
                                     </Button>
-                                    <Button size="sm" variant="outline" onClick={cancelEdit} aria-label="Cancel editing">
+                                    <Button size="sm" variant="outline" onClick={cancelEdit}>
                                       <X className="h-4 w-4" />
                                     </Button>
                                   </div>
@@ -1045,10 +1045,10 @@ export default function PortfolioPreview() {
                                 placeholder="Enter repository summary..."
                               />
                               <div className="flex gap-2">
-                                <Button size="sm" onClick={saveRepoSummary} aria-label="Save repository summary">
+                                <Button size="sm" onClick={saveRepoSummary}>
                                   <Check className="h-4 w-4" />
                                 </Button>
-                                <Button size="sm" variant="outline" onClick={cancelEdit} aria-label="Cancel editing">
+                                <Button size="sm" variant="outline" onClick={cancelEdit}>
                                   <X className="h-4 w-4" />
                                 </Button>
                               </div>
