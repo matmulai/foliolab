@@ -356,8 +356,40 @@ async function generateUserIntroduction(
 }
 
 export {
+  generateContentSummary,
   generateRepoSummary,
   generateUserIntroduction,
   type RepoSummary,
   type UserIntroduction,
 };
+
+/**
+ * Generates a summary for generic content (e.g., blog posts, medium articles, freeform text)
+ */
+async function generateContentSummary(
+  title: string,
+  content: string,
+  type: string,
+  apiKey: string,
+  options?: any
+): Promise<RepoSummary> {
+  const prompt = `Generate a compelling and informative summary for this ${type} content. The summary should be 100-200 words, capturing the main ideas, key takeaways, and the value it provides to the reader. Write in a professional, engaging tone suitable for a developer portfolio.
+
+${JSON_FORMAT_SUFFIX}`;
+
+  const userContent = JSON.stringify({
+    title,
+    content: intelligentTruncate(content, LLM_CONFIG.README_MAX_LENGTH),
+    type,
+    options
+  }, null, 2);
+
+  try {
+    const result = await generateWithOpenAI(prompt, userContent, apiKey);
+    return result as RepoSummary;
+  } catch (error) {
+    console.error(`Failed to generate ${type} summary:`, error);
+    // Return a fallback summary
+    return { summary: `${title} - A ${type.replace('_', ' ')}` };
+  }
+}
