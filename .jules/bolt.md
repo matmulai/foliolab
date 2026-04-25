@@ -1,0 +1,3 @@
+## 2024-05-18 - [Fix Promise.all with concurrent timeouts anti-pattern]
+**Learning:** Performance Anti-Pattern: When implementing API rate limits for asynchronous operations, avoid using `Promise.all` combined with sequential `setTimeout` delays inside a `.map` function, as all promises and timeouts are instantiated simultaneously. This creates massive spikes in concurrent requests after the initial delay, leading to rate limit exhaustion.
+**Action:** Instead, implement array chunking (batching) using a `for` loop, process each batch with `Promise.all`, and apply a `setTimeout` delay between batches.
