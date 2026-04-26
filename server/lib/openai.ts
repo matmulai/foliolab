@@ -400,92 +400,10 @@ async function generateUserIntroduction(
   }
 }
 
-async function generateContentSummary(
-  title: string,
-  content: string,
-  contentType: string,
-  apiKey: string,
-  metadata?: {
-    author?: string;
-    publishedAt?: string;
-    tags?: string[];
-    url?: string;
-  }
-): Promise<{ summary: string }> {
-  try {
-    // Build enhanced context with metadata
-    const userContentParts: string[] = [`Title: ${title}`];
-
-    if (metadata) {
-      if (metadata.author) {
-        userContentParts.push(`Author: ${metadata.author}`);
-      }
-      if (metadata.publishedAt) {
-        userContentParts.push(`Published At: ${metadata.publishedAt}`);
-      }
-      if (metadata.tags && metadata.tags.length > 0) {
-        userContentParts.push(`Tags: ${metadata.tags.join(', ')}`);
-      }
-      if (metadata.url) {
-        userContentParts.push(`URL: ${metadata.url}`);
-      }
-    }
-
-    userContentParts.push(`Content Type: ${contentType}`);
-    userContentParts.push(`Content:\n${content}`);
-
-    const userContent = userContentParts.join('\n');
-
-    const prompt = `Based on the provided content, generate a brief professional summary suitable for a developer portfolio. Ensure the response is in JSON format with a "summary" field.\n\n${JSON_FORMAT_SUFFIX}`;
-
-    const result = await generateWithOpenAI(prompt, userContent, apiKey);
-
-    // Cast appropriately since generateWithOpenAI parses the JSON
-    return result as unknown as { summary: string };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("Failed to generate content summary:", errorMessage);
-    throw new Error("Failed to generate content summary: " + errorMessage);
-  }
-}
-
 export {
   generateContentSummary,
   generateRepoSummary,
-  generateContentSummary,
   generateUserIntroduction,
-  generateContentSummary,
   type RepoSummary,
   type UserIntroduction,
 };
-
-/**
- * Generates a summary for generic content (e.g., blog posts, medium articles, freeform text)
- */
-async function generateContentSummary(
-  title: string,
-  content: string,
-  type: string,
-  apiKey: string,
-  options?: any
-): Promise<RepoSummary> {
-  const prompt = `Generate a compelling and informative summary for this ${type} content. The summary should be 100-200 words, capturing the main ideas, key takeaways, and the value it provides to the reader. Write in a professional, engaging tone suitable for a developer portfolio.
-
-${JSON_FORMAT_SUFFIX}`;
-
-  const userContent = JSON.stringify({
-    title,
-    content: intelligentTruncate(content, LLM_CONFIG.README_MAX_LENGTH),
-    type,
-    options
-  }, null, 2);
-
-  try {
-    const result = await generateWithOpenAI(prompt, userContent, apiKey);
-    return result as RepoSummary;
-  } catch (error) {
-    console.error(`Failed to generate ${type} summary:`, error);
-    // Return a fallback summary
-    return { summary: `${title} - A ${type.replace('_', ' ')}` };
-  }
-}
