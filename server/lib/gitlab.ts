@@ -228,23 +228,33 @@ export async function getGitLabProjectsWithTitles(
 ): Promise<GitLabRepository[]> {
   const projects = await getGitLabProjects(accessToken, username);
 
-  // Fetch README for each project (with delay to avoid rate limits)
-  const projectsWithTitles = await Promise.all(
-    projects.map(async (project, index) => {
-      // Add delay to avoid rate limiting
-      if (index > 0) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
+  // Fetch README for each project in batches (with delay to avoid rate limits)
+  const BATCH_SIZE = 10;
+  const BATCH_DELAY_MS = 100;
+  const projectsWithTitles = [];
 
-      const readme = await getGitLabReadme(project.id, accessToken);
-      const displayName = extractTitleFromReadme(readme);
+  for (let i = 0; i < projects.length; i += BATCH_SIZE) {
+    const batch = projects.slice(i, i + BATCH_SIZE);
 
-      return {
-        ...project,
-        displayName
-      };
-    })
-  );
+    const batchResults = await Promise.all(
+      batch.map(async (project) => {
+        const readme = await getGitLabReadme(project.id, accessToken);
+        const displayName = extractTitleFromReadme(readme);
+
+        return {
+          ...project,
+          displayName
+        };
+      })
+    );
+
+    projectsWithTitles.push(...batchResults);
+
+    // Apply delay between batches to avoid rate limiting (except for last batch)
+    if (i + BATCH_SIZE < projects.length) {
+      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+    }
+  }
 
   return projectsWithTitles;
 }
