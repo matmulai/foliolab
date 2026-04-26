@@ -407,3 +407,30 @@ export {
   type RepoSummary,
   type UserIntroduction,
 };
+
+async function generateContentSummary(
+  title: string,
+  content: string,
+  type: string,
+  apiKey: string,
+  metadata?: {
+    author?: string;
+    publishedAt?: string;
+    tags?: string[];
+    url?: string;
+  }
+): Promise<RepoSummary> {
+  const userContentParts: string[] = [`Title: ${title}`];
+  if (content) userContentParts.push(`Content:\n${intelligentTruncate(cleanReadmeContent(content), LLM_CONFIG.README_MAX_LENGTH)}`);
+  if (metadata) {
+    if (metadata.author) userContentParts.push(`Author: ${metadata.author}`);
+    if (metadata.publishedAt) userContentParts.push(`Published At: ${metadata.publishedAt}`);
+    if (metadata.tags && metadata.tags.length > 0) userContentParts.push(`Tags: ${metadata.tags.join(', ')}`);
+    if (metadata.url) userContentParts.push(`URL: ${metadata.url}`);
+  }
+  const userContent = userContentParts.join('\n');
+  const prompt = `${DEFAULT_PROMPT}\n\nAdditional context: This summary will be displayed in a developer portfolio. Focus on key takeaways and insights.\n\n${JSON_FORMAT_SUFFIX}`;
+  return await generateWithOpenAI(prompt, userContent, apiKey);
+}
+
+export { generateContentSummary };
