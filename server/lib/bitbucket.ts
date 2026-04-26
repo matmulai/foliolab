@@ -251,27 +251,38 @@ export async function getBitbucketRepositoriesWithTitles(
 ): Promise<BitbucketRepository[]> {
   const repositories = await getBitbucketRepositories(username, appPassword);
 
-  // Fetch README for each repository (with delay to avoid rate limits)
-  const repositoriesWithTitles = await Promise.all(
-    repositories.map(async (repo, index) => {
-      // Add delay to avoid rate limiting
-      if (index > 0) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
+  // Fetch README for each repository in batches (with delay to avoid rate limits)
+  const BATCH_SIZE = 10;
+  const BATCH_DELAY_MS = 200;
+  const repositoriesWithTitles = [];
 
-      // Extract workspace from URL or use owner login
-      const workspace = repo.owner.login;
-      const repoSlug = repo.name.toLowerCase().replace(/\s+/g, '-');
+  for (let i = 0; i < repositories.length; i += BATCH_SIZE) {
+    const batch = repositories.slice(i, i + BATCH_SIZE);
 
-      const readme = await getBitbucketReadme(workspace, repoSlug, username, appPassword);
-      const displayName = extractTitleFromReadme(readme);
+    const batchResults = await Promise.all(
+      batch.map(async (repo) => {
+        // Extract workspace and slug from the repo URL (https://bitbucket.org/{workspace}/{slug})
+        const urlParts = new URL(repo.url).pathname.split('/').filter(Boolean);
+        const workspace = urlParts[0] || repo.owner.login;
+        const repoSlug = urlParts[1] || repo.name.toLowerCase().replace(/\s+/g, '-');
 
-      return {
-        ...repo,
-        displayName
-      };
-    })
-  );
+        const readme = await getBitbucketReadme(workspace, repoSlug, username, appPassword);
+        const displayName = extractTitleFromReadme(readme);
+
+        return {
+          ...repo,
+          displayName
+        };
+      })
+    );
+
+    repositoriesWithTitles.push(...batchResults);
+
+    // Apply delay between batches to avoid rate limiting (except for last batch)
+    if (i + BATCH_SIZE < repositories.length) {
+      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+    }
+  }
 
   return repositoriesWithTitles;
 }

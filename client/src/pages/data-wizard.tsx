@@ -351,10 +351,11 @@ export default function DataWizardPage() {
             </p>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="github-token-wizard" className="block text-sm font-medium text-gray-700 mb-1">
                   Personal Access Token *
                 </label>
                 <input
+                  id="github-token-wizard"
                   type="password"
                   value={githubToken}
                   onChange={(e) => setGithubToken(e.target.value)}
@@ -394,10 +395,11 @@ export default function DataWizardPage() {
             </p>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="rss-url-wizard" className="block text-sm font-medium text-gray-700 mb-1">
                   RSS Feed URL *
                 </label>
                 <input
+                  id="rss-url-wizard"
                   type="url"
                   value={rssFeedUrl}
                   onChange={(e) => setRssFeedUrl(e.target.value)}
@@ -406,10 +408,11 @@ export default function DataWizardPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="rss-author-wizard" className="block text-sm font-medium text-gray-700 mb-1">
                   Author Name (optional)
                 </label>
                 <input
+                  id="rss-author-wizard"
                   type="text"
                   value={rssAuthor}
                   onChange={(e) => setRssAuthor(e.target.value)}
@@ -446,10 +449,11 @@ export default function DataWizardPage() {
             </p>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="medium-username-wizard" className="block text-sm font-medium text-gray-700 mb-1">
                   Medium Username *
                 </label>
                 <input
+                  id="medium-username-wizard"
                   type="text"
                   value={mediumUsername}
                   onChange={(e) => setMediumUsername(e.target.value)}
@@ -489,10 +493,11 @@ export default function DataWizardPage() {
             </p>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="gitlab-token-wizard" className="block text-sm font-medium text-gray-700 mb-1">
                   GitLab Personal Access Token *
                 </label>
                 <input
+                  id="gitlab-token-wizard"
                   type="password"
                   value={gitlabToken}
                   onChange={(e) => setGitlabToken(e.target.value)}
@@ -504,10 +509,11 @@ export default function DataWizardPage() {
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="gitlab-username-wizard" className="block text-sm font-medium text-gray-700 mb-1">
                   Username (optional)
                 </label>
                 <input
+                  id="gitlab-username-wizard"
                   type="text"
                   value={gitlabUsername}
                   onChange={(e) => setGitlabUsername(e.target.value)}
@@ -544,10 +550,11 @@ export default function DataWizardPage() {
             </p>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="bitbucket-username-wizard" className="block text-sm font-medium text-gray-700 mb-1">
                   Bitbucket Username *
                 </label>
                 <input
+                  id="bitbucket-username-wizard"
                   type="text"
                   value={bitbucketUsername}
                   onChange={(e) => setBitbucketUsername(e.target.value)}
@@ -556,10 +563,11 @@ export default function DataWizardPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="bitbucket-password-wizard" className="block text-sm font-medium text-gray-700 mb-1">
                   App Password *
                 </label>
                 <input
+                  id="bitbucket-password-wizard"
                   type="password"
                   value={bitbucketAppPassword}
                   onChange={(e) => setBitbucketAppPassword(e.target.value)}
@@ -599,10 +607,11 @@ export default function DataWizardPage() {
             </p>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="freeform-title-wizard" className="block text-sm font-medium text-gray-700 mb-1">
                   Title *
                 </label>
                 <input
+                  id="freeform-title-wizard"
                   type="text"
                   value={freeformTitle}
                   onChange={(e) => setFreeformTitle(e.target.value)}
@@ -611,10 +620,11 @@ export default function DataWizardPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="freeform-type-wizard" className="block text-sm font-medium text-gray-700 mb-1">
                   Content Type
                 </label>
                 <select
+                  id="freeform-type-wizard"
                   value={freeformType}
                   onChange={(e) => setFreeformType(e.target.value as any)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -627,10 +637,11 @@ export default function DataWizardPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="freeform-content-wizard" className="block text-sm font-medium text-gray-700 mb-1">
                   Content *
                 </label>
                 <textarea
+                  id="freeform-content-wizard"
                   value={freeformContent}
                   onChange={(e) => setFreeformContent(e.target.value)}
                   placeholder="Describe your work, achievement, or experience..."
@@ -639,10 +650,11 @@ export default function DataWizardPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="freeform-description-wizard" className="block text-sm font-medium text-gray-700 mb-1">
                   Short Description (optional)
                 </label>
                 <input
+                  id="freeform-description-wizard"
                   type="text"
                   value={freeformDescription}
                   onChange={(e) => setFreeformDescription(e.target.value)}
@@ -651,10 +663,11 @@ export default function DataWizardPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="freeform-url-wizard" className="block text-sm font-medium text-gray-700 mb-1">
                   URL (optional)
                 </label>
                 <input
+                  id="freeform-url-wizard"
                   type="url"
                   value={freeformUrl}
                   onChange={(e) => setFreeformUrl(e.target.value)}
@@ -663,10 +676,11 @@ export default function DataWizardPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="freeform-tags-wizard" className="block text-sm font-medium text-gray-700 mb-1">
                   Tags (optional, comma-separated)
                 </label>
                 <input
+                  id="freeform-tags-wizard"
                   type="text"
                   value={freeformTags}
                   onChange={(e) => setFreeformTags(e.target.value)}

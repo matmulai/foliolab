@@ -278,6 +278,7 @@ export default function DataSourcesPage() {
           <button
             onClick={() => setLocation(hasGitHubToken ? '/repos' : '/')}
             className="text-gray-600 hover:text-gray-900 mb-4 flex items-center gap-2"
+            aria-label={hasGitHubToken ? 'Back to GitHub Repos' : 'Back to Home'}
           >
             ← {hasGitHubToken ? 'Back to GitHub Repos' : 'Back to Home'}
           </button>
@@ -327,6 +328,7 @@ export default function DataSourcesPage() {
               <button
                 onClick={() => setActiveSource(null)}
                 className="text-gray-500 hover:text-gray-700"
+                aria-label="Close form"
               >
                 ✕
               </button>
@@ -375,6 +377,7 @@ export default function DataSourcesPage() {
               <button
                 onClick={() => setActiveSource(null)}
                 className="text-gray-500 hover:text-gray-700"
+                aria-label="Close form"
               >
                 ✕
               </button>
@@ -414,6 +417,7 @@ export default function DataSourcesPage() {
               <button
                 onClick={() => setActiveSource(null)}
                 className="text-gray-500 hover:text-gray-700"
+                aria-label="Close form"
               >
                 ✕
               </button>
@@ -465,6 +469,7 @@ export default function DataSourcesPage() {
               <button
                 onClick={() => setActiveSource(null)}
                 className="text-gray-500 hover:text-gray-700"
+                aria-label="Close form"
               >
                 ✕
               </button>
@@ -516,6 +521,7 @@ export default function DataSourcesPage() {
               <button
                 onClick={() => setActiveSource(null)}
                 className="text-gray-500 hover:text-gray-700"
+                aria-label="Close form"
               >
                 ✕
               </button>
@@ -614,6 +620,7 @@ export default function DataSourcesPage() {
             <button
               onClick={() => setLocation('/repos')}
               className="bg-white border-2 border-gray-300 text-gray-700 py-3 px-8 rounded-lg hover:bg-gray-50 transition-all shadow-lg"
+              aria-label="Back to GitHub Selection"
             >
               ← Back to GitHub Selection
             </button>

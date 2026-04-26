@@ -300,20 +300,21 @@ export async function getRepositories(
       orgs = [];
     }
 
-    // Get repositories for each organization with individual error handling
-    const orgRepos: Repository[] = [];
-    for (const org of orgs) {
+    // Get repositories for each organization concurrently with individual error handling
+    const orgReposPromises = orgs.map(async (org) => {
       try {
-        const repos = await getOrganizationRepositories(octokit, {
+        return await getOrganizationRepositories(octokit, {
           login: org.login,
           avatarUrl: org.avatarUrl,
         });
-        orgRepos.push(...repos);
       } catch (error) {
         console.warn(`Failed to fetch repositories for organization ${org.login}, skipping:`, error);
-        // Continue with other organizations
+        return [];
       }
-    }
+    });
+
+    const orgReposResults = await Promise.all(orgReposPromises);
+    const orgRepos = orgReposResults.flat();
 
     // Combine user and organization repositories, but deduplicate based on repo ID
     const allRepos = [...userRepos, ...orgRepos];
@@ -347,8 +348,8 @@ export async function getRepositories(
 
       console.log(`Processing README batch ${batchNumber}/${totalBatches} (${batch.length} repos)`);
 
-      const results = await Promise.allSettled(
-        batch.map(async (repo) => {
+      const results = await Promise.all(
+        batch.map(async (repo): Promise<{ repo: string; success: boolean }> => {
           try {
             const readme = await getReadmeContent(
               octokit,
@@ -361,6 +362,7 @@ export async function getRepositories(
             if (displayName) {
               repo.displayName = displayName;
             }
+            return { repo: `${repo.owner.login}/${repo.name}`, success: true };
           } catch (error) {
             console.warn(
               `Failed to process README for ${repo.owner.login}/${repo.name}:`,
@@ -368,12 +370,13 @@ export async function getRepositories(
             );
             // Continue with other repositories, don't set displayName
             repo.displayName = null;
+            return { repo: `${repo.owner.login}/${repo.name}`, success: false };
           }
         }),
       );
 
       // Log batch results for monitoring
-      const failures = results.filter(r => r.status === 'rejected');
+      const failures = results.filter(r => !r.success);
       if (failures.length > 0) {
         console.warn(`Batch ${batchNumber}: ${failures.length}/${batch.length} failures`);
       }
@@ -445,10 +448,9 @@ export async function getReadmeContent(
   owner: string,
   repo: string,
 ): Promise<string | null> {
-  const octokit =
-    typeof clientOrToken === "string"
-      ? new Octokit({ auth: clientOrToken })
-      : clientOrToken;
+  const octokit = typeof clientOrToken === 'string'
+    ? new Octokit({ auth: clientOrToken })
+    : clientOrToken;
 
   try {
     const { data } = await octokit.repos.getReadme({

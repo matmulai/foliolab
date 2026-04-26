@@ -64,8 +64,12 @@ export async function getGitLabUser(accessToken: string): Promise<GitLabUser> {
  */
 export async function getGitLabProjects(
   accessToken: string,
-  username?: string
+  username: string
 ): Promise<GitLabRepository[]> {
+  if (!username) {
+    throw new Error('GitLab username is required');
+  }
+
   try {
     let projects: GitLabProject[] = [];
     let page = 1;
@@ -117,27 +121,30 @@ export async function getGitLabReadme(
 ): Promise<string | null> {
   try {
     const readmeFiles = ['README.md', 'readme.md', 'Readme.md', 'README', 'readme'];
+    const branches = ['main', 'master'];
 
-    for (const filename of readmeFiles) {
-      try {
-        const response = await axios.get(
-          `${GITLAB_API_URL}/projects/${projectId}/repository/files/${encodeURIComponent(filename)}/raw`,
-          {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`
-            },
-            params: {
-              ref: 'main'
+    for (const ref of branches) {
+      for (const filename of readmeFiles) {
+        try {
+          const response = await axios.get(
+            `${GITLAB_API_URL}/projects/${projectId}/repository/files/${encodeURIComponent(filename)}/raw`,
+            {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`
+              },
+              params: {
+                ref
+              }
             }
-          }
-        );
+          );
 
-        if (response.data) {
-          return response.data;
+          if (response.data) {
+            return response.data;
+          }
+        } catch (err) {
+          // Try next filename / branch
+          continue;
         }
-      } catch (err) {
-        // Try next filename
-        continue;
       }
     }
 
@@ -156,10 +163,21 @@ export function extractTitleFromReadme(readme: string | null): string | null {
   if (!readme) return null;
 
   const lines = readme.split('\n');
-  for (const line of lines) {
-    const match = line.match(/^#\s+(.+)/);
-    if (match) {
-      return match[1].trim();
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Check for ATX-style H1 (# Title)
+    const atxMatch = line.match(/^\s*#(?![#])\s*(.+)/);
+    if (atxMatch) {
+      return atxMatch[1].trim();
+    }
+
+    // Check for Setext-style H1 (Title\n=====)
+    if (i < lines.length - 1) {
+      const nextLine = lines[i + 1];
+      if (nextLine.trim().match(/^={3,}$/) && line.trim() !== '') {
+        return line.trim();
+      }
     }
   }
 
@@ -213,27 +231,37 @@ function convertGitLabProjectToRepository(project: GitLabProject): GitLabReposit
  */
 export async function getGitLabProjectsWithTitles(
   accessToken: string,
-  username?: string
+  username: string
 ): Promise<GitLabRepository[]> {
   const projects = await getGitLabProjects(accessToken, username);
 
-  // Fetch README for each project (with delay to avoid rate limits)
-  const projectsWithTitles = await Promise.all(
-    projects.map(async (project, index) => {
-      // Add delay to avoid rate limiting
-      if (index > 0) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
+  // Fetch README for each project in batches (with delay to avoid rate limits)
+  const BATCH_SIZE = 10;
+  const BATCH_DELAY_MS = 100;
+  const projectsWithTitles = [];
 
-      const readme = await getGitLabReadme(project.id, accessToken);
-      const displayName = extractTitleFromReadme(readme);
+  for (let i = 0; i < projects.length; i += BATCH_SIZE) {
+    const batch = projects.slice(i, i + BATCH_SIZE);
 
-      return {
-        ...project,
-        displayName
-      };
-    })
-  );
+    const batchResults = await Promise.all(
+      batch.map(async (project) => {
+        const readme = await getGitLabReadme(project.id, accessToken);
+        const displayName = extractTitleFromReadme(readme);
+
+        return {
+          ...project,
+          displayName
+        };
+      })
+    );
+
+    projectsWithTitles.push(...batchResults);
+
+    // Apply delay between batches to avoid rate limiting (except for last batch)
+    if (i + BATCH_SIZE < projects.length) {
+      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+    }
+  }
 
   return projectsWithTitles;
 }
