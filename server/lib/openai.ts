@@ -421,9 +421,9 @@ ${JSON_FORMAT_SUFFIX}`;
 }
 
 export {
+  generateContentSummary,
   generateRepoSummary,
   generateUserIntroduction,
-  generateContentSummary,
   type RepoSummary,
   type UserIntroduction,
 };
