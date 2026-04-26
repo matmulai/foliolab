@@ -766,6 +766,7 @@ export default function PortfolioPreview() {
                           variant="ghost"
                           className="h-4 w-4 p-0 hover:bg-red-100"
                           onClick={() => removeSkill(index)}
+                          aria-label={`Remove skill ${skill}`}
                         >
                           <X className="h-3 w-3" />
                         </Button>
@@ -780,7 +781,7 @@ export default function PortfolioPreview() {
                       onKeyPress={(e) => e.key === 'Enter' && addSkill()}
                       className="flex-1"
                     />
-                    <Button size="sm" onClick={addSkill}>
+                    <Button size="sm" onClick={addSkill} aria-label="Add skill">
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
@@ -843,6 +844,7 @@ export default function PortfolioPreview() {
                           variant="ghost"
                           className="h-4 w-4 p-0 hover:bg-red-100"
                           onClick={() => removeInterest(index)}
+                          aria-label={`Remove interest ${interest}`}
                         >
                           <X className="h-3 w-3" />
                         </Button>
@@ -857,7 +859,7 @@ export default function PortfolioPreview() {
                       onKeyPress={(e) => e.key === 'Enter' && addInterest()}
                       className="flex-1"
                     />
-                    <Button size="sm" onClick={addInterest}>
+                    <Button size="sm" onClick={addInterest} aria-label="Add interest">
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
