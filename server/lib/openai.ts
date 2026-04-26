@@ -278,6 +278,51 @@ ${JSON_FORMAT_SUFFIX}`;
   }
 }
 
+async function generateContentSummary(
+  title: string,
+  content: string,
+  contentType: string,
+  apiKey: string,
+  metadata?: {
+    author?: string;
+    publishedAt?: string;
+    tags?: string[];
+    url?: string;
+  }
+): Promise<RepoSummary> {
+  try {
+    const userContentParts: string[] = [`Title: ${title}`, `Content Type: ${contentType}`];
+
+    if (metadata) {
+      if (metadata.author) userContentParts.push(`Author: ${metadata.author}`);
+      if (metadata.publishedAt) userContentParts.push(`Published: ${metadata.publishedAt}`);
+      if (metadata.url) userContentParts.push(`URL: ${metadata.url}`);
+      if (metadata.tags && metadata.tags.length > 0) userContentParts.push(`Tags: ${metadata.tags.join(', ')}`);
+    }
+
+    const truncatedContent = intelligentTruncate(content, LLM_CONFIG.README_MAX_LENGTH);
+    userContentParts.push(`Content:\n${truncatedContent}`);
+
+    const userContent = userContentParts.join('\n');
+
+    const prompt = `You are a professional technical writer and portfolio coach.
+Analyze the provided content (blog post, article, or custom text) and generate a compelling summary for a professional portfolio.
+
+Focus on:
+- Key takeaways and main arguments
+- Technologies, concepts, or practices discussed
+- The value this content demonstrates to a potential employer or client
+
+${JSON_FORMAT_SUFFIX}`;
+
+    return await generateWithOpenAI(prompt, userContent, apiKey);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`Failed to generate ${contentType} summary:`, errorMessage);
+    throw new Error(`Failed to generate ${contentType} summary: ${errorMessage}`);
+  }
+}
+
 async function generateUserIntroduction(
   repositories: Array<{
     name: string;
@@ -407,6 +452,7 @@ async function generateContentSummary(
 export {
   generateContentSummary,
   generateRepoSummary,
+  generateContentSummary,
   generateUserIntroduction,
   generateContentSummary,
   type RepoSummary,
