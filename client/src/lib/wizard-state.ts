@@ -1,4 +1,4 @@
-import { SourceType } from "@shared/schema";
+import type { SourceType } from "@shared/schema";
 
 const WIZARD_STORAGE_KEY = "foliolab_wizard_state";
 
@@ -16,7 +16,7 @@ export function getWizardState(): WizardState | null {
     if (!data) return null;
     return JSON.parse(data);
   } catch (error) {
-    console.error('Error reading wizard state:', error);
+    console.error("Error reading wizard state:", error);
     return null;
   }
 }
@@ -25,7 +25,7 @@ export function saveWizardState(state: WizardState) {
   try {
     localStorage.setItem(WIZARD_STORAGE_KEY, JSON.stringify(state));
   } catch (error) {
-    console.error('Error saving wizard state:', error);
+    console.error("Error saving wizard state:", error);
     throw error;
   }
 }
@@ -36,7 +36,7 @@ export function initializeWizardState(selectedSources: SourceType[]): WizardStat
     currentStep: 1, // Start at step 1 (source selection is step 0)
     completedSources: [],
     totalSteps: selectedSources.length + 2, // sources + selection page + preview
-    startedAt: new Date().toISOString()
+    startedAt: new Date().toISOString(),
   };
   saveWizardState(state);
   return state;
@@ -67,9 +67,7 @@ export function getNextIncompleteSource(): SourceType | null {
   const state = getWizardState();
   if (!state) return null;
 
-  return state.selectedSources.find(
-    source => !state.completedSources.includes(source)
-  ) || null;
+  return state.selectedSources.find((source) => !state.completedSources.includes(source)) || null;
 }
 
 export function isWizardComplete(): boolean {

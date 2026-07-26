@@ -5,60 +5,57 @@
 // ⚡ Bolt Optimization: Extracted RegExps to module level to avoid redundant compilation overhead on every execution
 const badgePatterns = [
   // Shield.io badges - [![text](shield-url)](link-url)
-  /\[\!\[([^\]]*)\]\([^)]*shields\.io[^)]*\)\]\([^)]*\)/g,
+  /\[!\[([^\]]*)\]\([^)]*shields\.io[^)]*\)\]\([^)]*\)/g,
 
   // PyPI badges
-  /\[\!\[PyPI[^\]]*\]\([^)]*pypi\.org[^)]*\)\]\([^)]*\)/g,
+  /\[!\[PyPI[^\]]*\]\([^)]*pypi\.org[^)]*\)\]\([^)]*\)/g,
 
   // GitHub workflow/action badges
-  /\[\!\[([^\]]*)\]\([^)]*github\.com[^)]*workflows[^)]*\)\]\([^)]*\)/g,
-  /\[\!\[([^\]]*)\]\([^)]*github\.com[^)]*actions[^)]*\)\]\([^)]*\)/g,
+  /\[!\[([^\]]*)\]\([^)]*github\.com[^)]*workflows[^)]*\)\]\([^)]*\)/g,
+  /\[!\[([^\]]*)\]\([^)]*github\.com[^)]*actions[^)]*\)\]\([^)]*\)/g,
 
   // License badges
-  /\[\!\[License[^\]]*\]\([^)]*badge[^)]*license[^)]*\)\]\([^)]*\)/g,
-  /\[\!\[([^\]]*license[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[!\[License[^\]]*\]\([^)]*badge[^)]*license[^)]*\)\]\([^)]*\)/g,
+  /\[!\[([^\]]*license[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
 
   // Version/Release badges
-  /\[\!\[([^\]]*version[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-  /\[\!\[([^\]]*release[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-  /\[\!\[Changelog[^\]]*\]\([^)]*\)\]\([^)]*\)/g,
+  /\[!\[([^\]]*version[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[!\[([^\]]*release[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[!\[Changelog[^\]]*\]\([^)]*\)\]\([^)]*\)/g,
 
   // Test/CI badges
-  /\[\!\[([^\]]*test[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-  /\[\!\[([^\]]*build[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-  /\[\!\[([^\]]*ci[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[!\[([^\]]*test[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[!\[([^\]]*build[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[!\[([^\]]*ci[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
 
   // Coverage badges
-  /\[\!\[([^\]]*coverage[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-  /\[\!\[([^\]]*codecov[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[!\[([^\]]*coverage[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[!\[([^\]]*codecov[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
 
   // Documentation badges
-  /\[\!\[([^\]]*docs[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-  /\[\!\[([^\]]*documentation[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[!\[([^\]]*docs[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[!\[([^\]]*documentation[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
 
   // Download/Install badges
-  /\[\!\[([^\]]*download[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
-  /\[\!\[([^\]]*install[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[!\[([^\]]*download[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
+  /\[!\[([^\]]*install[^\]]*)\]\([^)]*\)\]\([^)]*\)/gi,
 
   // Generic img.shields.io badges
-  /\[\!\[([^\]]*)\]\([^)]*img\.shields\.io[^)]*\)\]\([^)]*\)/g,
+  /\[!\[([^\]]*)\]\([^)]*img\.shields\.io[^)]*\)\]\([^)]*\)/g,
 
   // Standalone shield images without links
-  /\!\[([^\]]*)\]\([^)]*shields\.io[^)]*\)/g,
-  /\!\[([^\]]*)\]\([^)]*img\.shields\.io[^)]*\)/g,
+  /!\[([^\]]*)\]\([^)]*shields\.io[^)]*\)/g,
+  /!\[([^\]]*)\]\([^)]*img\.shields\.io[^)]*\)/g,
 
   // Common badge hosting services
-  /\[\!\[([^\]]*)\]\([^)]*badge\.fury\.io[^)]*\)\]\([^)]*\)/g,
-  /\[\!\[([^\]]*)\]\([^)]*badgen\.net[^)]*\)\]\([^)]*\)/g,
-  /\[\!\[([^\]]*)\]\([^)]*flat\.badgen\.net[^)]*\)\]\([^)]*\)/g,
+  /\[!\[([^\]]*)\]\([^)]*badge\.fury\.io[^)]*\)\]\([^)]*\)/g,
+  /\[!\[([^\]]*)\]\([^)]*badgen\.net[^)]*\)\]\([^)]*\)/g,
+  /\[!\[([^\]]*)\]\([^)]*flat\.badgen\.net[^)]*\)\]\([^)]*\)/g,
 ];
 
 // ⚡ Bolt Optimization: Combine badge patterns into a single RegExp to avoid looping over multiple patterns.
 // This allows the RegExp engine to perform a single O(N) pass over the text instead of M * O(N) passes.
-const combinedBadgePattern = new RegExp(
-  badgePatterns.map((p) => p.source).join("|"),
-  "gi",
-);
+const combinedBadgePattern = new RegExp(badgePatterns.map((p) => p.source).join("|"), "gi");
 
 const sectionsToRemove = [
   // License sections
@@ -186,9 +183,7 @@ function extractRelevantSections(content: string): string {
   // Add sections that match priority patterns
   sections.slice(1).forEach((section) => {
     const sectionHeader = section.split("\n")[0];
-    const isPriority = prioritySections.some((pattern) =>
-      pattern.test(sectionHeader),
-    );
+    const isPriority = prioritySections.some((pattern) => pattern.test(sectionHeader));
 
     if (isPriority) {
       // Limit section length to avoid overly detailed content
@@ -234,20 +229,16 @@ function limitSectionLength(section: string, maxLength: number): string {
     const line = lines[i];
     if (currentLength + line.length + 1 > maxLength) {
       // Try to end at a natural break point
-      if (
-        content.includes(".") ||
-        content.includes("!") ||
-        content.includes("?")
-      ) {
+      if (content.includes(".") || content.includes("!") || content.includes("?")) {
         break;
       }
       // Otherwise, add this line if it's not too long
       if (currentLength + line.length + 1 < maxLength + 100) {
-        content += "\n" + line;
+        content += `\n${line}`;
       }
       break;
     }
-    content += "\n" + line;
+    content += `\n${line}`;
     currentLength += line.length + 1;
   }
 

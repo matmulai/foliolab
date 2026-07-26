@@ -1,10 +1,10 @@
+import { useMutation } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { saveGitHubToken, removeGitHubToken } from "@/lib/storage";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { removeGitHubToken, saveGitHubToken } from "@/lib/storage";
 
 function getGithubAuthUrl() {
   const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
@@ -15,7 +15,7 @@ function getGithubAuthUrl() {
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: `${window.location.origin}/auth/github`,
-    scope: 'repo,read:user,read:org',
+    scope: "repo,read:user,read:org",
     state: crypto.randomUUID(),
   });
 
@@ -25,15 +25,15 @@ function getGithubAuthUrl() {
 export default function GithubAuth() {
   const [, setLocation] = useLocation();
 
-  const { mutate: authenticate, isPending, error: authError } = useMutation({
+  const { mutate: authenticate, error: authError } = useMutation({
     mutationFn: async (code: string) => {
       const res = await apiRequest("POST", "/api/fetch-repos", { code });
-      
+
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || 'Authentication failed');
+        throw new Error(errorData.error || "Authentication failed");
       }
-      
+
       const data = await res.json();
 
       // Store GitHub token and username for later use
@@ -46,8 +46,8 @@ export default function GithubAuth() {
           repositories: data.repositories.map((repo: any) => ({
             ...repo,
             selected: false, // Initialize all repos as unselected
-            summary: null // Initialize all repos without summaries
-          }))
+            summary: null, // Initialize all repos without summaries
+          })),
         });
       }
 
@@ -64,7 +64,7 @@ export default function GithubAuth() {
       queryClient.clear();
       removeGitHubToken();
       localStorage.removeItem("github_username");
-    }
+    },
   });
 
   useEffect(() => {
@@ -112,9 +112,13 @@ export default function GithubAuth() {
                 <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
                   <span className="text-destructive text-xl">⚠</span>
                 </div>
-                <h2 className="text-lg font-semibold text-destructive mb-2">Authentication Failed</h2>
+                <h2 className="text-lg font-semibold text-destructive mb-2">
+                  Authentication Failed
+                </h2>
                 <p className="text-sm text-muted-foreground mb-4">
-                  {authError instanceof Error ? authError.message : 'An error occurred during authentication'}
+                  {authError instanceof Error
+                    ? authError.message
+                    : "An error occurred during authentication"}
                 </p>
                 <p className="text-xs text-muted-foreground mb-4">
                   This usually happens when the authorization code has expired or been used already.
@@ -122,7 +126,7 @@ export default function GithubAuth() {
               </div>
               <div className="flex flex-col gap-2">
                 <button
-                  onClick={() => window.location.href = getGithubAuthUrl()}
+                  onClick={() => (window.location.href = getGithubAuthUrl())}
                   className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
                 >
                   Try Again

@@ -1,17 +1,17 @@
-import { useState } from 'react';
-import { useLocation } from 'wouter';
-import { PortfolioItem, BlogPost, MediumPost, FreeformContent } from '@shared/schema';
+import type { BlogPost, FreeformContent, MediumPost, PortfolioItem } from "@shared/schema";
+import { useState } from "react";
+import { useLocation } from "wouter";
 import {
-  addPortfolioItems,
   addPortfolioItem,
-  saveGitLabToken,
+  addPortfolioItems,
+  getBitbucketCredentials,
+  getGitHubToken,
   getGitLabToken,
   saveBitbucketCredentials,
-  getBitbucketCredentials,
-  getGitHubToken
-} from '../lib/storage';
+  saveGitLabToken,
+} from "../lib/storage";
 
-type DataSourceType = 'rss' | 'medium' | 'gitlab' | 'bitbucket' | 'freeform';
+type DataSourceType = "rss" | "medium" | "gitlab" | "bitbucket" | "freeform";
 
 export default function DataSourcesPage() {
   const [, setLocation] = useLocation();
@@ -24,35 +24,37 @@ export default function DataSourcesPage() {
   const hasGitHubToken = !!getGitHubToken();
 
   // RSS Form State
-  const [rssFeedUrl, setRssFeedUrl] = useState('');
-  const [rssAuthor, setRssAuthor] = useState('');
+  const [rssFeedUrl, setRssFeedUrl] = useState("");
+  const [rssAuthor, setRssAuthor] = useState("");
 
   // Medium Form State
-  const [mediumUsername, setMediumUsername] = useState('');
+  const [mediumUsername, setMediumUsername] = useState("");
 
   // GitLab Form State
-  const [gitlabToken, setGitlabToken] = useState(getGitLabToken() || '');
-  const [gitlabUsername, setGitlabUsername] = useState('');
+  const [gitlabToken, setGitlabToken] = useState(getGitLabToken() || "");
+  const [gitlabUsername, setGitlabUsername] = useState("");
 
   // Bitbucket Form State
   const [bitbucketUsername, setBitbucketUsername] = useState(
-    getBitbucketCredentials()?.username || ''
+    getBitbucketCredentials()?.username || "",
   );
   const [bitbucketAppPassword, setBitbucketAppPassword] = useState(
-    getBitbucketCredentials()?.appPassword || ''
+    getBitbucketCredentials()?.appPassword || "",
   );
 
   // Free-form State
-  const [freeformTitle, setFreeformTitle] = useState('');
-  const [freeformContent, setFreeformContent] = useState('');
-  const [freeformDescription, setFreeformDescription] = useState('');
-  const [freeformUrl, setFreeformUrl] = useState('');
-  const [freeformType, setFreeformType] = useState<'project' | 'achievement' | 'skill' | 'experience' | 'other'>('other');
-  const [freeformTags, setFreeformTags] = useState('');
+  const [freeformTitle, setFreeformTitle] = useState("");
+  const [freeformContent, setFreeformContent] = useState("");
+  const [freeformDescription, setFreeformDescription] = useState("");
+  const [freeformUrl, setFreeformUrl] = useState("");
+  const [freeformType, setFreeformType] = useState<
+    "project" | "achievement" | "skill" | "experience" | "other"
+  >("other");
+  const [freeformTags, setFreeformTags] = useState("");
 
   const handleRSSSubmit = async () => {
     if (!rssFeedUrl) {
-      setError('Please enter an RSS feed URL');
+      setError("Please enter an RSS feed URL");
       return;
     }
 
@@ -60,14 +62,14 @@ export default function DataSourcesPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/sources/rss', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ feedUrl: rssFeedUrl, author: rssAuthor })
+      const response = await fetch("/api/sources/rss", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedUrl: rssFeedUrl, author: rssAuthor }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch RSS feed');
+        throw new Error("Failed to fetch RSS feed");
       }
 
       const data = await response.json();
@@ -75,11 +77,11 @@ export default function DataSourcesPage() {
 
       addPortfolioItems(posts as PortfolioItem[]);
       setSuccess(`Added ${posts.length} blog posts from RSS feed!`);
-      setRssFeedUrl('');
-      setRssAuthor('');
+      setRssFeedUrl("");
+      setRssAuthor("");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch RSS feed');
+      setError(err instanceof Error ? err.message : "Failed to fetch RSS feed");
     } finally {
       setLoading(false);
     }
@@ -87,7 +89,7 @@ export default function DataSourcesPage() {
 
   const handleMediumSubmit = async () => {
     if (!mediumUsername) {
-      setError('Please enter a Medium username');
+      setError("Please enter a Medium username");
       return;
     }
 
@@ -95,14 +97,14 @@ export default function DataSourcesPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/sources/medium', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: mediumUsername })
+      const response = await fetch("/api/sources/medium", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: mediumUsername }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch Medium posts');
+        throw new Error("Failed to fetch Medium posts");
       }
 
       const data = await response.json();
@@ -110,10 +112,10 @@ export default function DataSourcesPage() {
 
       addPortfolioItems(posts as PortfolioItem[]);
       setSuccess(`Added ${posts.length} Medium posts!`);
-      setMediumUsername('');
+      setMediumUsername("");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch Medium posts');
+      setError(err instanceof Error ? err.message : "Failed to fetch Medium posts");
     } finally {
       setLoading(false);
     }
@@ -121,7 +123,7 @@ export default function DataSourcesPage() {
 
   const handleGitLabSubmit = async () => {
     if (!gitlabToken) {
-      setError('Please enter a GitLab access token');
+      setError("Please enter a GitLab access token");
       return;
     }
 
@@ -129,14 +131,14 @@ export default function DataSourcesPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/sources/gitlab', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessToken: gitlabToken, username: gitlabUsername })
+      const response = await fetch("/api/sources/gitlab", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accessToken: gitlabToken, username: gitlabUsername }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch GitLab projects');
+        throw new Error("Failed to fetch GitLab projects");
       }
 
       const data = await response.json();
@@ -147,7 +149,7 @@ export default function DataSourcesPage() {
       setSuccess(`Added ${projects.length} GitLab projects!`);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch GitLab projects');
+      setError(err instanceof Error ? err.message : "Failed to fetch GitLab projects");
     } finally {
       setLoading(false);
     }
@@ -155,7 +157,7 @@ export default function DataSourcesPage() {
 
   const handleBitbucketSubmit = async () => {
     if (!bitbucketUsername || !bitbucketAppPassword) {
-      setError('Please enter both username and app password');
+      setError("Please enter both username and app password");
       return;
     }
 
@@ -163,14 +165,14 @@ export default function DataSourcesPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/sources/bitbucket', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: bitbucketUsername, appPassword: bitbucketAppPassword })
+      const response = await fetch("/api/sources/bitbucket", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: bitbucketUsername, appPassword: bitbucketAppPassword }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch Bitbucket repositories');
+        throw new Error("Failed to fetch Bitbucket repositories");
       }
 
       const data = await response.json();
@@ -181,7 +183,7 @@ export default function DataSourcesPage() {
       setSuccess(`Added ${repositories.length} Bitbucket repositories!`);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch Bitbucket repositories');
+      setError(err instanceof Error ? err.message : "Failed to fetch Bitbucket repositories");
     } finally {
       setLoading(false);
     }
@@ -189,7 +191,7 @@ export default function DataSourcesPage() {
 
   const handleFreeformSubmit = async () => {
     if (!freeformTitle || !freeformContent) {
-      setError('Please enter both title and content');
+      setError("Please enter both title and content");
       return;
     }
 
@@ -197,36 +199,36 @@ export default function DataSourcesPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/sources/freeform', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/sources/freeform", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: freeformTitle,
           content: freeformContent,
           description: freeformDescription || null,
           url: freeformUrl || undefined,
           contentType: freeformType,
-          tags: freeformTags ? freeformTags.split(',').map(t => t.trim()) : []
-        })
+          tags: freeformTags ? freeformTags.split(",").map((t) => t.trim()) : [],
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create free-form content');
+        throw new Error("Failed to create free-form content");
       }
 
       const data = await response.json();
       const content = data.content as FreeformContent;
 
       addPortfolioItem(content as PortfolioItem);
-      setSuccess('Added custom content!');
-      setFreeformTitle('');
-      setFreeformContent('');
-      setFreeformDescription('');
-      setFreeformUrl('');
-      setFreeformTags('');
+      setSuccess("Added custom content!");
+      setFreeformTitle("");
+      setFreeformContent("");
+      setFreeformDescription("");
+      setFreeformUrl("");
+      setFreeformTags("");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create content');
+      setError(err instanceof Error ? err.message : "Failed to create content");
     } finally {
       setLoading(false);
     }
@@ -234,40 +236,40 @@ export default function DataSourcesPage() {
 
   const dataSourceCards = [
     {
-      id: 'rss' as DataSourceType,
-      title: 'Blog RSS Feed',
-      description: 'Import blog posts from any RSS feed',
-      icon: '📰',
-      color: 'bg-orange-50 border-orange-200'
+      id: "rss" as DataSourceType,
+      title: "Blog RSS Feed",
+      description: "Import blog posts from any RSS feed",
+      icon: "📰",
+      color: "bg-orange-50 border-orange-200",
     },
     {
-      id: 'medium' as DataSourceType,
-      title: 'Medium Posts',
-      description: 'Showcase your Medium articles',
-      icon: '📝',
-      color: 'bg-green-50 border-green-200'
+      id: "medium" as DataSourceType,
+      title: "Medium Posts",
+      description: "Showcase your Medium articles",
+      icon: "📝",
+      color: "bg-green-50 border-green-200",
     },
     {
-      id: 'gitlab' as DataSourceType,
-      title: 'GitLab Projects',
-      description: 'Import projects from GitLab',
-      icon: '🦊',
-      color: 'bg-purple-50 border-purple-200'
+      id: "gitlab" as DataSourceType,
+      title: "GitLab Projects",
+      description: "Import projects from GitLab",
+      icon: "🦊",
+      color: "bg-purple-50 border-purple-200",
     },
     {
-      id: 'bitbucket' as DataSourceType,
-      title: 'Bitbucket Repos',
-      description: 'Add Bitbucket repositories',
-      icon: '🪣',
-      color: 'bg-blue-50 border-blue-200'
+      id: "bitbucket" as DataSourceType,
+      title: "Bitbucket Repos",
+      description: "Add Bitbucket repositories",
+      icon: "🪣",
+      color: "bg-blue-50 border-blue-200",
     },
     {
-      id: 'freeform' as DataSourceType,
-      title: 'Custom Content',
-      description: 'Add any custom content you like',
-      icon: '✍️',
-      color: 'bg-pink-50 border-pink-200'
-    }
+      id: "freeform" as DataSourceType,
+      title: "Custom Content",
+      description: "Add any custom content you like",
+      icon: "✍️",
+      color: "bg-pink-50 border-pink-200",
+    },
   ];
 
   return (
@@ -276,18 +278,17 @@ export default function DataSourcesPage() {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => setLocation(hasGitHubToken ? '/repos' : '/')}
+            onClick={() => setLocation(hasGitHubToken ? "/repos" : "/")}
             className="text-gray-600 hover:text-gray-900 mb-4 flex items-center gap-2"
-            aria-label={hasGitHubToken ? 'Back to GitHub Repos' : 'Back to Home'}
+            aria-label={hasGitHubToken ? "Back to GitHub Repos" : "Back to Home"}
           >
-            ← {hasGitHubToken ? 'Back to GitHub Repos' : 'Back to Home'}
+            ← {hasGitHubToken ? "Back to GitHub Repos" : "Back to Home"}
           </button>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Add Data Sources</h1>
           <p className="text-gray-600">
             {hasGitHubToken
-              ? 'Expand your portfolio by importing content from multiple sources'
-              : 'Import content from any of these sources to build your portfolio'
-            }
+              ? "Expand your portfolio by importing content from multiple sources"
+              : "Import content from any of these sources to build your portfolio"}
           </p>
         </div>
 
@@ -306,7 +307,7 @@ export default function DataSourcesPage() {
         {/* Data Source Cards */}
         {!activeSource && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-            {dataSourceCards.map(source => (
+            {dataSourceCards.map((source) => (
               <button
                 key={source.id}
                 onClick={() => setActiveSource(source.id)}
@@ -321,7 +322,7 @@ export default function DataSourcesPage() {
         )}
 
         {/* RSS Feed Form */}
-        {activeSource === 'rss' && (
+        {activeSource === "rss" && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">Add Blog RSS Feed</h2>
@@ -363,14 +364,14 @@ export default function DataSourcesPage() {
                 disabled={loading}
                 className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
               >
-                {loading ? 'Fetching...' : 'Import Blog Posts'}
+                {loading ? "Fetching..." : "Import Blog Posts"}
               </button>
             </div>
           </div>
         )}
 
         {/* Medium Form */}
-        {activeSource === 'medium' && (
+        {activeSource === "medium" && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">Add Medium Posts</h2>
@@ -403,14 +404,14 @@ export default function DataSourcesPage() {
                 disabled={loading}
                 className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
               >
-                {loading ? 'Fetching...' : 'Import Medium Posts'}
+                {loading ? "Fetching..." : "Import Medium Posts"}
               </button>
             </div>
           </div>
         )}
 
         {/* GitLab Form */}
-        {activeSource === 'gitlab' && (
+        {activeSource === "gitlab" && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">Add GitLab Projects</h2>
@@ -455,14 +456,14 @@ export default function DataSourcesPage() {
                 disabled={loading}
                 className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
               >
-                {loading ? 'Fetching...' : 'Import GitLab Projects'}
+                {loading ? "Fetching..." : "Import GitLab Projects"}
               </button>
             </div>
           </div>
         )}
 
         {/* Bitbucket Form */}
-        {activeSource === 'bitbucket' && (
+        {activeSource === "bitbucket" && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">Add Bitbucket Repositories</h2>
@@ -499,7 +500,8 @@ export default function DataSourcesPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <p className="text-sm text-gray-500 mt-1">
-                  Create an app password at Bitbucket Settings → App passwords (needs repository:read)
+                  Create an app password at Bitbucket Settings → App passwords (needs
+                  repository:read)
                 </p>
               </div>
               <button
@@ -507,14 +509,14 @@ export default function DataSourcesPage() {
                 disabled={loading}
                 className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
               >
-                {loading ? 'Fetching...' : 'Import Bitbucket Repos'}
+                {loading ? "Fetching..." : "Import Bitbucket Repos"}
               </button>
             </div>
           </div>
         )}
 
         {/* Free-form Content Form */}
-        {activeSource === 'freeform' && (
+        {activeSource === "freeform" && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">Add Custom Content</h2>
@@ -528,9 +530,7 @@ export default function DataSourcesPage() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Title *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
                 <input
                   type="text"
                   value={freeformTitle}
@@ -540,9 +540,7 @@ export default function DataSourcesPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Content Type
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Content Type</label>
                 <select
                   value={freeformType}
                   onChange={(e) => setFreeformType(e.target.value as any)}
@@ -556,9 +554,7 @@ export default function DataSourcesPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Content *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Content *</label>
                 <textarea
                   value={freeformContent}
                   onChange={(e) => setFreeformContent(e.target.value)}
@@ -608,7 +604,7 @@ export default function DataSourcesPage() {
                 disabled={loading}
                 className="w-full bg-pink-600 text-white py-2 px-4 rounded-lg hover:bg-pink-700 disabled:bg-gray-400"
               >
-                {loading ? 'Adding...' : 'Add Custom Content'}
+                {loading ? "Adding..." : "Add Custom Content"}
               </button>
             </div>
           </div>
@@ -618,7 +614,7 @@ export default function DataSourcesPage() {
         <div className="flex justify-center gap-4">
           {hasGitHubToken && (
             <button
-              onClick={() => setLocation('/repos')}
+              onClick={() => setLocation("/repos")}
               className="bg-white border-2 border-gray-300 text-gray-700 py-3 px-8 rounded-lg hover:bg-gray-50 transition-all shadow-lg"
               aria-label="Back to GitHub Selection"
             >
@@ -626,10 +622,10 @@ export default function DataSourcesPage() {
             </button>
           )}
           <button
-            onClick={() => setLocation('/preview')}
+            onClick={() => setLocation("/preview")}
             className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-8 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg"
           >
-            {hasGitHubToken ? 'Continue to Portfolio →' : 'Preview Portfolio →'}
+            {hasGitHubToken ? "Continue to Portfolio →" : "Preview Portfolio →"}
           </button>
         </div>
       </div>

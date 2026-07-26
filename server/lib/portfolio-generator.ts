@@ -1,13 +1,13 @@
-import { themes } from '../../shared/themes.js';
-import type { Repository } from '../../shared/schema.js';
+import type { Repository } from "../../shared/schema.js";
+import { themes } from "../../shared/themes.js";
 
 export function escapeHtml(unsafe: string): string {
   return unsafe
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 export function capitalizeFirstLetter(str: string): string {
@@ -15,11 +15,11 @@ export function capitalizeFirstLetter(str: string): string {
 }
 
 export function sanitizeUrl(url: string | null | undefined): string {
-  if (!url) return '#';
+  if (!url) return "#";
   const trimmed = url.trim();
   // Check for dangerous protocols
   if (/^(javascript:|data:|vbscript:)/i.test(trimmed)) {
-    return '#';
+    return "#";
   }
   return escapeHtml(trimmed);
 }
@@ -49,10 +49,10 @@ export function generatePortfolioHtml(
       profile: string;
     };
   } = themes[1],
-  customTitle?: string | null
+  customTitle?: string | null,
 ): string {
   if (!repositories || repositories.length === 0) {
-    throw new Error('No repositories provided for portfolio generation');
+    throw new Error("No repositories provided for portfolio generation");
   }
 
   const capitalizedUsername = capitalizeFirstLetter(username);
@@ -104,73 +104,93 @@ export function generatePortfolioHtml(
         <div class="${theme.layout.container}">
             <header class="${theme.layout.header}">
                 <div class="${theme.layout.profile}">
-                    ${avatarUrl ? `
+                    ${
+                      avatarUrl
+                        ? `
                     <div class="mb-6">
                         <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(capitalizeFirstLetter(username))}" class="w-32 h-32 rounded-full mx-auto border-4 border-gray-200 shadow-lg">
                     </div>
-                    ` : ''}
+                    `
+                        : ""
+                    }
                     <h1 class="text-4xl font-bold mb-6 ${theme.preview.text}">${escapeHtml(portfolioTitle)}</h1>
-                    ${introduction ? `
-                    <div class="max-w-2xl ${theme.id === 'modern' ? 'text-center' : 'text-left'}">
+                    ${
+                      introduction
+                        ? `
+                    <div class="max-w-2xl ${theme.id === "modern" ? "text-center" : "text-left"}">
                         <p class="${theme.preview.text} mb-8 leading-relaxed">${escapeHtml(introduction.introduction)}</p>
-                        <div class="flex flex-wrap gap-3 ${theme.id === 'modern' ? 'justify-center' : ''} mb-8">
-                            ${introduction.skills.map(skill =>
-                              theme.id === 'modern'
-                                ? `<span class="px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 text-white">${escapeHtml(skill)}</span>`
-                                : `<span class="${theme.preview.accent} px-3 py-1 rounded-full text-sm font-medium">${escapeHtml(skill)}</span>`
-                            ).join('')}
+                        <div class="flex flex-wrap gap-3 ${theme.id === "modern" ? "justify-center" : ""} mb-8">
+                            ${introduction.skills
+                              .map((skill) =>
+                                theme.id === "modern"
+                                  ? `<span class="px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 text-white">${escapeHtml(skill)}</span>`
+                                  : `<span class="${theme.preview.accent} px-3 py-1 rounded-full text-sm font-medium">${escapeHtml(skill)}</span>`,
+                              )
+                              .join("")}
                         </div>
                         <p class="${theme.preview.text} text-sm mb-8">
-                            <span class="font-medium">Interests:</span> ${introduction.interests.map(interest => escapeHtml(interest)).join(', ')}
+                            <span class="font-medium">Interests:</span> ${introduction.interests.map((interest) => escapeHtml(interest)).join(", ")}
                         </p>
                     </div>
-                    ` : ''}
+                    `
+                        : ""
+                    }
                 </div>
             </header>
 
             <div class="${theme.layout.content}">
-                ${repositories.map(repo => {
-                  if (!repo || typeof repo !== 'object') {
-                    console.error('Invalid repository object:', repo);
-                    return '';
-                  }
+                ${repositories
+                  .map((repo) => {
+                    if (!repo || typeof repo !== "object") {
+                      console.error("Invalid repository object:", repo);
+                      return "";
+                    }
 
-                  const topics = Array.isArray(repo.metadata?.topics) ? repo.metadata.topics : [];
-                  const description = repo.summary || repo.description || '';
+                    const topics = Array.isArray(repo.metadata?.topics) ? repo.metadata.topics : [];
+                    const description = repo.summary || repo.description || "";
 
-                  const marginClass = theme.id === 'minimal' ? 'mb-6' : '';
+                    const marginClass = theme.id === "minimal" ? "mb-6" : "";
 
-                  return `
+                    return `
                     <article class="${theme.preview.card} p-6 relative card-shadow ${marginClass}">
                         <div class="flex justify-between items-start">
-                            <h2 class="text-2xl font-semibold mb-2 ${theme.preview.text}">${escapeHtml(repo.displayName || repo.name || 'Untitled Project')}</h2>
+                            <h2 class="text-2xl font-semibold mb-2 ${theme.preview.text}">${escapeHtml(repo.displayName || repo.name || "Untitled Project")}</h2>
                             <div class="flex items-center gap-2">
-                                ${repo.metadata?.stars > 0 ? `
+                                ${
+                                  repo.metadata?.stars > 0
+                                    ? `
                                 <span class="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">
                                     ★ ${repo.metadata.stars}
                                 </span>
-                                ` : ''}
+                                `
+                                    : ""
+                                }
                                 <a href="${sanitizeUrl(repo.url)}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View on GitHub">
                                     <i class="fab fa-github"></i>
                                 </a>
-                                ${repo.metadata?.url ?
-                                    `<a href="${sanitizeUrl(repo.metadata.url)}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View Live Demo">
+                                ${
+                                  repo.metadata?.url
+                                    ? `<a href="${sanitizeUrl(repo.metadata.url)}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View Live Demo">
                                         <i class="fas fa-external-link-alt"></i>
                                     </a>`
-                                    : ''}
+                                    : ""
+                                }
                             </div>
                         </div>
                         <p class="${theme.preview.text} mb-4">${escapeHtml(description)}</p>
                         <div class="flex gap-2 flex-wrap">
-                            ${topics.map(topic =>
-                                theme.id === 'modern'
-                                    ? `<span class="px-2 py-1 rounded-full text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white">${escapeHtml(topic)}</span>`
-                                    : `<span class="${theme.preview.accent} px-2 py-1 rounded-full text-sm">${escapeHtml(topic)}</span>`
-                            ).join('')}
+                            ${topics
+                              .map((topic) =>
+                                theme.id === "modern"
+                                  ? `<span class="px-2 py-1 rounded-full text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white">${escapeHtml(topic)}</span>`
+                                  : `<span class="${theme.preview.accent} px-2 py-1 rounded-full text-sm">${escapeHtml(topic)}</span>`,
+                              )
+                              .join("")}
                         </div>
                     </article>
                   `;
-                }).join('')}
+                  })
+                  .join("")}
             </div>
         </div>
     </div>

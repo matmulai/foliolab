@@ -25,16 +25,12 @@ export interface ErrorResponse {
  * ));
  * ```
  */
-export function createErrorResponse(
-  error: string,
-  details?: string,
-  code?: string
-): ErrorResponse {
+export function createErrorResponse(error: string, details?: string, code?: string): ErrorResponse {
   return {
     error,
     ...(details && { details }),
     ...(code && { code }),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   };
 }
 
@@ -43,24 +39,24 @@ export function createErrorResponse(
  */
 export const ErrorCodes = {
   // Authentication errors
-  INVALID_TOKEN: 'INVALID_TOKEN',
-  MISSING_TOKEN: 'MISSING_TOKEN',
-  TOKEN_EXPIRED: 'TOKEN_EXPIRED',
+  INVALID_TOKEN: "INVALID_TOKEN",
+  MISSING_TOKEN: "MISSING_TOKEN",
+  TOKEN_EXPIRED: "TOKEN_EXPIRED",
 
   // GitHub errors
-  GITHUB_AUTH_FAILED: 'GITHUB_AUTH_FAILED',
-  GITHUB_API_ERROR: 'GITHUB_API_ERROR',
-  REPO_NOT_FOUND: 'REPO_NOT_FOUND',
+  GITHUB_AUTH_FAILED: "GITHUB_AUTH_FAILED",
+  GITHUB_API_ERROR: "GITHUB_API_ERROR",
+  REPO_NOT_FOUND: "REPO_NOT_FOUND",
 
   // OpenAI errors
-  OPENAI_API_ERROR: 'OPENAI_API_ERROR',
-  OPENAI_API_KEY_MISSING: 'OPENAI_API_KEY_MISSING',
+  OPENAI_API_ERROR: "OPENAI_API_ERROR",
+  OPENAI_API_KEY_MISSING: "OPENAI_API_KEY_MISSING",
 
   // Validation errors
-  INVALID_INPUT: 'INVALID_INPUT',
-  MISSING_REQUIRED_FIELD: 'MISSING_REQUIRED_FIELD',
+  INVALID_INPUT: "INVALID_INPUT",
+  MISSING_REQUIRED_FIELD: "MISSING_REQUIRED_FIELD",
 
   // Server errors
-  INTERNAL_ERROR: 'INTERNAL_ERROR',
-  SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
+  INTERNAL_ERROR: "INTERNAL_ERROR",
+  SERVICE_UNAVAILABLE: "SERVICE_UNAVAILABLE",
 } as const;

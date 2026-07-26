@@ -1,16 +1,16 @@
+import { Database, FileQuestion, Github, Info, Mail, Shield } from "lucide-react";
+import { useEffect } from "react";
 import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Github, Shield, Globe, FileQuestion, Mail, Info, Database } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { clearAllData } from "@/lib/queryClient";
 import { clearStorage } from "@/lib/storage";
-import { useEffect } from "react";
 
 export default function Home() {
   // Clear all data when the component mounts
@@ -58,9 +58,7 @@ export default function Home() {
                       <span className="w-full border-t" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">
-                        Or
-                      </span>
+                      <span className="bg-background px-2 text-muted-foreground">Or</span>
                     </div>
                   </div>
 
@@ -115,10 +113,10 @@ export default function Home() {
                       How does it work?
                     </AccordionTrigger>
                     <AccordionContent className="text-muted-foreground text-base">
-                      Import content from GitHub, GitLab, Bitbucket, Medium, your
-                      blog, or add custom content. Select what you want to showcase,
-                      and we'll generate beautiful summaries using AI. Deploy your
-                      portfolio with one click to GitHub Pages or Vercel.
+                      Import content from GitHub, GitLab, Bitbucket, Medium, your blog, or add
+                      custom content. Select what you want to showcase, and we'll generate beautiful
+                      summaries using AI. Deploy your portfolio with one click to GitHub Pages or
+                      Vercel.
                     </AccordionContent>
                   </AccordionItem>
 
@@ -127,10 +125,9 @@ export default function Home() {
                       What sources can I use?
                     </AccordionTrigger>
                     <AccordionContent className="text-muted-foreground text-base">
-                      You can import from GitHub (OAuth), GitLab (personal access
-                      token), Bitbucket (app password), Medium (username), any blog
-                      RSS feed, or create custom free-form content. Mix and match as
-                      many sources as you like!
+                      You can import from GitHub (OAuth), GitLab (personal access token), Bitbucket
+                      (app password), Medium (username), any blog RSS feed, or create custom
+                      free-form content. Mix and match as many sources as you like!
                     </AccordionContent>
                   </AccordionItem>
 
@@ -162,9 +159,9 @@ export default function Home() {
                   <div className="text-left">
                     <h3 className="font-semibold mb-2">Privacy First</h3>
                     <p className="text-sm text-muted-foreground">
-                      Your data stays completely private. All content from any source is stored only in your browser's
-                      local storage. We never store your tokens, credentials, or portfolio data on our servers.
-                      Everything is processed client-side.
+                      Your data stays completely private. All content from any source is stored only
+                      in your browser's local storage. We never store your tokens, credentials, or
+                      portfolio data on our servers. Everything is processed client-side.
                     </p>
                   </div>
                 </div>
@@ -178,8 +175,7 @@ export default function Home() {
       <footer className="border-t bg-white/80 backdrop-blur-md shadow-sm py-6">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center">
-            </div>
+            <div className="flex items-center"></div>
             <div className="flex items-center gap-8">
               <a
                 href="https://github.com/matmulai/foliolab"

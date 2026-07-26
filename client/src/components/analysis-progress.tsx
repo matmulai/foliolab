@@ -29,15 +29,13 @@ export function AnalysisProgress({
 
           <div className="space-y-4">
             <Progress value={progress} className="h-2" />
-            
+
             <div className="text-sm text-muted-foreground space-y-1">
               <p>
                 Processing repository {currentRepo} of {totalRepos}
               </p>
               {repoName && (
-                <p className="font-medium text-foreground">
-                  Currently analyzing: {repoName}
-                </p>
+                <p className="font-medium text-foreground">Currently analyzing: {repoName}</p>
               )}
             </div>
           </div>

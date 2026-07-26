@@ -1,7 +1,7 @@
-import axios from 'axios';
-import { BitbucketRepository } from '../../shared/schema';
+import axios from "axios";
+import type { BitbucketRepository } from "../../shared/schema";
 
-const BITBUCKET_API_URL = 'https://api.bitbucket.org/2.0';
+const BITBUCKET_API_URL = "https://api.bitbucket.org/2.0";
 
 interface BitbucketRepo {
   uuid: string;
@@ -60,21 +60,20 @@ interface BitbucketPaginatedResponse<T> {
  */
 export async function getBitbucketUser(
   username: string,
-  appPassword: string
+  appPassword: string,
 ): Promise<BitbucketUser> {
   try {
-    const auth = Buffer.from(`${username}:${appPassword}`).toString('base64');
-    const response = await axios.get<BitbucketUser>(
-      `${BITBUCKET_API_URL}/user`,
-      {
-        headers: {
-          'Authorization': `Basic ${auth}`
-        }
-      }
-    );
+    const auth = Buffer.from(`${username}:${appPassword}`).toString("base64");
+    const response = await axios.get<BitbucketUser>(`${BITBUCKET_API_URL}/user`, {
+      headers: {
+        Authorization: `Basic ${auth}`,
+      },
+    });
     return response.data;
   } catch (error) {
-    throw new Error(`Failed to fetch Bitbucket user: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to fetch Bitbucket user: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -87,28 +86,27 @@ export async function getBitbucketUser(
  */
 export async function getBitbucketRepositories(
   username: string,
-  appPassword: string
+  appPassword: string,
 ): Promise<BitbucketRepository[]> {
   try {
-    const auth = Buffer.from(`${username}:${appPassword}`).toString('base64');
+    const auth = Buffer.from(`${username}:${appPassword}`).toString("base64");
     let repositories: BitbucketRepo[] = [];
     let nextUrl: string | undefined = `${BITBUCKET_API_URL}/repositories/${username}`;
     let pageCount = 0;
 
     // Bitbucket uses cursor-based pagination
     while (nextUrl && pageCount < 10) {
-      const response: { data: BitbucketPaginatedResponse<BitbucketRepo> } = await axios.get<BitbucketPaginatedResponse<BitbucketRepo>>(
-        nextUrl,
-        {
-          headers: {
-            'Authorization': `Basic ${auth}`
-          },
-          params: {
-            pagelen: 100,
-            role: 'owner'
-          }
-        }
-      );
+      const response: { data: BitbucketPaginatedResponse<BitbucketRepo> } = await axios.get<
+        BitbucketPaginatedResponse<BitbucketRepo>
+      >(nextUrl, {
+        headers: {
+          Authorization: `Basic ${auth}`,
+        },
+        params: {
+          pagelen: 100,
+          role: "owner",
+        },
+      });
 
       repositories = repositories.concat(response.data.values);
       nextUrl = response.data.next;
@@ -116,14 +114,16 @@ export async function getBitbucketRepositories(
 
       // Add delay to avoid rate limiting
       if (nextUrl) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
     }
 
     // Convert to our schema format
-    return repositories.map(repo => convertBitbucketRepoToRepository(repo));
+    return repositories.map((repo) => convertBitbucketRepoToRepository(repo));
   } catch (error) {
-    throw new Error(`Failed to fetch Bitbucket repositories: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to fetch Bitbucket repositories: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -140,11 +140,11 @@ export async function getBitbucketReadme(
   workspace: string,
   repoSlug: string,
   username: string,
-  appPassword: string
+  appPassword: string,
 ): Promise<string | null> {
   try {
-    const auth = Buffer.from(`${username}:${appPassword}`).toString('base64');
-    const readmeFiles = ['README.md', 'readme.md', 'Readme.md', 'README', 'readme'];
+    const auth = Buffer.from(`${username}:${appPassword}`).toString("base64");
+    const readmeFiles = ["README.md", "readme.md", "Readme.md", "README", "readme"];
 
     for (const filename of readmeFiles) {
       try {
@@ -152,38 +152,35 @@ export async function getBitbucketReadme(
           `${BITBUCKET_API_URL}/repositories/${workspace}/${repoSlug}/src/main/${filename}`,
           {
             headers: {
-              'Authorization': `Basic ${auth}`
-            }
-          }
+              Authorization: `Basic ${auth}`,
+            },
+          },
         );
 
         if (response.data) {
           return response.data;
         }
-      } catch (err) {
+      } catch (_err) {
         // Try with master branch
         try {
           const responseMaster = await axios.get<string>(
             `${BITBUCKET_API_URL}/repositories/${workspace}/${repoSlug}/src/master/${filename}`,
             {
               headers: {
-                'Authorization': `Basic ${auth}`
-              }
-            }
+                Authorization: `Basic ${auth}`,
+              },
+            },
           );
 
           if (responseMaster.data) {
             return responseMaster.data;
           }
-        } catch (err2) {
-          // Try next filename
-          continue;
-        }
+        } catch (_err2) {}
       }
     }
 
     return null;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
@@ -196,7 +193,7 @@ export async function getBitbucketReadme(
 export function extractTitleFromReadme(readme: string | null): string | null {
   if (!readme) return null;
 
-  const lines = readme.split('\n');
+  const lines = readme.split("\n");
   for (const line of lines) {
     const match = line.match(/^#\s+(.+)/);
     if (match) {
@@ -221,11 +218,11 @@ function convertBitbucketRepoToRepository(repo: BitbucketRepo): BitbucketReposit
     url: repo.links.html.href,
     summary: null,
     selected: false,
-    source: 'bitbucket',
+    source: "bitbucket",
     owner: {
       login: repo.owner.username,
-      type: repo.owner.type === 'team' ? 'Organization' : 'User',
-      avatarUrl: repo.owner.links.avatar.href
+      type: repo.owner.type === "team" ? "Organization" : "User",
+      avatarUrl: repo.owner.links.avatar.href,
     },
     metadata: {
       id: repo.uuid,
@@ -233,8 +230,8 @@ function convertBitbucketRepoToRepository(repo: BitbucketRepo): BitbucketReposit
       language: repo.language,
       topics: [], // Bitbucket API v2 doesn't expose topics easily
       updatedAt: repo.updated_on,
-      url: repo.links.html.href
-    }
+      url: repo.links.html.href,
+    },
   };
 }
 
@@ -247,7 +244,7 @@ function convertBitbucketRepoToRepository(repo: BitbucketRepo): BitbucketReposit
  */
 export async function getBitbucketRepositoriesWithTitles(
   username: string,
-  appPassword: string
+  appPassword: string,
 ): Promise<BitbucketRepository[]> {
   const repositories = await getBitbucketRepositories(username, appPassword);
 
@@ -262,25 +259,25 @@ export async function getBitbucketRepositoriesWithTitles(
     const batchResults = await Promise.all(
       batch.map(async (repo) => {
         // Extract workspace and slug from the repo URL (https://bitbucket.org/{workspace}/{slug})
-        const urlParts = new URL(repo.url).pathname.split('/').filter(Boolean);
+        const urlParts = new URL(repo.url).pathname.split("/").filter(Boolean);
         const workspace = urlParts[0] || repo.owner.login;
-        const repoSlug = urlParts[1] || repo.name.toLowerCase().replace(/\s+/g, '-');
+        const repoSlug = urlParts[1] || repo.name.toLowerCase().replace(/\s+/g, "-");
 
         const readme = await getBitbucketReadme(workspace, repoSlug, username, appPassword);
         const displayName = extractTitleFromReadme(readme);
 
         return {
           ...repo,
-          displayName
+          displayName,
         };
-      })
+      }),
     );
 
     repositoriesWithTitles.push(...batchResults);
 
     // Apply delay between batches to avoid rate limiting (except for last batch)
     if (i + BATCH_SIZE < repositories.length) {
-      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+      await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
     }
   }
 
@@ -295,12 +292,12 @@ export async function getBitbucketRepositoriesWithTitles(
  */
 export async function validateBitbucketCredentials(
   username: string,
-  appPassword: string
+  appPassword: string,
 ): Promise<boolean> {
   try {
     await getBitbucketUser(username, appPassword);
     return true;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 }
