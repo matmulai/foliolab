@@ -1,0 +1,36 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    # Supply-chain guard: only propose releases that are at least a week old.
+    # Security updates are not delayed by cooldown.
+    cooldown:
+      default-days: 7
+    # Majors are deliberately left ungrouped so they arrive as individual PRs
+    # and fail the auto-merge gate. Security updates are ungrouped too: a
+    # grouped PR reports its group name rather than a bump type, so grouping
+    # them would send every security fix to manual review, which is how this
+    # repo accumulated an eight-PR backlog in the first place.
+    groups:
+      npm-minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    cooldown:
+      default-days: 7
+    groups:
+      actions-minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
