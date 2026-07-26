@@ -1,7 +1,56 @@
 import Parser from 'rss-parser';
 import { BlogPost } from '../../shared/schema';
+import dns from 'dns';
+import net from 'net';
+
+// Check for private / local IP addresses to prevent SSRF
+const isPrivateIP = (ip: string): boolean => {
+  const cleanIp = ip.replace(/^\[(.*)\]$/, '$1');
+  const ipVersion = net.isIP(cleanIp);
+  if (!ipVersion) return false;
+
+  // IPv4: loopback, private ranges, link-local, unspecified, cloud metadata
+  if (ipVersion === 4) {
+    return /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|169\.254\.|0\.0\.0\.0)/.test(cleanIp);
+  }
+
+  // IPv6: loopback (::1), unspecified (::), unique-local (fc00::/7),
+  // link-local (fe80::/10), and IPv4-mapped (::ffff:private)
+  const lowerIp = cleanIp.toLowerCase();
+  if (lowerIp === '::1' || lowerIp === '::') return true;
+  if (/^f[cd]/i.test(lowerIp)) return true;  // fc00::/7 unique-local
+  if (/^fe[89ab]/i.test(lowerIp)) return true; // fe80::/10 link-local
+  // IPv4-mapped IPv6 (::ffff:10.x.x.x, etc.)
+  const v4Mapped = cleanIp.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  if (v4Mapped) return isPrivateIP(v4Mapped[1]);
+
+  return false;
+};
+
+// Custom DNS lookup to prevent DNS rebinding attacks pointing to local IPs
+const customLookup = (
+  hostname: string,
+  options: dns.LookupOptions | number,
+  callback: (err: NodeJS.ErrnoException | null, address: string | dns.LookupAddress[], family: number) => void
+) => {
+  dns.lookup(hostname, options as dns.LookupOptions, (err, address, family) => {
+    if (err) return callback(err, address, family);
+
+    const addresses = Array.isArray(address) ? address : [{ address }];
+    for (const addr of addresses) {
+      if (isPrivateIP(addr.address)) {
+        return callback(new Error(`Access to private IP ${addr.address} is blocked`), address, family);
+      }
+    }
+    callback(err, address, family);
+  });
+};
 
 const parser = new Parser({
+  maxRedirects: 0, // Prevent redirects to IP literals to bypass dns.lookup
+  requestOptions: {
+    lookup: customLookup
+  },
   customFields: {
     item: [
       ['content:encoded', 'contentEncoded'],
@@ -37,6 +86,12 @@ export interface RSSFeed {
  */
 export async function fetchRSSFeed(feedUrl: string): Promise<RSSFeed> {
   try {
+    // Pre-flight check: prevent direct IP access to private network
+    const url = new URL(feedUrl);
+    if (isPrivateIP(url.hostname)) {
+      throw new Error(`Direct access to private network is blocked`);
+    }
+
     const feed = await parser.parseURL(feedUrl);
 
     return {

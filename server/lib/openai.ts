@@ -174,27 +174,27 @@ async function generateRepoSummary(
 ): Promise<RepoSummary> {
   try {
     // Build enhanced context with metadata
-    let userContent = `Repository Name: ${name}`;
+    const userContentParts: string[] = [`Repository Name: ${name}`];
     
     if (description) {
-      userContent += `\nDescription: ${description}`;
+      userContentParts.push(`Description: ${description}`);
     }
     
     if (metadata) {
       if (metadata.language) {
-        userContent += `\nPrimary Language: ${metadata.language}`;
+        userContentParts.push(`Primary Language: ${metadata.language}`);
       }
       
       if (metadata.topics && metadata.topics.length > 0) {
-        userContent += `\nTopics/Tags: ${metadata.topics.join(', ')}`;
+        userContentParts.push(`Topics/Tags: ${metadata.topics.join(', ')}`);
       }
       
       if (metadata.stars > 0) {
-        userContent += `\nStars: ${metadata.stars}`;
+        userContentParts.push(`Stars: ${metadata.stars}`);
       }
       
       if (metadata.url) {
-        userContent += `\nProject URL: ${metadata.url}`;
+        userContentParts.push(`Project URL: ${metadata.url}`);
       }
     }
 
@@ -204,52 +204,54 @@ async function generateRepoSummary(
       const cleanedReadme = cleanReadmeContent(readme);
       const trimmedReadme = intelligentTruncate(cleanedReadme, LLM_CONFIG.README_MAX_LENGTH);
 
-      userContent += `\nREADME:\n${trimmedReadme}`;
+      userContentParts.push(`README:\n${trimmedReadme}`);
     } else if (accessToken && owner) {
       try {
         // Analyze project structure when README is not available
         const projectStructure = await analyzeProjectStructure(accessToken, owner, name);
         const structureSummary = generateProjectSummary(projectStructure);
         
-        userContent += `\nProject Structure Analysis:\n${structureSummary}`;
+        userContentParts.push(`Project Structure Analysis:\n${structureSummary}`);
         
         // Add detailed structure information
         if (projectStructure.frameworkIndicators.length > 0) {
-          userContent += `\nDetected Frameworks: ${projectStructure.frameworkIndicators.map(f => f.framework).join(', ')}`;
+          userContentParts.push(`Detected Frameworks: ${projectStructure.frameworkIndicators.map(f => f.framework).join(', ')}`);
         }
         
         if (projectStructure.techStack.length > 0) {
-          userContent += `\nTech Stack: ${projectStructure.techStack.join(', ')}`;
+          userContentParts.push(`Tech Stack: ${projectStructure.techStack.join(', ')}`);
         }
         
         if (projectStructure.sourceFiles.length > 0) {
           const entryPoints = projectStructure.sourceFiles.filter(f => f.isEntryPoint);
           if (entryPoints.length > 0) {
-            userContent += `\nEntry Points: ${entryPoints.map(f => f.name).join(', ')}`;
+            userContentParts.push(`Entry Points: ${entryPoints.map(f => f.name).join(', ')}`);
           }
           
           const languages = Array.from(new Set(projectStructure.sourceFiles.map(f => f.language)));
-          userContent += `\nLanguages Used: ${languages.join(', ')}`;
+          userContentParts.push(`Languages Used: ${languages.join(', ')}`);
         }
         
         if (projectStructure.packageFiles.length > 0) {
           const packageInfo = projectStructure.packageFiles[0];
           if (packageInfo.description) {
-            userContent += `\nPackage Description: ${packageInfo.description}`;
+            userContentParts.push(`Package Description: ${packageInfo.description}`);
           }
           if (packageInfo.dependencies && packageInfo.dependencies.length > 0) {
             const majorDeps = packageInfo.dependencies.slice(0, 10); // Limit to avoid token overflow
-            userContent += `\nKey Dependencies: ${majorDeps.join(', ')}`;
+            userContentParts.push(`Key Dependencies: ${majorDeps.join(', ')}`);
           }
         }
         
       } catch (error) {
         console.warn("Failed to analyze project structure:", error);
-        userContent += `\nNote: No README available and project structure analysis failed. Analysis based on repository metadata only.`;
+        userContentParts.push(`Note: No README available and project structure analysis failed. Analysis based on repository metadata only.`);
       }
     } else {
-      userContent += `\nNote: No README available. Analysis based on repository metadata only.`;
+      userContentParts.push(`Note: No README available. Analysis based on repository metadata only.`);
     }
+
+    const userContent = userContentParts.join('\n');
 
     const prompt = `${customPrompt || DEFAULT_PROMPT}
     
@@ -419,9 +421,9 @@ ${JSON_FORMAT_SUFFIX}`;
 }
 
 export {
+  generateContentSummary,
   generateRepoSummary,
   generateUserIntroduction,
-  generateContentSummary,
   type RepoSummary,
   type UserIntroduction,
 };

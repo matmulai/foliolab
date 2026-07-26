@@ -1,6 +1,12 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Github, Shield, Globe, FileQuestion, Mail, Info, Database } from "lucide-react";
 import { clearAllData } from "@/lib/queryClient";
 import { clearStorage } from "@/lib/storage";
@@ -103,34 +109,49 @@ export default function Home() {
             <div className="mt-20">
               <h2 className="text-3xl font-bold mb-8">Frequently Asked Questions</h2>
               <div className="grid gap-6 text-left">
-                <div>
-                  <h3 className="font-semibold mb-2">How does it work?</h3>
-                  <p className="text-muted-foreground">
-                    Import content from GitHub, GitLab, Bitbucket, Medium, your blog, or add custom content.
-                    Select what you want to showcase, and we'll generate beautiful summaries using AI.
-                    Deploy your portfolio with one click to GitHub Pages or Vercel.
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">What sources can I use?</h3>
-                  <p className="text-muted-foreground">
-                    You can import from GitHub (OAuth), GitLab (personal access token), Bitbucket (app password),
-                    Medium (username), any blog RSS feed, or create custom free-form content. Mix and match
-                    as many sources as you like!
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Is it free to use?</h3>
-                  <p className="text-muted-foreground">
-                    FolioLab is open-source and free to use. 
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">What data do you collect?</h3>
-                  <p className="text-muted-foreground">
-                    We don't store any of your data.
-                  </p>
-                </div>
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="item-1">
+                    <AccordionTrigger className="text-lg font-semibold">
+                      How does it work?
+                    </AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground text-base">
+                      Import content from GitHub, GitLab, Bitbucket, Medium, your
+                      blog, or add custom content. Select what you want to showcase,
+                      and we'll generate beautiful summaries using AI. Deploy your
+                      portfolio with one click to GitHub Pages or Vercel.
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="item-2">
+                    <AccordionTrigger className="text-lg font-semibold">
+                      What sources can I use?
+                    </AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground text-base">
+                      You can import from GitHub (OAuth), GitLab (personal access
+                      token), Bitbucket (app password), Medium (username), any blog
+                      RSS feed, or create custom free-form content. Mix and match as
+                      many sources as you like!
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="item-3">
+                    <AccordionTrigger className="text-lg font-semibold">
+                      Is it free to use?
+                    </AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground text-base">
+                      FolioLab is open-source and free to use.
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="item-4">
+                    <AccordionTrigger className="text-lg font-semibold">
+                      What data do you collect?
+                    </AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground text-base">
+                      We don't store any of your data.
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </div>
             </div>
 

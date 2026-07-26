@@ -14,6 +14,16 @@ export function capitalizeFirstLetter(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+export function sanitizeUrl(url: string | null | undefined): string {
+  if (!url) return '#';
+  const trimmed = url.trim();
+  // Check for dangerous protocols
+  if (/^(javascript:|data:|vbscript:)/i.test(trimmed)) {
+    return '#';
+  }
+  return escapeHtml(trimmed);
+}
+
 export function generatePortfolioHtml(
   username: string,
   repositories: Repository[],
@@ -140,11 +150,11 @@ export function generatePortfolioHtml(
                                     ★ ${repo.metadata.stars}
                                 </span>
                                 ` : ''}
-                                <a href="${repo.url}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View on GitHub">
+                                <a href="${sanitizeUrl(repo.url)}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View on GitHub">
                                     <i class="fab fa-github"></i>
                                 </a>
                                 ${repo.metadata?.url ?
-                                    `<a href="${repo.metadata.url}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View Live Demo">
+                                    `<a href="${sanitizeUrl(repo.metadata.url)}" class="icon-button border border-gray-200 bg-white" target="_blank" title="View Live Demo">
                                         <i class="fas fa-external-link-alt"></i>
                                     </a>`
                                     : ''}

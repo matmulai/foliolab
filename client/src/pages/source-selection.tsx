@@ -98,6 +98,7 @@ export default function SourceSelectionPage() {
           <button
             onClick={() => setLocation('/')}
             className="text-gray-600 hover:text-gray-900 mb-4 flex items-center gap-2"
+            aria-label="Back to Home"
           >
             ← Back to Home
           </button>
@@ -109,29 +110,29 @@ export default function SourceSelectionPage() {
 
         {/* Progress Indicator */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between" role="list" aria-label="Progress steps">
+            <div className="flex items-center gap-3" role="listitem" aria-current="step">
               <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
                 1
               </div>
               <span className="font-medium text-gray-900">Select Sources</span>
             </div>
-            <div className="flex-1 h-1 bg-gray-200 mx-4"></div>
-            <div className="flex items-center gap-3">
+            <div className="flex-1 h-1 bg-gray-200 mx-4" aria-hidden="true"></div>
+            <div className="flex items-center gap-3" role="listitem">
               <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-semibold">
                 2
               </div>
               <span className="text-gray-500">Import Data</span>
             </div>
-            <div className="flex-1 h-1 bg-gray-200 mx-4"></div>
-            <div className="flex items-center gap-3">
+            <div className="flex-1 h-1 bg-gray-200 mx-4" aria-hidden="true"></div>
+            <div className="flex items-center gap-3" role="listitem">
               <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-semibold">
                 3
               </div>
               <span className="text-gray-500">Select Items</span>
             </div>
-            <div className="flex-1 h-1 bg-gray-200 mx-4"></div>
-            <div className="flex items-center gap-3">
+            <div className="flex-1 h-1 bg-gray-200 mx-4" aria-hidden="true"></div>
+            <div className="flex items-center gap-3" role="listitem">
               <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-semibold">
                 4
               </div>
@@ -152,12 +153,13 @@ export default function SourceSelectionPage() {
                 key={source.type}
                 onClick={() => !isDisabled && toggleSource(source.type)}
                 disabled={isDisabled}
-                className={`${source.color} border-2 rounded-lg p-6 text-left hover:shadow-lg transition-all relative ${
+                aria-pressed={isSelected}
+                className={`${source.color} border-2 rounded-lg p-6 text-left hover:shadow-lg transition-all relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
                   isSelected ? 'ring-4 ring-blue-500 ring-opacity-50' : ''
                 } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {/* Selection Checkbox */}
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-4 right-4" aria-hidden="true">
                   <div
                     className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
                       isSelected

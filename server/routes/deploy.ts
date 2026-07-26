@@ -2,19 +2,10 @@ import { Router } from 'express';
 import { getGithubUser, createPortfolioRepository, commitPortfolioFiles, deployToGitHubPages } from '../lib/github.js';
 import { generateUserIntroduction } from '../lib/openai.js';
 import { generatePortfolioHtml } from '../lib/portfolio-generator.js';
+import { safeJsonStringify } from '../lib/security.js';
 import { themes } from '../../shared/themes.js';
 
 const router = Router();
-
-// Helper to safely stringify JSON for script injection
-function safeJsonStringify(obj: any): string {
-  return JSON.stringify(obj)
-    .replace(/</g, '\\u003c')
-    .replace(/>/g, '\\u003e')
-    .replace(/&/g, '\\u0026')
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029');
-}
 
 router.post('/api/deploy/github', async (req, res) => {
   const { accessToken, downloadOnly, repositories, themeId, userInfo, introduction, customTitle } = req.body;

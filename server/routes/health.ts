@@ -40,11 +40,19 @@ router.get('/health/ready', (_req, res) => {
     // Check if all required services are ready
     const allReady = checks.github.configured && checks.openai.configured;
 
-    res.status(allReady ? 200 : 503).json({
-      status: allReady ? 'ready' : 'not ready',
-      timestamp: new Date().toISOString(),
-      checks
-    });
+    // In production, only return aggregate status (don't leak which services are configured)
+    if (process.env.NODE_ENV === 'production') {
+      res.status(allReady ? 200 : 503).json({
+        status: allReady ? 'ready' : 'not ready',
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      res.status(allReady ? 200 : 503).json({
+        status: allReady ? 'ready' : 'not ready',
+        timestamp: new Date().toISOString(),
+        checks
+      });
+    }
   } catch (error) {
     res.status(503).json({
       status: 'not ready',

@@ -129,11 +129,18 @@ const FRAMEWORK_PATTERNS: Record<string, FrameworkPattern> = {
   }
 };
 
-const ENTRY_POINT_PATTERNS = [
-  'main.js', 'main.ts', 'index.js', 'index.ts', 'app.js', 'app.ts',
-  'server.js', 'server.ts', 'main.py', 'app.py', 'main.go',
-  'main.rs', 'lib.rs', 'Main.java', 'Application.java'
-];
+const ENTRY_POINT_REGEX = /main\.js|main\.ts|index\.js|index\.ts|app\.js|app\.ts|server\.js|server\.ts|main\.py|app\.py|main\.go|main\.rs|lib\.rs|main\.java|application\.java/i;
+
+const CONFIG_REGEX = /webpack\.config|vite\.config|rollup\.config|babel\.config|eslint|prettier|tsconfig|jest\.config|cypress\.config|docker|nginx\.conf|apache\.conf|\.env|config\.yml|config\.yaml/;
+
+const PACKAGE_FILES = new Set([
+  'package.json', 'requirements.txt', 'cargo.toml', 'go.mod', 'go.sum',
+  'pom.xml', 'build.gradle', 'gemfile', 'composer.json', 'pubspec.yaml'
+]);
+
+const SOURCE_EXT_REGEX = /\.(?:js|ts|jsx|tsx|py|java|go|rs|rb|php|cpp|c|cs|swift|kt|dart|vue|svelte)$/;
+
+const MAJOR_TECH_REGEX = /react|vue|angular|express|django|flask|spring|rails|laravel|mongodb|postgresql|mysql|redis|docker|kubernetes|aws|azure|gcp|firebase|graphql|apollo|prisma|typeorm|sequelize/i;
 
 export async function analyzeProjectStructure(
   accessToken: string,
@@ -354,8 +361,22 @@ function analyzeGoMod(content: string): PackageInfo {
   };
 }
 
-function detectFrameworks(structure: ProjectStructure): FrameworkInfo[] {
+export function detectFrameworks(structure: ProjectStructure): FrameworkInfo[] {
   const frameworks: FrameworkInfo[] = [];
+
+  const rootFilesSet = new Set(structure.rootFiles);
+  const directoriesSet = new Set(structure.directories);
+
+  // Flatten dependencies for faster lookup
+  const allDependencies = new Set<string>();
+  for (const pkg of structure.packageFiles) {
+    if (pkg.dependencies) {
+      for (const dep of pkg.dependencies) {
+        allDependencies.add(dep);
+      }
+    }
+  }
+  const uniqueDependencies = Array.from(allDependencies);
 
   for (const [frameworkName, patterns] of Object.entries(FRAMEWORK_PATTERNS)) {
     let confidence = 0;
@@ -364,7 +385,7 @@ function detectFrameworks(structure: ProjectStructure): FrameworkInfo[] {
     // Check for required files
     if (patterns.files) {
       for (const file of patterns.files) {
-        if (structure.rootFiles.includes(file)) {
+        if (rootFilesSet.has(file)) {
           confidence += 30;
           indicators.push(`Has ${file}`);
         }
@@ -373,14 +394,12 @@ function detectFrameworks(structure: ProjectStructure): FrameworkInfo[] {
 
     // Check for dependencies
     if (patterns.dependencies) {
-      for (const packageFile of structure.packageFiles) {
-        if (packageFile.dependencies) {
-          for (const dep of patterns.dependencies) {
-            if (packageFile.dependencies.some(d => d.includes(dep))) {
-              confidence += 40;
-              indicators.push(`Uses ${dep}`);
-            }
-          }
+      for (const dep of patterns.dependencies) {
+        // Check if ANY installed dependency includes the target framework dependency
+        // We preserve the original substring matching logic
+        if (uniqueDependencies.some(d => d.includes(dep))) {
+          confidence += 40;
+          indicators.push(`Uses ${dep}`);
         }
       }
     }
@@ -388,7 +407,7 @@ function detectFrameworks(structure: ProjectStructure): FrameworkInfo[] {
     // Check for config files
     if (patterns.configs) {
       for (const config of patterns.configs) {
-        if (structure.rootFiles.includes(config)) {
+        if (rootFilesSet.has(config)) {
           confidence += 20;
           indicators.push(`Has ${config}`);
         }
@@ -401,13 +420,13 @@ function detectFrameworks(structure: ProjectStructure): FrameworkInfo[] {
         if (pattern.endsWith('/')) {
           // Directory pattern
           const dirName = pattern.slice(0, -1);
-          if (structure.directories.includes(dirName)) {
+          if (directoriesSet.has(dirName)) {
             confidence += 15;
             indicators.push(`Has ${dirName}/ directory`);
           }
         } else {
           // File pattern
-          if (structure.rootFiles.includes(pattern)) {
+          if (rootFilesSet.has(pattern)) {
             confidence += 25;
             indicators.push(`Has ${pattern}`);
           }
@@ -470,28 +489,15 @@ function extractTechStack(structure: ProjectStructure): string[] {
 }
 
 function isPackageFile(fileName: string): boolean {
-  const packageFiles = [
-    'package.json', 'requirements.txt', 'cargo.toml', 'go.mod', 'go.sum',
-    'pom.xml', 'build.gradle', 'gemfile', 'composer.json', 'pubspec.yaml'
-  ];
-  return packageFiles.includes(fileName);
+  return PACKAGE_FILES.has(fileName);
 }
 
 function isConfigFile(fileName: string): boolean {
-  const configPatterns = [
-    'webpack.config', 'vite.config', 'rollup.config', 'babel.config',
-    'eslint', 'prettier', 'tsconfig', 'jest.config', 'cypress.config',
-    'docker', 'nginx.conf', 'apache.conf', '.env', 'config.yml', 'config.yaml'
-  ];
-  return configPatterns.some(pattern => fileName.includes(pattern));
+  return CONFIG_REGEX.test(fileName);
 }
 
 function isSourceFile(fileName: string): boolean {
-  const sourceExtensions = [
-    '.js', '.ts', '.jsx', '.tsx', '.py', '.java', '.go', '.rs', '.rb',
-    '.php', '.cpp', '.c', '.cs', '.swift', '.kt', '.dart', '.vue', '.svelte'
-  ];
-  return sourceExtensions.some(ext => fileName.endsWith(ext));
+  return SOURCE_EXT_REGEX.test(fileName);
 }
 
 function getConfigType(fileName: string): 'config' | 'build' | 'deployment' | 'testing' | 'linting' {
@@ -548,9 +554,7 @@ function getLanguageFromExtension(extension: string): string {
 }
 
 function isEntryPoint(fileName: string): boolean {
-  return ENTRY_POINT_PATTERNS.some(pattern => 
-    fileName.toLowerCase().includes(pattern.toLowerCase())
-  );
+  return ENTRY_POINT_REGEX.test(fileName);
 }
 
 function getMostCommonLanguage(languages: string[]): string | null {
@@ -566,13 +570,7 @@ function getMostCommonLanguage(languages: string[]): string | null {
 }
 
 function isMajorTechnology(dependency: string): boolean {
-  const majorTechs = [
-    'react', 'vue', 'angular', 'express', 'django', 'flask', 'spring',
-    'rails', 'laravel', 'mongodb', 'postgresql', 'mysql', 'redis',
-    'docker', 'kubernetes', 'aws', 'azure', 'gcp', 'firebase',
-    'graphql', 'apollo', 'prisma', 'typeorm', 'sequelize'
-  ];
-  return majorTechs.some(tech => dependency.toLowerCase().includes(tech));
+  return MAJOR_TECH_REGEX.test(dependency);
 }
 
 export function generateProjectSummary(structure: ProjectStructure): string {

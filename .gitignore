@@ -1,5 +1,7 @@
 # Dependencies
 node_modules
+pnpm-lock.yaml
+yarn.lock
 
 # Build outputs
 dist
