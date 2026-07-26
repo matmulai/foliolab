@@ -1,20 +1,13 @@
-import { useState, useEffect } from "react";
+import type { Repository } from "@shared/schema";
+import type { Theme } from "@shared/themes";
+import { Download, Github, Globe, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle 
-} from "@/components/ui/dialog";
-import { Loader2, Github, Download, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { getGitHubToken } from "@/lib/storage";
 import { DeploymentOverlay } from "./deployment-overlay";
 import { VercelDeploymentOverlay } from "./vercel-deployment-overlay";
-import { Repository } from "@shared/schema";
-import { Theme } from "@shared/themes";
 
 interface DeploymentActionsProps {
   onSuccess?: () => void;
@@ -34,12 +27,11 @@ interface DeploymentActionsProps {
 }
 
 export function DeploymentActions({
-  onSuccess,
   repositories,
   userInfo,
   introduction,
   theme,
-  customTitle
+  customTitle,
 }: DeploymentActionsProps) {
   const [isCreatingRepo, setIsCreatingRepo] = useState(false);
   const [isDeployingToPages, setIsDeployingToPages] = useState(false);
@@ -63,7 +55,7 @@ export function DeploymentActions({
         userInfo,
         introduction,
         themeId: theme?.id,
-        customTitle
+        customTitle,
       });
 
       if (!res.ok) {
@@ -88,7 +80,7 @@ export function DeploymentActions({
         title: "Portfolio Downloaded",
         description: "Your portfolio has been downloaded successfully!",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to download portfolio. Please try again.",
@@ -108,7 +100,7 @@ export function DeploymentActions({
         userInfo,
         introduction,
         themeId: theme?.id,
-        customTitle
+        customTitle,
       });
 
       if (!res.ok) {
@@ -133,7 +125,7 @@ export function DeploymentActions({
         title: data.wasCreated ? "GitHub Pages Created" : "GitHub Pages Updated",
         description: data.message,
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to deploy to GitHub Pages. Please try again.",
@@ -153,23 +145,23 @@ export function DeploymentActions({
         throw new Error("GitHub token not found. Please reconnect your GitHub account.");
       }
 
-      const configRes = await fetch('/api/deploy/vercel/config');
+      const configRes = await fetch("/api/deploy/vercel/config");
       if (!configRes.ok) {
-        throw new Error('Failed to get Vercel configuration');
+        throw new Error("Failed to get Vercel configuration");
       }
       const config = await configRes.json();
 
       const state = Array.from(crypto.getRandomValues(new Uint8Array(16)))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
 
       localStorage.setItem("vercel_csrf_token", state);
       localStorage.setItem("pending_repositories", JSON.stringify(repositories));
 
       const params = new URLSearchParams({
-        source: 'marketplace',
+        source: "marketplace",
         state,
-        next: `${window.location.origin}/api/deploy/vercel/callback`
+        next: `${window.location.origin}/api/deploy/vercel/callback`,
       });
 
       const integrationUrl = `https://vercel.com/integrations/${config.integrationSlug}/new?${params.toString()}`;
@@ -181,15 +173,17 @@ export function DeploymentActions({
 
       window.open(
         integrationUrl,
-        'Vercel Integration',
-        `width=${width},height=${height},left=${left},top=${top}`
+        "Vercel Integration",
+        `width=${width},height=${height},left=${left},top=${top}`,
       );
-
     } catch (error) {
       setIsCreatingRepo(false);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to initiate Vercel deployment. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to initiate Vercel deployment. Please try again.",
         variant: "destructive",
       });
     }
@@ -199,7 +193,7 @@ export function DeploymentActions({
     const handleMessage = async (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
 
-      if (event.data.type === 'vercel-oauth-success') {
+      if (event.data.type === "vercel-oauth-success") {
         try {
           const username = localStorage.getItem("github_username");
           if (!username) throw new Error("GitHub username not found");
@@ -208,7 +202,7 @@ export function DeploymentActions({
           if (!savedRepos) throw new Error("No pending repositories found");
           const repositories = JSON.parse(savedRepos);
 
-          localStorage.setItem('vercel_access_token', event.data.token);
+          localStorage.setItem("vercel_access_token", event.data.token);
 
           const deployResponse = await apiRequest("POST", "/api/deploy/vercel", {
             accessToken: event.data.token,
@@ -218,7 +212,7 @@ export function DeploymentActions({
             themeId: theme?.id,
             introduction,
             userInfo,
-            customTitle
+            customTitle,
           });
 
           if (!deployResponse.ok) {
@@ -227,8 +221,8 @@ export function DeploymentActions({
 
           const deployData = await deployResponse.json();
 
-          localStorage.setItem('vercel_deployment_url', deployData.url);
-          localStorage.setItem('vercel_deployment_id', deployData.deploymentId);
+          localStorage.setItem("vercel_deployment_url", deployData.url);
+          localStorage.setItem("vercel_deployment_id", deployData.deploymentId);
 
           setShowVercelDeployment(true);
 
@@ -239,9 +233,8 @@ export function DeploymentActions({
 
           localStorage.removeItem("pending_repositories");
           localStorage.removeItem("vercel_csrf_token");
-
         } catch (error) {
-          console.error('Deployment error:', error);
+          console.error("Deployment error:", error);
           toast({
             title: "Deployment Error",
             description: error instanceof Error ? error.message : "Failed to deploy to Vercel",
@@ -250,7 +243,7 @@ export function DeploymentActions({
         } finally {
           setIsCreatingRepo(false);
         }
-      } else if (event.data.type === 'vercel-oauth-error') {
+      } else if (event.data.type === "vercel-oauth-error") {
         toast({
           title: "Authorization Failed",
           description: event.data.error,
@@ -260,9 +253,9 @@ export function DeploymentActions({
       }
     };
 
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [toast, theme]); 
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [toast, theme]);
 
   return (
     <div className="mt-12 flex flex-wrap justify-center gap-4">

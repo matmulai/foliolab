@@ -1,7 +1,7 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
-import { persistQueryClient } from '@tanstack/react-query-persist-client';
-import { getGitHubToken, removeGitHubToken } from './storage';
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
+import { QueryClient, type QueryFunction } from "@tanstack/react-query";
+import { persistQueryClient } from "@tanstack/react-query-persist-client";
+import { getGitHubToken, removeGitHubToken } from "./storage";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -23,7 +23,7 @@ export async function apiRequest(
   // Add GitHub token if available
   const githubToken = getGitHubToken();
   if (githubToken) {
-    headers["Authorization"] = `Bearer ${githubToken}`;
+    headers.Authorization = `Bearer ${githubToken}`;
   }
 
   const res = await fetch(url, {
@@ -38,9 +38,7 @@ export async function apiRequest(
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
+export const getQueryFn: <T>(options: { on401: UnauthorizedBehavior }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const headers: Record<string, string> = {};
@@ -48,7 +46,7 @@ export const getQueryFn: <T>(options: {
     // Add GitHub token if available
     const githubToken = getGitHubToken();
     if (githubToken) {
-      headers["Authorization"] = `Bearer ${githubToken}`;
+      headers.Authorization = `Bearer ${githubToken}`;
     }
 
     const res = await fetch(queryKey[0] as string, {
@@ -85,7 +83,7 @@ export const queryClient = new QueryClient({
 // Set up cache persistence with localStorage
 const localStoragePersister = createSyncStoragePersister({
   storage: window.localStorage,
-  key: 'PORTFOLIO_QUERY_CACHE', // Specific key for our app
+  key: "PORTFOLIO_QUERY_CACHE", // Specific key for our app
   throttleTime: 1000, // Save to storage at most once per second
   serialize: (data) => JSON.stringify(data),
   deserialize: (data) => JSON.parse(data),
@@ -97,11 +95,11 @@ persistQueryClient({
   persister: localStoragePersister,
   // Cache persists until explicitly cleared
   maxAge: Infinity,
-  buster: 'v1', // Cache version, increment when structure changes
+  buster: "v1", // Cache version, increment when structure changes
   dehydrateOptions: {
     shouldDehydrateQuery: ({ queryKey }) => {
       // Only persist repository data
-      return queryKey[0] === '/api/repositories';
+      return queryKey[0] === "/api/repositories";
     },
   },
 });
@@ -113,7 +111,7 @@ export function clearQueryCache() {
 
 // Force refresh repositories only when explicitly needed
 export function forceRefreshRepositories() {
-  return queryClient.invalidateQueries({ queryKey: ['/api/repositories'] });
+  return queryClient.invalidateQueries({ queryKey: ["/api/repositories"] });
 }
 
 // Clear all data when returning to home

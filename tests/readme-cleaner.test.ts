@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { cleanReadmeContent } from '../server/lib/readme-cleaner.js';
+import { describe, expect, it } from "vitest";
+import { cleanReadmeContent } from "../server/lib/readme-cleaner.js";
 
-describe('README Cleaner', () => {
-  it('should remove badges from README content', () => {
+describe("README Cleaner", () => {
+  it("should remove badges from README content", () => {
     const readmeWithBadges = `# My Project
 
 [![Build Status](https://travis-ci.org/user/repo.svg?branch=master)](https://travis-ci.org/user/repo)
@@ -22,17 +22,17 @@ npm install my-project
 Here's how to use it...`;
 
     const cleaned = cleanReadmeContent(readmeWithBadges);
-    
+
     // Should remove badges but keep content
-    expect(cleaned).not.toContain('[![Build Status]');
-    expect(cleaned).not.toContain('[![npm version]');
-    expect(cleaned).not.toContain('![License]');
-    expect(cleaned).toContain('This is a great project');
-    expect(cleaned).toContain('## Installation');
-    expect(cleaned).toContain('## Usage');
+    expect(cleaned).not.toContain("[![Build Status]");
+    expect(cleaned).not.toContain("[![npm version]");
+    expect(cleaned).not.toContain("![License]");
+    expect(cleaned).toContain("This is a great project");
+    expect(cleaned).toContain("## Installation");
+    expect(cleaned).toContain("## Usage");
   });
 
-  it('should remove boilerplate sections', () => {
+  it("should remove boilerplate sections", () => {
     const readmeWithBoilerplate = `# My Project
 
 This is a great project.
@@ -52,15 +52,15 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 * etc`;
 
     const cleaned = cleanReadmeContent(readmeWithBoilerplate);
-    
+
     // Should remove boilerplate sections
-    expect(cleaned).not.toContain('## Contributing');
-    expect(cleaned).not.toContain('## License');
-    expect(cleaned).not.toContain('## Acknowledgments');
-    expect(cleaned).toContain('This is a great project');
+    expect(cleaned).not.toContain("## Contributing");
+    expect(cleaned).not.toContain("## License");
+    expect(cleaned).not.toContain("## Acknowledgments");
+    expect(cleaned).toContain("This is a great project");
   });
 
-  it('should preserve essential content', () => {
+  it("should preserve essential content", () => {
     const readmeWithEssentials = `# My Project
 
 This project does amazing things.
@@ -88,27 +88,27 @@ Does something important.
 Here are some examples...`;
 
     const cleaned = cleanReadmeContent(readmeWithEssentials);
-    
+
     // Should preserve essential sections
-    expect(cleaned).toContain('## Features');
-    expect(cleaned).toContain('## Installation');
-    expect(cleaned).toContain('## API Reference');
-    expect(cleaned).toContain('## Examples');
-    expect(cleaned).toContain('This project does amazing things');
+    expect(cleaned).toContain("## Features");
+    expect(cleaned).toContain("## Installation");
+    expect(cleaned).toContain("## API Reference");
+    expect(cleaned).toContain("## Examples");
+    expect(cleaned).toContain("This project does amazing things");
   });
 
-  it('should handle empty or minimal README', () => {
+  it("should handle empty or minimal README", () => {
     const minimalReadme = `# My Project
 
 A simple project.`;
 
     const cleaned = cleanReadmeContent(minimalReadme);
-    
-    expect(cleaned).toContain('# My Project');
-    expect(cleaned).toContain('A simple project');
+
+    expect(cleaned).toContain("# My Project");
+    expect(cleaned).toContain("A simple project");
   });
 
-  it('should remove table of contents', () => {
+  it("should remove table of contents", () => {
     const readmeWithToc = `# My Project
 
 ## Table of Contents
@@ -126,10 +126,10 @@ Install the package...
 Use it like this...`;
 
     const cleaned = cleanReadmeContent(readmeWithToc);
-    
-    expect(cleaned).not.toContain('## Table of Contents');
-    expect(cleaned).not.toContain('- [Installation](#installation)');
-    expect(cleaned).toContain('## Installation');
-    expect(cleaned).toContain('## Usage');
+
+    expect(cleaned).not.toContain("## Table of Contents");
+    expect(cleaned).not.toContain("- [Installation](#installation)");
+    expect(cleaned).toContain("## Installation");
+    expect(cleaned).toContain("## Usage");
   });
 });

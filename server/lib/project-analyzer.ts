@@ -13,7 +13,14 @@ export interface ProjectStructure {
 
 export interface PackageInfo {
   name: string;
-  type: 'package.json' | 'requirements.txt' | 'Cargo.toml' | 'go.mod' | 'pom.xml' | 'Gemfile' | 'composer.json';
+  type:
+    | "package.json"
+    | "requirements.txt"
+    | "Cargo.toml"
+    | "go.mod"
+    | "pom.xml"
+    | "Gemfile"
+    | "composer.json";
   dependencies?: string[];
   scripts?: string[];
   description?: string;
@@ -21,7 +28,7 @@ export interface PackageInfo {
 
 export interface ConfigInfo {
   name: string;
-  type: 'config' | 'build' | 'deployment' | 'testing' | 'linting';
+  type: "config" | "build" | "deployment" | "testing" | "linting";
   framework?: string;
 }
 
@@ -48,117 +55,129 @@ interface FrameworkPattern {
 }
 
 const FRAMEWORK_PATTERNS: Record<string, FrameworkPattern> = {
-  'React': {
-    files: ['package.json'],
-    dependencies: ['react', '@types/react', 'react-dom'],
-    configs: ['vite.config.js', 'webpack.config.js', 'craco.config.js'],
-    patterns: ['src/App.jsx', 'src/App.tsx', 'public/index.html']
+  React: {
+    files: ["package.json"],
+    dependencies: ["react", "@types/react", "react-dom"],
+    configs: ["vite.config.js", "webpack.config.js", "craco.config.js"],
+    patterns: ["src/App.jsx", "src/App.tsx", "public/index.html"],
   },
-  'Next.js': {
-    files: ['package.json', 'next.config.js', 'next.config.mjs'],
-    dependencies: ['next'],
-    patterns: ['pages/', 'app/', 'src/pages/', 'src/app/']
+  "Next.js": {
+    files: ["package.json", "next.config.js", "next.config.mjs"],
+    dependencies: ["next"],
+    patterns: ["pages/", "app/", "src/pages/", "src/app/"],
   },
-  'Vue.js': {
-    files: ['package.json'],
-    dependencies: ['vue', '@vue/cli'],
-    configs: ['vue.config.js', 'vite.config.js'],
-    patterns: ['src/App.vue', 'src/main.js']
+  "Vue.js": {
+    files: ["package.json"],
+    dependencies: ["vue", "@vue/cli"],
+    configs: ["vue.config.js", "vite.config.js"],
+    patterns: ["src/App.vue", "src/main.js"],
   },
-  'Angular': {
-    files: ['package.json', 'angular.json'],
-    dependencies: ['@angular/core', '@angular/cli'],
-    patterns: ['src/app/', 'src/main.ts']
+  Angular: {
+    files: ["package.json", "angular.json"],
+    dependencies: ["@angular/core", "@angular/cli"],
+    patterns: ["src/app/", "src/main.ts"],
   },
-  'Express.js': {
-    files: ['package.json'],
-    dependencies: ['express'],
-    patterns: ['server.js', 'app.js', 'index.js', 'src/server.js']
+  "Express.js": {
+    files: ["package.json"],
+    dependencies: ["express"],
+    patterns: ["server.js", "app.js", "index.js", "src/server.js"],
   },
-  'Django': {
-    files: ['requirements.txt', 'manage.py', 'pyproject.toml'],
-    dependencies: ['django'],
-    patterns: ['settings.py', 'urls.py', 'wsgi.py']
+  Django: {
+    files: ["requirements.txt", "manage.py", "pyproject.toml"],
+    dependencies: ["django"],
+    patterns: ["settings.py", "urls.py", "wsgi.py"],
   },
-  'Flask': {
-    files: ['requirements.txt', 'app.py'],
-    dependencies: ['flask'],
-    patterns: ['app.py', 'main.py', 'run.py']
+  Flask: {
+    files: ["requirements.txt", "app.py"],
+    dependencies: ["flask"],
+    patterns: ["app.py", "main.py", "run.py"],
   },
-  'Spring Boot': {
-    files: ['pom.xml', 'build.gradle'],
-    dependencies: ['spring-boot'],
-    patterns: ['src/main/java/', 'Application.java']
+  "Spring Boot": {
+    files: ["pom.xml", "build.gradle"],
+    dependencies: ["spring-boot"],
+    patterns: ["src/main/java/", "Application.java"],
   },
-  'Ruby on Rails': {
-    files: ['Gemfile', 'config/application.rb'],
-    dependencies: ['rails'],
-    patterns: ['app/', 'config/', 'db/']
+  "Ruby on Rails": {
+    files: ["Gemfile", "config/application.rb"],
+    dependencies: ["rails"],
+    patterns: ["app/", "config/", "db/"],
   },
-  'Laravel': {
-    files: ['composer.json', 'artisan'],
-    dependencies: ['laravel/framework'],
-    patterns: ['app/', 'routes/', 'resources/']
+  Laravel: {
+    files: ["composer.json", "artisan"],
+    dependencies: ["laravel/framework"],
+    patterns: ["app/", "routes/", "resources/"],
   },
-  'Rust': {
-    files: ['Cargo.toml'],
-    patterns: ['src/main.rs', 'src/lib.rs']
+  Rust: {
+    files: ["Cargo.toml"],
+    patterns: ["src/main.rs", "src/lib.rs"],
   },
-  'Go': {
-    files: ['go.mod', 'go.sum'],
-    patterns: ['main.go', 'cmd/', 'internal/']
+  Go: {
+    files: ["go.mod", "go.sum"],
+    patterns: ["main.go", "cmd/", "internal/"],
   },
-  'Python': {
-    files: ['requirements.txt', 'setup.py', 'pyproject.toml', 'Pipfile'],
-    patterns: ['main.py', 'app.py', '__init__.py']
+  Python: {
+    files: ["requirements.txt", "setup.py", "pyproject.toml", "Pipfile"],
+    patterns: ["main.py", "app.py", "__init__.py"],
   },
-  'Mobile App (React Native)': {
-    files: ['package.json'],
-    dependencies: ['react-native', '@react-native'],
-    configs: ['metro.config.js', 'react-native.config.js'],
-    patterns: ['App.js', 'App.tsx', 'index.js']
+  "Mobile App (React Native)": {
+    files: ["package.json"],
+    dependencies: ["react-native", "@react-native"],
+    configs: ["metro.config.js", "react-native.config.js"],
+    patterns: ["App.js", "App.tsx", "index.js"],
   },
-  'Mobile App (Flutter)': {
-    files: ['pubspec.yaml'],
-    patterns: ['lib/main.dart', 'android/', 'ios/']
+  "Mobile App (Flutter)": {
+    files: ["pubspec.yaml"],
+    patterns: ["lib/main.dart", "android/", "ios/"],
   },
-  'Desktop App (Electron)': {
-    files: ['package.json'],
-    dependencies: ['electron'],
-    patterns: ['main.js', 'src/main/', 'public/electron.js']
-  }
+  "Desktop App (Electron)": {
+    files: ["package.json"],
+    dependencies: ["electron"],
+    patterns: ["main.js", "src/main/", "public/electron.js"],
+  },
 };
 
-const ENTRY_POINT_REGEX = /main\.js|main\.ts|index\.js|index\.ts|app\.js|app\.ts|server\.js|server\.ts|main\.py|app\.py|main\.go|main\.rs|lib\.rs|main\.java|application\.java/i;
+const ENTRY_POINT_REGEX =
+  /main\.js|main\.ts|index\.js|index\.ts|app\.js|app\.ts|server\.js|server\.ts|main\.py|app\.py|main\.go|main\.rs|lib\.rs|main\.java|application\.java/i;
 
-const CONFIG_REGEX = /webpack\.config|vite\.config|rollup\.config|babel\.config|eslint|prettier|tsconfig|jest\.config|cypress\.config|docker|nginx\.conf|apache\.conf|\.env|config\.yml|config\.yaml/;
+const CONFIG_REGEX =
+  /webpack\.config|vite\.config|rollup\.config|babel\.config|eslint|prettier|tsconfig|jest\.config|cypress\.config|docker|nginx\.conf|apache\.conf|\.env|config\.yml|config\.yaml/;
 
 const PACKAGE_FILES = new Set([
-  'package.json', 'requirements.txt', 'cargo.toml', 'go.mod', 'go.sum',
-  'pom.xml', 'build.gradle', 'gemfile', 'composer.json', 'pubspec.yaml'
+  "package.json",
+  "requirements.txt",
+  "cargo.toml",
+  "go.mod",
+  "go.sum",
+  "pom.xml",
+  "build.gradle",
+  "gemfile",
+  "composer.json",
+  "pubspec.yaml",
 ]);
 
-const SOURCE_EXT_REGEX = /\.(?:js|ts|jsx|tsx|py|java|go|rs|rb|php|cpp|c|cs|swift|kt|dart|vue|svelte)$/;
+const SOURCE_EXT_REGEX =
+  /\.(?:js|ts|jsx|tsx|py|java|go|rs|rb|php|cpp|c|cs|swift|kt|dart|vue|svelte)$/;
 
-const MAJOR_TECH_REGEX = /react|vue|angular|express|django|flask|spring|rails|laravel|mongodb|postgresql|mysql|redis|docker|kubernetes|aws|azure|gcp|firebase|graphql|apollo|prisma|typeorm|sequelize/i;
+const MAJOR_TECH_REGEX =
+  /react|vue|angular|express|django|flask|spring|rails|laravel|mongodb|postgresql|mysql|redis|docker|kubernetes|aws|azure|gcp|firebase|graphql|apollo|prisma|typeorm|sequelize/i;
 
 export async function analyzeProjectStructure(
   accessToken: string,
   owner: string,
-  repo: string
+  repo: string,
 ): Promise<ProjectStructure> {
   const octokit = new Octokit({ auth: accessToken });
-  
+
   try {
     // Get repository contents
     const { data: contents } = await octokit.repos.getContent({
       owner,
       repo,
-      path: ''
+      path: "",
     });
 
     if (!Array.isArray(contents)) {
-      throw new Error('Repository contents is not an array');
+      throw new Error("Repository contents is not an array");
     }
 
     const structure: ProjectStructure = {
@@ -168,16 +187,16 @@ export async function analyzeProjectStructure(
       configFiles: [],
       sourceFiles: [],
       frameworkIndicators: [],
-      projectType: 'Unknown',
-      techStack: []
+      projectType: "Unknown",
+      techStack: [],
     };
 
     // Analyze root level files and directories
     for (const item of contents) {
-      if (item.type === 'file') {
+      if (item.type === "file") {
         structure.rootFiles.push(item.name);
         await analyzeFile(octokit, owner, repo, item, structure);
-      } else if (item.type === 'dir') {
+      } else if (item.type === "dir") {
         structure.directories.push(item.name);
       }
     }
@@ -197,8 +216,8 @@ export async function analyzeProjectStructure(
       configFiles: [],
       sourceFiles: [],
       frameworkIndicators: [],
-      projectType: 'Unknown',
-      techStack: []
+      projectType: "Unknown",
+      techStack: [],
     };
   }
 }
@@ -208,10 +227,10 @@ async function analyzeFile(
   owner: string,
   repo: string,
   file: any,
-  structure: ProjectStructure
+  structure: ProjectStructure,
 ): Promise<void> {
   const fileName = file.name.toLowerCase();
-  
+
   // Analyze package files
   if (isPackageFile(fileName)) {
     try {
@@ -223,16 +242,16 @@ async function analyzeFile(
       console.warn(`Failed to analyze package file ${file.name}:`, error);
     }
   }
-  
+
   // Analyze config files
   if (isConfigFile(fileName)) {
     structure.configFiles.push({
       name: file.name,
       type: getConfigType(fileName),
-      framework: getConfigFramework(fileName)
+      framework: getConfigFramework(fileName),
     });
   }
-  
+
   // Analyze source files
   if (isSourceFile(fileName)) {
     structure.sourceFiles.push({
@@ -240,7 +259,7 @@ async function analyzeFile(
       extension: getFileExtension(file.name),
       language: getLanguageFromExtension(getFileExtension(file.name)),
       isEntryPoint: isEntryPoint(file.name),
-      size: file.size
+      size: file.size,
     });
   }
 }
@@ -249,29 +268,29 @@ async function analyzePackageFile(
   octokit: Octokit,
   owner: string,
   repo: string,
-  file: any
+  file: any,
 ): Promise<PackageInfo | null> {
   try {
     const { data } = await octokit.repos.getContent({
       owner,
       repo,
       path: file.name,
-      mediaType: { format: 'raw' }
+      mediaType: { format: "raw" },
     });
 
     const content = data.toString();
     const fileName = file.name.toLowerCase();
 
-    if (fileName === 'package.json') {
+    if (fileName === "package.json") {
       return analyzePackageJson(content);
-    } else if (fileName === 'requirements.txt') {
+    } else if (fileName === "requirements.txt") {
       return analyzeRequirementsTxt(content);
-    } else if (fileName === 'cargo.toml') {
+    } else if (fileName === "cargo.toml") {
       return analyzeCargoToml(content);
-    } else if (fileName === 'go.mod') {
+    } else if (fileName === "go.mod") {
       return analyzeGoMod(content);
     }
-    
+
     return null;
   } catch (error) {
     console.warn(`Failed to fetch package file content:`, error);
@@ -283,81 +302,81 @@ function analyzePackageJson(content: string): PackageInfo {
   try {
     const pkg = JSON.parse(content);
     return {
-      name: 'package.json',
-      type: 'package.json',
+      name: "package.json",
+      type: "package.json",
       dependencies: [
         ...Object.keys(pkg.dependencies || {}),
-        ...Object.keys(pkg.devDependencies || {})
+        ...Object.keys(pkg.devDependencies || {}),
       ],
       scripts: Object.keys(pkg.scripts || {}),
-      description: pkg.description
+      description: pkg.description,
     };
-  } catch (error) {
+  } catch (_error) {
     return {
-      name: 'package.json',
-      type: 'package.json',
+      name: "package.json",
+      type: "package.json",
       dependencies: [],
-      scripts: []
+      scripts: [],
     };
   }
 }
 
 function analyzeRequirementsTxt(content: string): PackageInfo {
   const dependencies = content
-    .split('\n')
-    .map(line => line.trim())
-    .filter(line => line && !line.startsWith('#'))
-    .map(line => line.split('==')[0].split('>=')[0].split('<=')[0].trim());
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"))
+    .map((line) => line.split("==")[0].split(">=")[0].split("<=")[0].trim());
 
   return {
-    name: 'requirements.txt',
-    type: 'requirements.txt',
-    dependencies
+    name: "requirements.txt",
+    type: "requirements.txt",
+    dependencies,
   };
 }
 
 function analyzeCargoToml(content: string): PackageInfo {
   const dependencies: string[] = [];
-  const lines = content.split('\n');
+  const lines = content.split("\n");
   let inDependencies = false;
 
   for (const line of lines) {
-    if (line.trim() === '[dependencies]') {
+    if (line.trim() === "[dependencies]") {
       inDependencies = true;
       continue;
     }
-    if (line.trim().startsWith('[') && line.trim() !== '[dependencies]') {
+    if (line.trim().startsWith("[") && line.trim() !== "[dependencies]") {
       inDependencies = false;
       continue;
     }
-    if (inDependencies && line.includes('=')) {
-      const dep = line.split('=')[0].trim();
+    if (inDependencies && line.includes("=")) {
+      const dep = line.split("=")[0].trim();
       if (dep) dependencies.push(dep);
     }
   }
 
   return {
-    name: 'Cargo.toml',
-    type: 'Cargo.toml',
-    dependencies
+    name: "Cargo.toml",
+    type: "Cargo.toml",
+    dependencies,
   };
 }
 
 function analyzeGoMod(content: string): PackageInfo {
   const dependencies: string[] = [];
-  const lines = content.split('\n');
+  const lines = content.split("\n");
 
   for (const line of lines) {
-    if (line.trim().startsWith('require ')) {
-      const dep = line.replace('require ', '').trim().split(' ')[0];
+    if (line.trim().startsWith("require ")) {
+      const dep = line.replace("require ", "").trim().split(" ")[0];
       if (dep) dependencies.push(dep);
     }
   }
 
   return {
-    name: 'go.mod',
-    type: 'go.mod',
-    dependencies
+    name: "go.mod",
+    type: "go.mod",
+    dependencies,
   };
 }
 
@@ -397,7 +416,7 @@ export function detectFrameworks(structure: ProjectStructure): FrameworkInfo[] {
       for (const dep of patterns.dependencies) {
         // Check if ANY installed dependency includes the target framework dependency
         // We preserve the original substring matching logic
-        if (uniqueDependencies.some(d => d.includes(dep))) {
+        if (uniqueDependencies.some((d) => d.includes(dep))) {
           confidence += 40;
           indicators.push(`Uses ${dep}`);
         }
@@ -417,7 +436,7 @@ export function detectFrameworks(structure: ProjectStructure): FrameworkInfo[] {
     // Check for directory patterns
     if (patterns.patterns) {
       for (const pattern of patterns.patterns) {
-        if (pattern.endsWith('/')) {
+        if (pattern.endsWith("/")) {
           // Directory pattern
           const dirName = pattern.slice(0, -1);
           if (directoriesSet.has(dirName)) {
@@ -438,7 +457,7 @@ export function detectFrameworks(structure: ProjectStructure): FrameworkInfo[] {
       frameworks.push({
         framework: frameworkName,
         confidence,
-        indicators
+        indicators,
       });
     }
   }
@@ -452,31 +471,33 @@ function determineProjectType(structure: ProjectStructure): string {
   }
 
   // Fallback to language-based detection
-  const languages = structure.sourceFiles.map(f => f.language);
+  const languages = structure.sourceFiles.map((f) => f.language);
   const primaryLanguage = getMostCommonLanguage(languages);
 
   if (primaryLanguage) {
     return `${primaryLanguage} Project`;
   }
 
-  return 'Unknown';
+  return "Unknown";
 }
 
 function extractTechStack(structure: ProjectStructure): string[] {
   const techStack = new Set<string>();
 
   // Add frameworks
-  structure.frameworkIndicators.forEach(f => techStack.add(f.framework));
+  for (const f of structure.frameworkIndicators) {
+    techStack.add(f.framework);
+  }
 
   // Add languages
-  structure.sourceFiles.forEach(f => {
+  structure.sourceFiles.forEach((f) => {
     if (f.language) techStack.add(f.language);
   });
 
   // Add major dependencies
-  structure.packageFiles.forEach(pkg => {
+  structure.packageFiles.forEach((pkg) => {
     if (pkg.dependencies) {
-      pkg.dependencies.forEach(dep => {
+      pkg.dependencies.forEach((dep) => {
         // Add major/well-known dependencies
         if (isMajorTechnology(dep)) {
           techStack.add(dep);
@@ -500,55 +521,57 @@ function isSourceFile(fileName: string): boolean {
   return SOURCE_EXT_REGEX.test(fileName);
 }
 
-function getConfigType(fileName: string): 'config' | 'build' | 'deployment' | 'testing' | 'linting' {
-  if (fileName.includes('webpack') || fileName.includes('vite') || fileName.includes('rollup')) {
-    return 'build';
+function getConfigType(
+  fileName: string,
+): "config" | "build" | "deployment" | "testing" | "linting" {
+  if (fileName.includes("webpack") || fileName.includes("vite") || fileName.includes("rollup")) {
+    return "build";
   }
-  if (fileName.includes('docker') || fileName.includes('nginx') || fileName.includes('apache')) {
-    return 'deployment';
+  if (fileName.includes("docker") || fileName.includes("nginx") || fileName.includes("apache")) {
+    return "deployment";
   }
-  if (fileName.includes('jest') || fileName.includes('cypress') || fileName.includes('test')) {
-    return 'testing';
+  if (fileName.includes("jest") || fileName.includes("cypress") || fileName.includes("test")) {
+    return "testing";
   }
-  if (fileName.includes('eslint') || fileName.includes('prettier') || fileName.includes('lint')) {
-    return 'linting';
+  if (fileName.includes("eslint") || fileName.includes("prettier") || fileName.includes("lint")) {
+    return "linting";
   }
-  return 'config';
+  return "config";
 }
 
 function getConfigFramework(fileName: string): string | undefined {
-  if (fileName.includes('webpack')) return 'Webpack';
-  if (fileName.includes('vite')) return 'Vite';
-  if (fileName.includes('rollup')) return 'Rollup';
-  if (fileName.includes('babel')) return 'Babel';
+  if (fileName.includes("webpack")) return "Webpack";
+  if (fileName.includes("vite")) return "Vite";
+  if (fileName.includes("rollup")) return "Rollup";
+  if (fileName.includes("babel")) return "Babel";
   return undefined;
 }
 
 function getFileExtension(fileName: string): string {
-  const lastDot = fileName.lastIndexOf('.');
-  return lastDot > 0 ? fileName.substring(lastDot) : '';
+  const lastDot = fileName.lastIndexOf(".");
+  return lastDot > 0 ? fileName.substring(lastDot) : "";
 }
 
 function getLanguageFromExtension(extension: string): string {
   const languageMap: Record<string, string> = {
-    '.js': 'JavaScript',
-    '.ts': 'TypeScript',
-    '.jsx': 'React',
-    '.tsx': 'React',
-    '.py': 'Python',
-    '.java': 'Java',
-    '.go': 'Go',
-    '.rs': 'Rust',
-    '.rb': 'Ruby',
-    '.php': 'PHP',
-    '.cpp': 'C++',
-    '.c': 'C',
-    '.cs': 'C#',
-    '.swift': 'Swift',
-    '.kt': 'Kotlin',
-    '.dart': 'Dart',
-    '.vue': 'Vue.js',
-    '.svelte': 'Svelte'
+    ".js": "JavaScript",
+    ".ts": "TypeScript",
+    ".jsx": "React",
+    ".tsx": "React",
+    ".py": "Python",
+    ".java": "Java",
+    ".go": "Go",
+    ".rs": "Rust",
+    ".rb": "Ruby",
+    ".php": "PHP",
+    ".cpp": "C++",
+    ".c": "C",
+    ".cs": "C#",
+    ".swift": "Swift",
+    ".kt": "Kotlin",
+    ".dart": "Dart",
+    ".vue": "Vue.js",
+    ".svelte": "Svelte",
   };
   return languageMap[extension] || extension.substring(1).toUpperCase();
 }
@@ -559,14 +582,16 @@ function isEntryPoint(fileName: string): boolean {
 
 function getMostCommonLanguage(languages: string[]): string | null {
   if (languages.length === 0) return null;
-  
-  const counts = languages.reduce((acc, lang) => {
-    acc[lang] = (acc[lang] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
 
-  return Object.entries(counts)
-    .sort(([,a], [,b]) => b - a)[0][0];
+  const counts = languages.reduce(
+    (acc, lang) => {
+      acc[lang] = (acc[lang] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+
+  return Object.entries(counts).sort(([, a], [, b]) => b - a)[0][0];
 }
 
 function isMajorTechnology(dependency: string): boolean {
@@ -577,43 +602,46 @@ export function generateProjectSummary(structure: ProjectStructure): string {
   const parts: string[] = [];
 
   // Project type and main framework
-  if (structure.projectType !== 'Unknown') {
+  if (structure.projectType !== "Unknown") {
     parts.push(`This is a ${structure.projectType} project`);
   }
 
   // Tech stack
   if (structure.techStack.length > 0) {
-    parts.push(`built with ${structure.techStack.slice(0, 5).join(', ')}`);
+    parts.push(`built with ${structure.techStack.slice(0, 5).join(", ")}`);
   }
 
   // Key features based on structure
   const features: string[] = [];
-  
-  if (structure.directories.includes('api') || structure.directories.includes('server')) {
-    features.push('backend API');
+
+  if (structure.directories.includes("api") || structure.directories.includes("server")) {
+    features.push("backend API");
   }
-  if (structure.directories.includes('client') || structure.directories.includes('frontend')) {
-    features.push('frontend interface');
+  if (structure.directories.includes("client") || structure.directories.includes("frontend")) {
+    features.push("frontend interface");
   }
-  if (structure.directories.includes('mobile') || structure.frameworkIndicators.some(f => f.framework.includes('Mobile'))) {
-    features.push('mobile application');
+  if (
+    structure.directories.includes("mobile") ||
+    structure.frameworkIndicators.some((f) => f.framework.includes("Mobile"))
+  ) {
+    features.push("mobile application");
   }
-  if (structure.directories.includes('docs') || structure.directories.includes('documentation')) {
-    features.push('comprehensive documentation');
+  if (structure.directories.includes("docs") || structure.directories.includes("documentation")) {
+    features.push("comprehensive documentation");
   }
-  if (structure.directories.includes('tests') || structure.directories.includes('test')) {
-    features.push('test suite');
+  if (structure.directories.includes("tests") || structure.directories.includes("test")) {
+    features.push("test suite");
   }
 
   if (features.length > 0) {
-    parts.push(`featuring ${features.join(', ')}`);
+    parts.push(`featuring ${features.join(", ")}`);
   }
 
   // Package information
-  const mainPackage = structure.packageFiles.find(p => p.description);
+  const mainPackage = structure.packageFiles.find((p) => p.description);
   if (mainPackage?.description) {
     parts.push(`Description: ${mainPackage.description}`);
   }
 
-  return parts.join('. ') + '.';
+  return `${parts.join(". ")}.`;
 }

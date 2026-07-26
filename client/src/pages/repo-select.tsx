@@ -1,24 +1,24 @@
-import { useState, useMemo } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import type { Repository } from "@shared/schema";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { ExternalLink, Search, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { Card, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Repository } from "@shared/schema";
-import { Search, ExternalLink, X } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { toggleRepositorySelection, saveRepositories, getRepositories, getGitHubToken } from "@/lib/storage";
 import { AnalysisProgress } from "@/components/analysis-progress";
-import { 
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue 
+  SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { getGitHubToken, getRepositories, saveRepositories } from "@/lib/storage";
 
 const REPOS_PER_PAGE = 10;
 
@@ -31,8 +31,8 @@ export default function RepoSelect() {
   const [analysisProgress, setAnalysisProgress] = useState({
     isAnalyzing: false,
     currentRepo: 0,
-    repoName: '',
-    progress: 0
+    repoName: "",
+    progress: 0,
   });
 
   const { data, isLoading } = useQuery<{ repositories: Repository[] }>({
@@ -41,31 +41,29 @@ export default function RepoSelect() {
       // Load initial data from storage
       const storedRepos = getRepositories();
       return storedRepos.length ? { repositories: storedRepos } : undefined;
-    }
+    },
   });
 
   const { mutate: toggleRepo, isPending: isToggling } = useMutation({
     mutationFn: async ({ id, selected }: { id: number; selected: boolean }) => {
-      if (!id) throw new Error('Repository ID is required');
+      if (!id) throw new Error("Repository ID is required");
 
       // Get the current repository data
       const repositories = data?.repositories || [];
       const updatedRepo = {
-        ...repositories.find(r => r.id === id)!,
-        selected
+        ...repositories.find((r) => r.id === id)!,
+        selected,
       };
 
       // Update both cache and storage atomically
-      const updatedRepos = repositories.map(repo =>
-        repo.id === id ? updatedRepo : repo
-      );
+      const updatedRepos = repositories.map((repo) => (repo.id === id ? updatedRepo : repo));
 
       // Save to storage first
       saveRepositories(updatedRepos);
 
       // Update cache
       queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], {
-        repositories: updatedRepos
+        repositories: updatedRepos,
       });
 
       return updatedRepo;
@@ -73,56 +71,58 @@ export default function RepoSelect() {
     onError: (error) => {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update repository selection",
+        description:
+          error instanceof Error ? error.message : "Failed to update repository selection",
         variant: "destructive",
       });
-    }
+    },
   });
 
   // Extract unique owners from repositories
   const owners = useMemo(() => {
     if (!data?.repositories) return [];
-    
-    const ownerMap = new Map<string, { login: string, type: string, avatarUrl: string | null }>();
-    
-    data.repositories.forEach(repo => {
+
+    const ownerMap = new Map<string, { login: string; type: string; avatarUrl: string | null }>();
+
+    data.repositories.forEach((repo) => {
       // Use the actual owner information from the repository
       if (repo.owner && !ownerMap.has(repo.owner.login)) {
         ownerMap.set(repo.owner.login, {
           login: repo.owner.login,
           type: repo.owner.type,
-          avatarUrl: repo.owner.avatarUrl
+          avatarUrl: repo.owner.avatarUrl,
         });
       }
     });
-    
+
     // Sort owners: current user first, then organizations alphabetically
     const sortedOwners = Array.from(ownerMap.values()).sort((a, b) => {
       // User type comes first
-      if (a.type === 'User' && b.type === 'Organization') return -1;
-      if (a.type === 'Organization' && b.type === 'User') return 1;
+      if (a.type === "User" && b.type === "Organization") return -1;
+      if (a.type === "Organization" && b.type === "User") return 1;
       // Then sort alphabetically by login
       return a.login.localeCompare(b.login);
     });
-    
+
     return sortedOwners;
   }, [data?.repositories]);
 
   const filteredRepos = useMemo(() => {
     if (!data?.repositories) return [];
-    
+
     // First filter by owner if not "all"
     let filtered = data.repositories;
     if (selectedOwner !== "all") {
-      filtered = filtered.filter(repo => repo.owner.login === selectedOwner);
+      filtered = filtered.filter((repo) => repo.owner.login === selectedOwner);
     }
-    
+
     // Then filter by search query
-    filtered = filtered.filter((repo) =>
-      repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (repo.description?.toLowerCase() || "").includes(searchQuery.toLowerCase())
+    filtered = filtered.filter(
+      (repo) =>
+        repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (repo.description?.toLowerCase() || "").includes(searchQuery.toLowerCase()),
     );
-    
+
     // Sort by last modified date (most recent first)
     return filtered.sort((a, b) => {
       const dateA = new Date(a.metadata.updatedAt || 0);
@@ -155,28 +155,28 @@ export default function RepoSelect() {
       setAnalysisProgress({
         isAnalyzing: true,
         currentRepo: 0,
-        repoName: '',
-        progress: 0
+        repoName: "",
+        progress: 0,
       });
 
       // Analyze repositories sequentially to avoid rate limits
       for (let i = 0; i < selectedRepos.length; i++) {
         const repo = selectedRepos[i];
         if (repo.id) {
-          setAnalysisProgress(prev => ({
+          setAnalysisProgress((prev) => ({
             ...prev,
             currentRepo: i + 1,
             repoName: repo.name,
-            progress: (i / selectedRepos.length) * 100
+            progress: (i / selectedRepos.length) * 100,
           }));
 
           const res = await apiRequest("POST", `/api/repositories/${repo.id}/analyze`, {
             accessToken: getGitHubToken(),
-            username: localStorage.getItem("github_username")
+            username: localStorage.getItem("github_username"),
           });
 
           if (!res.ok) {
-            throw new Error('Failed to analyze repository');
+            throw new Error("Failed to analyze repository");
           }
 
           const data = await res.json();
@@ -185,29 +185,29 @@ export default function RepoSelect() {
           queryClient.setQueryData<{ repositories: Repository[] }>(["/api/repositories"], (old) => {
             if (!old) return old;
             return {
-              repositories: old.repositories.map(r =>
-                r.id === data.repository.id ? { ...r, summary: data.repository.summary } : r
-              )
+              repositories: old.repositories.map((r) =>
+                r.id === data.repository.id ? { ...r, summary: data.repository.summary } : r,
+              ),
             };
           });
         }
       }
 
       // Set progress to 100% when complete
-      setAnalysisProgress(prev => ({
+      setAnalysisProgress((prev) => ({
         ...prev,
-        progress: 100
+        progress: 100,
       }));
 
       // Small delay to show 100% completion before navigating
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       setLocation("/preview");
       toast({
         title: "Success",
         description: "Repository analysis complete!",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to analyze repositories. Please try again.",
@@ -217,8 +217,8 @@ export default function RepoSelect() {
       setAnalysisProgress({
         isAnalyzing: false,
         currentRepo: 0,
-        repoName: '',
-        progress: 0
+        repoName: "",
+        progress: 0,
       });
     }
   };
@@ -231,38 +231,42 @@ export default function RepoSelect() {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">Select Repositories</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Choose GitHub repositories for your portfolio, or{' '}
+              Choose GitHub repositories for your portfolio, or{" "}
               <button
-                onClick={() => setLocation('/data-sources')}
+                onClick={() => setLocation("/data-sources")}
                 className="text-blue-600 hover:text-blue-800 underline"
               >
                 add content from other sources
               </button>
             </p>
           </div>
-          
+
           {/* Owner filter dropdown */}
           {owners.length > 0 && (
             <div className="w-full md:w-48">
-              <Select value={selectedOwner} onValueChange={(value) => {
-                setSelectedOwner(value);
-                setCurrentPage(1);
-              }}>
+              <Select
+                value={selectedOwner}
+                onValueChange={(value) => {
+                  setSelectedOwner(value);
+                  setCurrentPage(1);
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Owner" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Repositories</SelectItem>
-                  {owners.map(owner => (
+                  {owners.map((owner) => (
                     <SelectItem key={owner.login} value={owner.login}>
-                      {owner.type === "User" ? "User: " : "Org: "}{owner.login}
+                      {owner.type === "User" ? "User: " : "Org: "}
+                      {owner.login}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           )}
-          
+
           <div className="w-full md:w-auto flex flex-col md:flex-row items-stretch md:items-center gap-4">
             <div className="relative flex-1 md:w-64">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -302,10 +306,7 @@ export default function RepoSelect() {
                 </label>
               </div>
               {selectedCount > 0 && (
-                <Button
-                  onClick={analyzeRepos}
-                  disabled={isToggling}
-                >
+                <Button onClick={analyzeRepos} disabled={isToggling}>
                   Generate Portfolio ({selectedCount} selected)
                 </Button>
               )}
@@ -319,77 +320,75 @@ export default function RepoSelect() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Available Repositories</h2>
-              <span className="text-sm text-muted-foreground">{filteredRepos.length} repositories</span>
+              <span className="text-sm text-muted-foreground">
+                {filteredRepos.length} repositories
+              </span>
             </div>
-            
+
             <div className="grid gap-4 max-h-[800px] overflow-y-auto">
-              {isLoading ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-32" />
-                ))
-              ) : (
-                paginatedRepos.map((repo) => (
-                  <Card key={repo.id} className="transition-shadow hover:shadow-md">
-                    <CardHeader className="flex flex-row items-start gap-4 p-4">
-                      <Checkbox
-                        id={`repo-${repo.id}`}
-                        checked={repo.selected}
-                        onCheckedChange={(checked) => {
-                          if (repo.id) {
-                            toggleRepo({ id: repo.id, selected: !!checked });
-                          }
-                        }}
-                        disabled={isToggling}
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <label
-                            htmlFor={`repo-${repo.id}`}
-                            className="text-base font-semibold cursor-pointer"
-                          >
-                            {repo.displayName || repo.name}
-                          </label>
-                          <span className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">
-                            {repo.owner.type === "User" ? "User" : "Org"}: {repo.owner.login}
-                          </span>
-                          <a
-                            href={repo.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-full flex items-center gap-1 transition-colors"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            GitHub <ExternalLink className="w-3 h-3" />
-                          </a>
-                        </div>
-                        
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Updated {new Date(repo.metadata.updatedAt).toLocaleDateString()}
-                        </div>
-                        
-                        {repo.description && (
-                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                            {repo.description}
-                          </p>
-                        )}
-                        
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {repo.metadata.language && (
-                            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
-                              {repo.metadata.language}
+              {isLoading
+                ? Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32" />)
+                : paginatedRepos.map((repo) => (
+                    <Card key={repo.id} className="transition-shadow hover:shadow-md">
+                      <CardHeader className="flex flex-row items-start gap-4 p-4">
+                        <Checkbox
+                          id={`repo-${repo.id}`}
+                          checked={repo.selected}
+                          onCheckedChange={(checked) => {
+                            if (repo.id) {
+                              toggleRepo({ id: repo.id, selected: !!checked });
+                            }
+                          }}
+                          disabled={isToggling}
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <label
+                              htmlFor={`repo-${repo.id}`}
+                              className="text-base font-semibold cursor-pointer"
+                            >
+                              {repo.displayName || repo.name}
+                            </label>
+                            <span className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">
+                              {repo.owner.type === "User" ? "User" : "Org"}: {repo.owner.login}
                             </span>
+                            <a
+                              href={repo.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-full flex items-center gap-1 transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              GitHub <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Updated {new Date(repo.metadata.updatedAt).toLocaleDateString()}
+                          </div>
+
+                          {repo.description && (
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                              {repo.description}
+                            </p>
                           )}
-                          {repo.metadata.stars > 0 && (
-                            <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
-                              ★ {repo.metadata.stars}
-                            </span>
-                          )}
+
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {repo.metadata.language && (
+                              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                                {repo.metadata.language}
+                              </span>
+                            )}
+                            {repo.metadata.stars > 0 && (
+                              <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
+                                ★ {repo.metadata.stars}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </CardHeader>
-                  </Card>
-                ))
-              )}
+                      </CardHeader>
+                    </Card>
+                  ))}
             </div>
 
             {/* Pagination */}
@@ -424,7 +423,7 @@ export default function RepoSelect() {
               <h2 className="text-lg font-semibold">Selected Repositories</h2>
               <span className="text-sm text-muted-foreground">{selectedCount} selected</span>
             </div>
-            
+
             <div className="border-2 border-dashed border-muted rounded-lg p-4 min-h-[800px]">
               {selectedCount === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-12">
@@ -432,7 +431,9 @@ export default function RepoSelect() {
                     <Search className="w-8 h-8" />
                   </div>
                   <p className="text-center font-medium">No repositories selected</p>
-                  <p className="text-sm text-center mt-1">Select repositories from the left to see them here</p>
+                  <p className="text-sm text-center mt-1">
+                    Select repositories from the left to see them here
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-[750px] overflow-y-auto">
@@ -458,13 +459,13 @@ export default function RepoSelect() {
                                 GitHub <ExternalLink className="w-3 h-3" />
                               </a>
                             </div>
-                            
+
                             {repo.description && (
                               <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                                 {repo.description}
                               </p>
                             )}
-                            
+
                             <div className="flex flex-wrap gap-1 mt-2">
                               {repo.metadata.language && (
                                 <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
@@ -498,9 +499,7 @@ export default function RepoSelect() {
           </div>
         </div>
 
-
         {/* Generate Portfolio button appears above */}
-        
       </div>
 
       <AnalysisProgress

@@ -73,8 +73,7 @@ export const themes: Theme[] = [
     layout: {
       container: "grid grid-cols-1 md:grid-cols-2 gap-12",
       header: "col-span-full flex justify-center",
-      content:
-        "col-span-full grid grid-cols-1 md:grid-cols-2 gap-8",
+      content: "col-span-full grid grid-cols-1 md:grid-cols-2 gap-8",
       profile: "flex flex-col items-center",
     },
   },

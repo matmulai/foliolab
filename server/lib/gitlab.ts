@@ -1,7 +1,7 @@
-import axios from 'axios';
-import { GitLabRepository } from '../../shared/schema';
+import axios from "axios";
+import type { GitLabRepository } from "../../shared/schema";
 
-const GITLAB_API_URL = 'https://gitlab.com/api/v4';
+const GITLAB_API_URL = "https://gitlab.com/api/v4";
 
 interface GitLabProject {
   id: number;
@@ -46,12 +46,14 @@ export async function getGitLabUser(accessToken: string): Promise<GitLabUser> {
   try {
     const response = await axios.get<GitLabUser>(`${GITLAB_API_URL}/user`, {
       headers: {
-        'Authorization': `Bearer ${accessToken}`
-      }
+        Authorization: `Bearer ${accessToken}`,
+      },
     });
     return response.data;
   } catch (error) {
-    throw new Error(`Failed to fetch GitLab user: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to fetch GitLab user: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -64,10 +66,10 @@ export async function getGitLabUser(accessToken: string): Promise<GitLabUser> {
  */
 export async function getGitLabProjects(
   accessToken: string,
-  username: string
+  username: string,
 ): Promise<GitLabRepository[]> {
   if (!username) {
-    throw new Error('GitLab username is required');
+    throw new Error("GitLab username is required");
   }
 
   try {
@@ -78,17 +80,20 @@ export async function getGitLabProjects(
 
     // Fetch user projects
     while (hasMore) {
-      const response = await axios.get<GitLabProject[]>(`${GITLAB_API_URL}/users/${username}/projects`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
+      const response = await axios.get<GitLabProject[]>(
+        `${GITLAB_API_URL}/users/${username}/projects`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          params: {
+            per_page: perPage,
+            page,
+            owned: true,
+            membership: true,
+          },
         },
-        params: {
-          per_page: perPage,
-          page,
-          owned: true,
-          membership: true
-        }
-      });
+      );
 
       if (response.data.length === 0) {
         hasMore = false;
@@ -102,9 +107,11 @@ export async function getGitLabProjects(
     }
 
     // Convert to our schema format
-    return projects.map(project => convertGitLabProjectToRepository(project));
+    return projects.map((project) => convertGitLabProjectToRepository(project));
   } catch (error) {
-    throw new Error(`Failed to fetch GitLab projects: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to fetch GitLab projects: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -117,11 +124,11 @@ export async function getGitLabProjects(
  */
 export async function getGitLabReadme(
   projectId: number,
-  accessToken: string
+  accessToken: string,
 ): Promise<string | null> {
   try {
-    const readmeFiles = ['README.md', 'readme.md', 'Readme.md', 'README', 'readme'];
-    const branches = ['main', 'master'];
+    const readmeFiles = ["README.md", "readme.md", "Readme.md", "README", "readme"];
+    const branches = ["main", "master"];
 
     for (const ref of branches) {
       for (const filename of readmeFiles) {
@@ -130,26 +137,23 @@ export async function getGitLabReadme(
             `${GITLAB_API_URL}/projects/${projectId}/repository/files/${encodeURIComponent(filename)}/raw`,
             {
               headers: {
-                'Authorization': `Bearer ${accessToken}`
+                Authorization: `Bearer ${accessToken}`,
               },
               params: {
-                ref
-              }
-            }
+                ref,
+              },
+            },
           );
 
           if (response.data) {
             return response.data;
           }
-        } catch (err) {
-          // Try next filename / branch
-          continue;
-        }
+        } catch (_err) {}
       }
     }
 
     return null;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
@@ -162,7 +166,7 @@ export async function getGitLabReadme(
 export function extractTitleFromReadme(readme: string | null): string | null {
   if (!readme) return null;
 
-  const lines = readme.split('\n');
+  const lines = readme.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
@@ -175,7 +179,7 @@ export function extractTitleFromReadme(readme: string | null): string | null {
     // Check for Setext-style H1 (Title\n=====)
     if (i < lines.length - 1) {
       const nextLine = lines[i + 1];
-      if (nextLine.trim().match(/^={3,}$/) && line.trim() !== '') {
+      if (nextLine.trim().match(/^={3,}$/) && line.trim() !== "") {
         return line.trim();
       }
     }
@@ -194,7 +198,7 @@ function convertGitLabProjectToRepository(project: GitLabProject): GitLabReposit
     id: project.namespace.id,
     username: project.namespace.path,
     name: project.namespace.name,
-    avatar_url: project.namespace.avatar_url
+    avatar_url: project.namespace.avatar_url,
   };
 
   return {
@@ -205,11 +209,11 @@ function convertGitLabProjectToRepository(project: GitLabProject): GitLabReposit
     url: project.web_url,
     summary: null,
     selected: false,
-    source: 'gitlab',
+    source: "gitlab",
     owner: {
       login: owner.username,
-      type: project.namespace.kind === 'group' ? 'Organization' : 'User',
-      avatarUrl: owner.avatar_url
+      type: project.namespace.kind === "group" ? "Organization" : "User",
+      avatarUrl: owner.avatar_url,
     },
     metadata: {
       id: project.id,
@@ -217,8 +221,8 @@ function convertGitLabProjectToRepository(project: GitLabProject): GitLabReposit
       language: null, // GitLab API v4 doesn't return language directly
       topics: project.topics,
       updatedAt: project.last_activity_at,
-      url: project.web_url
-    }
+      url: project.web_url,
+    },
   };
 }
 
@@ -231,7 +235,7 @@ function convertGitLabProjectToRepository(project: GitLabProject): GitLabReposit
  */
 export async function getGitLabProjectsWithTitles(
   accessToken: string,
-  username: string
+  username: string,
 ): Promise<GitLabRepository[]> {
   const projects = await getGitLabProjects(accessToken, username);
 
@@ -250,16 +254,16 @@ export async function getGitLabProjectsWithTitles(
 
         return {
           ...project,
-          displayName
+          displayName,
         };
-      })
+      }),
     );
 
     projectsWithTitles.push(...batchResults);
 
     // Apply delay between batches to avoid rate limiting (except for last batch)
     if (i + BATCH_SIZE < projects.length) {
-      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+      await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
     }
   }
 

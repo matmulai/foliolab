@@ -1,22 +1,33 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Repository, PortfolioItem } from "@shared/schema";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Github, ExternalLink, ArrowLeft, Edit2, Check, X, Plus, Camera, Trash2, GripVertical } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
-import { DeploymentActions } from "@/components/deployment-actions";
-import { useLocation } from "wouter";
-import { apiRequest } from "@/lib/queryClient";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ThemeSelector } from "@/components/theme-selector";
+import type { PortfolioItem, Repository } from "@shared/schema";
 import { themes } from "@shared/themes";
-import { cn } from "@/lib/utils";
-import { Textarea } from "@/components/ui/textarea";
+import { useMutation } from "@tanstack/react-query";
+import {
+  ArrowLeft,
+  Camera,
+  Check,
+  Edit2,
+  ExternalLink,
+  Github,
+  GripVertical,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
+import { DeploymentActions } from "@/components/deployment-actions";
+import { ThemeSelector } from "@/components/theme-selector";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { getPortfolioItems } from "@/lib/storage";
+import { cn } from "@/lib/utils";
 
 interface UserIntroduction {
   introduction: string;
@@ -36,28 +47,28 @@ const capitalizeFirstLetter = (str: string) => {
 };
 
 const getItemTitle = (item: PortfolioItem): string => {
-  if (item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') {
+  if (item.source === "github" || item.source === "gitlab" || item.source === "bitbucket") {
     return item.displayName || item.name;
   }
-  return item.title || 'Untitled';
+  return item.title || "Untitled";
 };
 
 const getItemSummary = (item: PortfolioItem): string => {
-  if (item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') {
-    return item.summary || '';
+  if (item.source === "github" || item.source === "gitlab" || item.source === "bitbucket") {
+    return item.summary || "";
   }
-  if (item.source === 'linkedin') {
-    return item.summary || '';
+  if (item.source === "linkedin") {
+    return item.summary || "";
   }
-  if (item.source === 'freeform') {
-    return item.description || '';
+  if (item.source === "freeform") {
+    return item.description || "";
   }
-  return item.summary || item.description || '';
+  return item.summary || item.description || "";
 };
 
-const getItemUrl = (item: PortfolioItem): string | undefined => {
+const _getItemUrl = (item: PortfolioItem): string | undefined => {
   if (item.url) return item.url;
-  if (item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') {
+  if (item.source === "github" || item.source === "gitlab" || item.source === "bitbucket") {
     return item.metadata.url || undefined;
   }
   return undefined;
@@ -102,7 +113,7 @@ export default function PortfolioPreview() {
   const { mutate: generateIntro, isPending: isGenerating } = useMutation({
     mutationFn: async (repositories: Repository[]) => {
       const res = await apiRequest("POST", "/api/user/introduction", {
-        repositories
+        repositories,
       });
       const data = await res.json();
       return data;
@@ -115,8 +126,7 @@ export default function PortfolioPreview() {
       console.error("Error generating introduction:", err);
       toast({
         title: "Warning",
-        description:
-          "Could not generate personalized introduction. Proceeding with basic preview.",
+        description: "Could not generate personalized introduction. Proceeding with basic preview.",
         variant: "destructive",
       });
     },
@@ -201,16 +211,16 @@ export default function PortfolioPreview() {
 
   const saveItemSummary = () => {
     if (editingItem !== null) {
-      setSelectedItems(items =>
-        items.map(item => {
+      setSelectedItems((items) =>
+        items.map((item) => {
           if (item.id === editingItem) {
-            if (item.source === 'freeform') {
+            if (item.source === "freeform") {
               return { ...item, description: tempItemSummary };
             }
             return { ...item, summary: tempItemSummary } as PortfolioItem;
           }
           return item;
-        })
+        }),
       );
       setEditingItem(null);
       toast({
@@ -229,19 +239,28 @@ export default function PortfolioPreview() {
     });
   };
 
-  const saveItemTitle = () => {
+  const _saveItemTitle = () => {
     if (editingItemTitle !== null) {
-      setSelectedItems(items =>
-        items.map(item => {
+      setSelectedItems((items) =>
+        items.map((item) => {
           if (item.id === editingItemTitle) {
-            if (item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') {
+            if (
+              item.source === "github" ||
+              item.source === "gitlab" ||
+              item.source === "bitbucket"
+            ) {
               return { ...item, displayName: tempItemTitle };
-            } else if (item.source === 'blog_rss' || item.source === 'medium' || item.source === 'freeform' || item.source === 'linkedin') {
+            } else if (
+              item.source === "blog_rss" ||
+              item.source === "medium" ||
+              item.source === "freeform" ||
+              item.source === "linkedin"
+            ) {
               return { ...item, title: tempItemTitle };
             }
           }
           return item;
-        })
+        }),
       );
       setEditingItemTitle(null);
       toast({
@@ -303,13 +322,9 @@ export default function PortfolioPreview() {
     setTempInterests(tempInterests.filter((_, i) => i !== index));
   };
 
-  const deleteItemSummary = (itemId: string | number) => {
-    setSelectedItems(items =>
-      items.map(item =>
-        item.id === itemId
-          ? { ...item, summary: "" }
-          : item
-      )
+  const _deleteItemSummary = (itemId: string | number) => {
+    setSelectedItems((items) =>
+      items.map((item) => (item.id === itemId ? { ...item, summary: "" } : item)),
     );
     toast({
       title: "Summary Deleted",
@@ -318,7 +333,7 @@ export default function PortfolioPreview() {
   };
 
   const deleteItem = (itemId: string | number) => {
-    setSelectedItems(items => items.filter(item => item.id !== itemId));
+    setSelectedItems((items) => items.filter((item) => item.id !== itemId));
     toast({
       title: "Item Removed",
       description: "The item has been removed from your portfolio.",
@@ -343,7 +358,7 @@ export default function PortfolioPreview() {
 
   const handleDrop = (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault();
-    
+
     if (draggedIndex === null || draggedIndex === dropIndex) {
       setDraggedIndex(null);
       setDragOverIndex(null);
@@ -352,17 +367,17 @@ export default function PortfolioPreview() {
 
     const newItems = [...selectedItems];
     const draggedItem = newItems[draggedIndex];
-    
+
     // Remove the dragged item
     newItems.splice(draggedIndex, 1);
-    
+
     // Insert at the new position
     newItems.splice(dropIndex, 0, draggedItem);
-    
+
     setSelectedItems(newItems);
     setDraggedIndex(null);
     setDragOverIndex(null);
-    
+
     toast({
       title: "Item Reordered",
       description: "The item order has been updated.",
@@ -383,26 +398,25 @@ export default function PortfolioPreview() {
 
     if (filtered.length > 0) {
       // Only generate intro if we have GitHub repos
-      const githubRepos = filtered.filter(item => item.source === 'github') as Repository[];
+      const githubRepos = filtered.filter((item) => item.source === "github") as Repository[];
       if (githubRepos.length > 0) {
         generateIntro(githubRepos);
       } else {
         // For non-GitHub items, create a basic intro
         setUserInfo({
           username: "Portfolio",
-          avatarUrl: null
+          avatarUrl: null,
         });
         setUserIntro({
           introduction: "Welcome to my portfolio! Here's a showcase of my work and writing.",
           skills: [],
-          interests: []
+          interests: [],
         });
       }
     } else {
       toast({
         title: "No Items Selected",
-        description:
-          "Please go back and select items to include in your portfolio.",
+        description: "Please go back and select items to include in your portfolio.",
         variant: "destructive",
       });
     }
@@ -488,7 +502,7 @@ export default function PortfolioPreview() {
               isModern ? "shadow-lg hover:shadow-xl transition-shadow" : "",
               draggedIndex === index ? "opacity-50" : "",
               dragOverIndex === index ? "border-blue-500 border-2" : "",
-              "cursor-move relative group"
+              "cursor-move relative group",
             )}
           >
             <CardHeader>
@@ -508,16 +522,19 @@ export default function PortfolioPreview() {
                           <Button size="sm" onClick={saveTitle} aria-label="Save repository title">
                             <Check className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="outline" onClick={cancelEdit} aria-label="Cancel editing">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={cancelEdit}
+                            aria-label="Cancel editing"
+                          >
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
                     ) : (
                       <>
-                        <h2
-                          className={cn("text-2xl font-semibold", theme.preview.text)}
-                        >
+                        <h2 className={cn("text-2xl font-semibold", theme.preview.text)}>
                           {getItemTitle(item)}
                         </h2>
                         <Button
@@ -534,33 +551,35 @@ export default function PortfolioPreview() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 ml-2">
-                  {(item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') && item.metadata.stars > 0 && (
-                    <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">
-                      ★ {item.metadata.stars}
-                    </span>
-                  )}
+                  {(item.source === "github" ||
+                    item.source === "gitlab" ||
+                    item.source === "bitbucket") &&
+                    item.metadata.stars > 0 && (
+                      <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">
+                        ★ {item.metadata.stars}
+                      </span>
+                    )}
                   {item.url && (
                     <Button variant="outline" size="icon" asChild aria-label="View item">
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {item.source === 'github' ? <Github className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
+                      <a href={item.url} target="_blank" rel="noopener noreferrer">
+                        {item.source === "github" ? (
+                          <Github className="h-4 w-4" />
+                        ) : (
+                          <ExternalLink className="h-4 w-4" />
+                        )}
                       </a>
                     </Button>
                   )}
-                  {(item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') && item.metadata.url && (
-                    <Button variant="outline" size="icon" asChild>
-                      <a
-                        href={item.metadata.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  )}
+                  {(item.source === "github" ||
+                    item.source === "gitlab" ||
+                    item.source === "bitbucket") &&
+                    item.metadata.url && (
+                      <Button variant="outline" size="icon" asChild>
+                        <a href={item.metadata.url} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
                 </div>
               </div>
             </CardHeader>
@@ -577,19 +596,26 @@ export default function PortfolioPreview() {
                         placeholder="Enter summary..."
                       />
                       <div className="flex gap-2">
-                        <Button size="sm" onClick={saveItemSummary} aria-label="Save repository summary">
+                        <Button
+                          size="sm"
+                          onClick={saveItemSummary}
+                          aria-label="Save repository summary"
+                        >
                           <Check className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="outline" onClick={cancelEdit} aria-label="Cancel editing">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={cancelEdit}
+                          aria-label="Cancel editing"
+                        >
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
                   ) : (
                     <>
-                      <p className={cn("mb-4", theme.preview.text)}>
-                        {getItemSummary(item)}
-                      </p>
+                      <p className={cn("mb-4", theme.preview.text)}>{getItemSummary(item)}</p>
                       <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                         <Button
                           size="sm"
@@ -613,39 +639,45 @@ export default function PortfolioPreview() {
                     </>
                   )}
                   {/* Topics for repos */}
-                  {(item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') && item.metadata.topics.length > 0 && (
-                    <div className="flex gap-2 flex-wrap">
-                      {item.metadata.topics.map((topic) => (
-                        <span
-                          key={topic}
-                          className={
-                            isModern
-                              ? "px-2 py-1 rounded-full text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
-                              : "px-2 py-1 rounded-full text-sm bg-slate-800 text-white" // Explicit styling for Minimal theme
-                          }
-                        >
-                          {topic}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  {(item.source === "github" ||
+                    item.source === "gitlab" ||
+                    item.source === "bitbucket") &&
+                    item.metadata.topics.length > 0 && (
+                      <div className="flex gap-2 flex-wrap">
+                        {item.metadata.topics.map((topic) => (
+                          <span
+                            key={topic}
+                            className={
+                              isModern
+                                ? "px-2 py-1 rounded-full text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
+                                : "px-2 py-1 rounded-full text-sm bg-slate-800 text-white" // Explicit styling for Minimal theme
+                            }
+                          >
+                            {topic}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   {/* Tags for other types */}
-                  {(item.source === 'blog_rss' || item.source === 'medium' || item.source === 'freeform') && item.tags && (
-                    <div className="flex gap-2 flex-wrap">
-                      {item.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className={
-                            isModern
-                              ? "px-2 py-1 rounded-full text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
-                              : "px-2 py-1 rounded-full text-sm bg-slate-800 text-white"
-                          }
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  {(item.source === "blog_rss" ||
+                    item.source === "medium" ||
+                    item.source === "freeform") &&
+                    item.tags && (
+                      <div className="flex gap-2 flex-wrap">
+                        {item.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className={
+                              isModern
+                                ? "px-2 py-1 rounded-full text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
+                                : "px-2 py-1 rounded-full text-sm bg-slate-800 text-white"
+                            }
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -690,13 +722,11 @@ export default function PortfolioPreview() {
                   onError={(e) => {
                     // Fallback to GitHub avatar if custom URL fails
                     if (userIntro?.customImageUrl && e.currentTarget.src !== userInfo.avatarUrl) {
-                      e.currentTarget.src = userInfo.avatarUrl || '';
+                      e.currentTarget.src = userInfo.avatarUrl || "";
                     }
                   }}
                 />
-                <AvatarFallback>
-                  {userInfo.username.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
+                <AvatarFallback>{userInfo.username.slice(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
               <Button
                 size="sm"
@@ -749,7 +779,12 @@ export default function PortfolioPreview() {
                     <Button size="sm" onClick={saveTitle} aria-label="Save portfolio title">
                       <Check className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={cancelEdit} aria-label="Cancel editing">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={cancelEdit}
+                      aria-label="Cancel editing"
+                    >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -795,7 +830,12 @@ export default function PortfolioPreview() {
                     <Button size="sm" onClick={saveIntro} aria-label="Save introduction">
                       <Check className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={cancelEdit} aria-label="Cancel editing">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={cancelEdit}
+                      aria-label="Cancel editing"
+                    >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -844,7 +884,7 @@ export default function PortfolioPreview() {
                       value={newSkill}
                       onChange={(e) => setNewSkill(e.target.value)}
                       placeholder="Add new skill..."
-                      onKeyPress={(e) => e.key === 'Enter' && addSkill()}
+                      onKeyPress={(e) => e.key === "Enter" && addSkill()}
                       className="flex-1"
                     />
                     <Button size="sm" onClick={addSkill} aria-label="Add skill">
@@ -855,19 +895,19 @@ export default function PortfolioPreview() {
                     <Button size="sm" onClick={saveSkills} aria-label="Save skills">
                       <Check className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={cancelEdit} aria-label="Cancel editing">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={cancelEdit}
+                      aria-label="Cancel editing"
+                    >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               ) : (
                 <>
-                  <div
-                    className={cn(
-                      "flex flex-wrap gap-2",
-                      isMinimal ? "" : "justify-center",
-                    )}
-                  >
+                  <div className={cn("flex flex-wrap gap-2", isMinimal ? "" : "justify-center")}>
                     {userIntro.skills.map((skill, index) => (
                       <span
                         key={index}
@@ -922,7 +962,7 @@ export default function PortfolioPreview() {
                       value={newInterest}
                       onChange={(e) => setNewInterest(e.target.value)}
                       placeholder="Add new interest..."
-                      onKeyPress={(e) => e.key === 'Enter' && addInterest()}
+                      onKeyPress={(e) => e.key === "Enter" && addInterest()}
                       className="flex-1"
                     />
                     <Button size="sm" onClick={addInterest} aria-label="Add interest">
@@ -933,7 +973,12 @@ export default function PortfolioPreview() {
                     <Button size="sm" onClick={saveInterests} aria-label="Save interests">
                       <Check className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={cancelEdit} aria-label="Cancel editing">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={cancelEdit}
+                      aria-label="Cancel editing"
+                    >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -941,8 +986,7 @@ export default function PortfolioPreview() {
               ) : (
                 <>
                   <p className={cn("text-sm", theme.preview.text)}>
-                    <span className="font-medium">Interests:</span>{" "}
-                    {userIntro.interests.join(", ")}
+                    <span className="font-medium">Interests:</span> {userIntro.interests.join(", ")}
                   </p>
                   <Button
                     size="sm"
@@ -983,16 +1027,14 @@ export default function PortfolioPreview() {
               Back to Repositories
             </Button>
 
-            <ThemeSelector
-              value={selectedTheme}
-              onValueChange={setSelectedTheme}
-            />
+            <ThemeSelector value={selectedTheme} onValueChange={setSelectedTheme} />
           </div>
 
           {/* Simple Editing Hint */}
           <div className="text-center mb-4">
             <p className="text-sm text-muted-foreground">
-              💡 Tip: Your portfolio is fully customizable! Hover over elements to edit, drag repositories to reorder, or delete summaries
+              💡 Tip: Your portfolio is fully customizable! Hover over elements to edit, drag
+              repositories to reorder, or delete summaries
             </p>
           </div>
 
@@ -1000,9 +1042,7 @@ export default function PortfolioPreview() {
           {selectedTheme === "minimal" ? (
             // Minimal theme layout - 2 columns with left sidebar
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              <div className="lg:col-span-4 flex justify-center">
-                {renderProfile()}
-              </div>
+              <div className="lg:col-span-4 flex justify-center">{renderProfile()}</div>
               <div className="lg:col-span-8">{renderPortfolioContent()}</div>
             </div>
           ) : selectedTheme === "elegant" ? (
@@ -1025,7 +1065,7 @@ export default function PortfolioPreview() {
                       className={cn(
                         "border-l-4 border-stone-900 rounded-none shadow-[0_2px_40px_-12px_rgba(0,0,0,0.1)] bg-white h-full cursor-move relative group",
                         draggedIndex === index ? "opacity-50" : "",
-                        dragOverIndex === index ? "border-blue-500 border-2" : ""
+                        dragOverIndex === index ? "border-blue-500 border-2" : "",
                       )}
                     >
                       <CardHeader>
@@ -1042,29 +1082,35 @@ export default function PortfolioPreview() {
                                     placeholder="Enter title..."
                                   />
                                   <div className="flex gap-2">
-                                    <Button size="sm" onClick={saveTitle} aria-label="Save repository title">
+                                    <Button
+                                      size="sm"
+                                      onClick={saveTitle}
+                                      aria-label="Save repository title"
+                                    >
                                       <Check className="h-4 w-4" />
                                     </Button>
-                                    <Button size="sm" variant="outline" onClick={cancelEdit} aria-label="Cancel editing">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={cancelEdit}
+                                      aria-label="Cancel editing"
+                                    >
                                       <X className="h-4 w-4" />
                                     </Button>
                                   </div>
                                 </div>
                               ) : (
                                 <>
-                                  <h2
-                                    className={cn(
-                                      "text-2xl font-semibold",
-                                      theme.preview.text,
-                                    )}
-                                  >
+                                  <h2 className={cn("text-2xl font-semibold", theme.preview.text)}>
                                     {getItemTitle(item)}
                                   </h2>
                                   <Button
                                     size="sm"
                                     variant="ghost"
                                     className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => startEditingItemTitle(item.id, getItemTitle(item))}
+                                    onClick={() =>
+                                      startEditingItemTitle(item.id, getItemTitle(item))
+                                    }
                                     aria-label="Edit item title"
                                   >
                                     <Edit2 className="h-4 w-4" />
@@ -1072,35 +1118,41 @@ export default function PortfolioPreview() {
                                 </>
                               )}
                             </div>
-                         </div>
-                         <div className="flex items-center gap-2 ml-2">
-                            {(item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') && item.metadata.stars > 0 && (
-                              <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">
-                                ★ {item.metadata.stars}
-                              </span>
-                            )}
+                          </div>
+                          <div className="flex items-center gap-2 ml-2">
+                            {(item.source === "github" ||
+                              item.source === "gitlab" ||
+                              item.source === "bitbucket") &&
+                              item.metadata.stars > 0 && (
+                                <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">
+                                  ★ {item.metadata.stars}
+                                </span>
+                              )}
                             {item.url && (
                               <Button variant="outline" size="icon" asChild aria-label="View item">
-                                <a
-                                  href={item.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  {item.source === 'github' ? <Github className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
+                                <a href={item.url} target="_blank" rel="noopener noreferrer">
+                                  {item.source === "github" ? (
+                                    <Github className="h-4 w-4" />
+                                  ) : (
+                                    <ExternalLink className="h-4 w-4" />
+                                  )}
                                 </a>
                               </Button>
                             )}
-                            {(item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') && item.metadata.url && (
-                              <Button variant="outline" size="icon" asChild>
-                                <a
-                                  href={item.metadata.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <ExternalLink className="h-4 w-4" />
-                                </a>
-                              </Button>
-                            )}
+                            {(item.source === "github" ||
+                              item.source === "gitlab" ||
+                              item.source === "bitbucket") &&
+                              item.metadata.url && (
+                                <Button variant="outline" size="icon" asChild>
+                                  <a
+                                    href={item.metadata.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </a>
+                                </Button>
+                              )}
                           </div>
                         </div>
                       </CardHeader>
@@ -1117,10 +1169,19 @@ export default function PortfolioPreview() {
                                   placeholder="Enter summary..."
                                 />
                                 <div className="flex gap-2">
-                                  <Button size="sm" onClick={saveItemSummary} aria-label="Save repository summary">
+                                  <Button
+                                    size="sm"
+                                    onClick={saveItemSummary}
+                                    aria-label="Save repository summary"
+                                  >
                                     <Check className="h-4 w-4" />
                                   </Button>
-                                  <Button size="sm" variant="outline" onClick={cancelEdit} aria-label="Cancel editing">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={cancelEdit}
+                                    aria-label="Cancel editing"
+                                  >
                                     <X className="h-4 w-4" />
                                   </Button>
                                 </div>
@@ -1153,33 +1214,39 @@ export default function PortfolioPreview() {
                               </>
                             )}
                             {/* Topics for repos */}
-                            {(item.source === 'github' || item.source === 'gitlab' || item.source === 'bitbucket') && item.metadata.topics.length > 0 && (
-                              <div className="flex flex-wrap gap-2">
-                                {item.metadata.topics.map((topic) => (
-                                  <Badge
-                                    key={topic}
-                                    variant="outline"
-                                    className="bg-stone-900 text-stone-50"
-                                  >
-                                    {topic}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
+                            {(item.source === "github" ||
+                              item.source === "gitlab" ||
+                              item.source === "bitbucket") &&
+                              item.metadata.topics.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {item.metadata.topics.map((topic) => (
+                                    <Badge
+                                      key={topic}
+                                      variant="outline"
+                                      className="bg-stone-900 text-stone-50"
+                                    >
+                                      {topic}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
                             {/* Tags for other types */}
-                            {(item.source === 'blog_rss' || item.source === 'medium' || item.source === 'freeform') && item.tags && (
-                              <div className="flex flex-wrap gap-2">
-                                {item.tags.map((tag) => (
-                                  <Badge
-                                    key={tag}
-                                    variant="outline"
-                                    className="bg-stone-900 text-stone-50"
-                                  >
-                                    {tag}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
+                            {(item.source === "blog_rss" ||
+                              item.source === "medium" ||
+                              item.source === "freeform") &&
+                              item.tags && (
+                                <div className="flex flex-wrap gap-2">
+                                  {item.tags.map((tag) => (
+                                    <Badge
+                                      key={tag}
+                                      variant="outline"
+                                      className="bg-stone-900 text-stone-50"
+                                    >
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
                           </div>
                         ) : (
                           <div className="space-y-4">
@@ -1205,7 +1272,7 @@ export default function PortfolioPreview() {
           )}
 
           <DeploymentActions
-            repositories={selectedItems.filter(item => item.source === 'github') as Repository[]}
+            repositories={selectedItems.filter((item) => item.source === "github") as Repository[]}
             userInfo={userInfo}
             introduction={userIntro}
             theme={theme}

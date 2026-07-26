@@ -1,5 +1,5 @@
 import { Octokit } from "@octokit/rest";
-import { Repository, Organization } from "@shared/schema";
+import type { Organization, Repository } from "@shared/schema";
 
 interface GithubUser {
   githubId: string;
@@ -26,7 +26,7 @@ interface OctokitError extends Error {
 function isOctokitError(error: unknown): error is OctokitError {
   return (
     error instanceof Error &&
-    ('status' in error || ('response' in error && typeof (error as any).response === 'object'))
+    ("status" in error || ("response" in error && typeof (error as any).response === "object"))
   );
 }
 
@@ -40,7 +40,7 @@ function isOctokitError(error: unknown): error is OctokitError {
  */
 async function paginateGithubAPI<T>(
   fetchPage: (page: number) => Promise<T[]>,
-  perPage: number = 100
+  perPage: number = 100,
 ): Promise<T[]> {
   const results: T[] = [];
   let page = 1;
@@ -93,21 +93,17 @@ export async function checkRepositoryExists(
   }
 }
 
-export async function getUserOrganizations(
-  accessToken: string,
-): Promise<Organization[]> {
+export async function getUserOrganizations(accessToken: string): Promise<Organization[]> {
   const octokit = new Octokit({ auth: accessToken });
 
   try {
-    const orgData = await paginateGithubAPI(
-      async (page) => {
-        const { data } = await octokit.orgs.listForAuthenticatedUser({
-          per_page: 100,
-          page,
-        });
-        return data;
-      }
-    );
+    const orgData = await paginateGithubAPI(async (page) => {
+      const { data } = await octokit.orgs.listForAuthenticatedUser({
+        per_page: 100,
+        page,
+      });
+      return data;
+    });
 
     const organizations = orgData.map((org) => ({
       id: org.id,
@@ -121,7 +117,9 @@ export async function getUserOrganizations(
   } catch (error) {
     console.error("Failed to fetch user organizations:", error);
     // Don't return empty array - let the caller know there was an error
-    throw new Error(`Failed to fetch organizations: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `Failed to fetch organizations: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
@@ -130,17 +128,15 @@ async function getUserRepositories(
   user: { login: string; type: "User"; avatarUrl: string | null },
 ): Promise<Repository[]> {
   try {
-    const allRepos = await paginateGithubAPI(
-      async (page) => {
-        const { data } = await octokit.repos.listForAuthenticatedUser({
-          visibility: "public",
-          sort: "updated",
-          per_page: 100,
-          page,
-        });
-        return data;
-      }
-    );
+    const allRepos = await paginateGithubAPI(async (page) => {
+      const { data } = await octokit.repos.listForAuthenticatedUser({
+        visibility: "public",
+        sort: "updated",
+        per_page: 100,
+        page,
+      });
+      return data;
+    });
 
     // Apply filtering - make it less aggressive
     const filteredRepos = allRepos.filter((repo) => {
@@ -153,7 +149,9 @@ async function getUserRepositories(
       );
     });
 
-    console.log(`Fetched ${allRepos.length} repositories for user ${user.login}, ${filteredRepos.length} after filtering`);
+    console.log(
+      `Fetched ${allRepos.length} repositories for user ${user.login}, ${filteredRepos.length} after filtering`,
+    );
 
     return filteredRepos.map((repo) => {
       // Extract the actual owner from the repository URL
@@ -170,7 +168,7 @@ async function getUserRepositories(
         url: repo.html_url,
         summary: null,
         selected: false,
-        source: 'github' as const,
+        source: "github" as const,
         owner: {
           login: repoOwner,
           type: isUserRepo ? "User" : "Organization",
@@ -178,10 +176,7 @@ async function getUserRepositories(
         },
         metadata: {
           id: repo.id,
-          stars:
-            typeof repo.stargazers_count === "number"
-              ? repo.stargazers_count
-              : 0,
+          stars: typeof repo.stargazers_count === "number" ? repo.stargazers_count : 0,
           language: repo.language || null,
           topics: repo.topics || [],
           updatedAt: repo.updated_at || "",
@@ -190,12 +185,11 @@ async function getUserRepositories(
       };
     });
   } catch (error) {
-    console.error(
-      `Failed to fetch repositories for user ${user.login}:`,
-      error,
-    );
+    console.error(`Failed to fetch repositories for user ${user.login}:`, error);
     // Don't return empty array - let the caller handle the error
-    throw new Error(`Failed to fetch repositories for user ${user.login}: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `Failed to fetch repositories for user ${user.login}: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
@@ -204,18 +198,16 @@ async function getOrganizationRepositories(
   org: { login: string; avatarUrl: string | null },
 ): Promise<Repository[]> {
   try {
-    const allRepos = await paginateGithubAPI(
-      async (page) => {
-        const { data } = await octokit.repos.listForOrg({
-          org: org.login,
-          type: "public",
-          sort: "updated",
-          per_page: 100,
-          page,
-        });
-        return data;
-      }
-    );
+    const allRepos = await paginateGithubAPI(async (page) => {
+      const { data } = await octokit.repos.listForOrg({
+        org: org.login,
+        type: "public",
+        sort: "updated",
+        per_page: 100,
+        page,
+      });
+      return data;
+    });
 
     // Apply filtering - make it less aggressive
     const filteredRepos = allRepos.filter((repo) => {
@@ -228,7 +220,9 @@ async function getOrganizationRepositories(
       );
     });
 
-    console.log(`Fetched ${allRepos.length} repositories for org ${org.login}, ${filteredRepos.length} after filtering`);
+    console.log(
+      `Fetched ${allRepos.length} repositories for org ${org.login}, ${filteredRepos.length} after filtering`,
+    );
 
     return filteredRepos.map((repo) => {
       // Extract the actual owner from the repository URL
@@ -242,7 +236,7 @@ async function getOrganizationRepositories(
         url: repo.html_url,
         summary: null,
         selected: false,
-        source: 'github' as const,
+        source: "github" as const,
         owner: {
           login: repoOwner,
           type: "Organization", // This should always be an organization
@@ -250,10 +244,7 @@ async function getOrganizationRepositories(
         },
         metadata: {
           id: repo.id,
-          stars:
-            typeof repo.stargazers_count === "number"
-              ? repo.stargazers_count
-              : 0,
+          stars: typeof repo.stargazers_count === "number" ? repo.stargazers_count : 0,
           language: repo.language || null,
           topics: repo.topics || [],
           updatedAt: repo.updated_at || "",
@@ -264,13 +255,13 @@ async function getOrganizationRepositories(
   } catch (error) {
     console.error(`Failed to fetch repositories for org ${org.login}:`, error);
     // Don't return empty array - let the caller handle the error
-    throw new Error(`Failed to fetch repositories for org ${org.login}: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `Failed to fetch repositories for org ${org.login}: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
-export async function getRepositories(
-  accessToken: string,
-): Promise<Repository[]> {
+export async function getRepositories(accessToken: string): Promise<Repository[]> {
   const octokit = new Octokit({ auth: accessToken });
 
   try {
@@ -308,7 +299,10 @@ export async function getRepositories(
           avatarUrl: org.avatarUrl,
         });
       } catch (error) {
-        console.warn(`Failed to fetch repositories for organization ${org.login}, skipping:`, error);
+        console.warn(
+          `Failed to fetch repositories for organization ${org.login}, skipping:`,
+          error,
+        );
         return [];
       }
     });
@@ -318,7 +312,7 @@ export async function getRepositories(
 
     // Combine user and organization repositories, but deduplicate based on repo ID
     const allRepos = [...userRepos, ...orgRepos];
-    
+
     console.log(`Repository Summary:
       - User repositories: ${userRepos.length}
       - Organization repositories: ${orgRepos.length}
@@ -338,8 +332,8 @@ export async function getRepositories(
     console.log(`Final repository count after deduplication: ${repositories.length}`);
 
     // Fetch READMEs and extract titles (in batches to avoid rate limiting)
-    const BATCH_SIZE = parseInt(process.env.GITHUB_BATCH_SIZE || '10');
-    const BATCH_DELAY_MS = parseInt(process.env.GITHUB_BATCH_DELAY_MS || '100');
+    const BATCH_SIZE = parseInt(process.env.GITHUB_BATCH_SIZE || "10", 10);
+    const BATCH_DELAY_MS = parseInt(process.env.GITHUB_BATCH_DELAY_MS || "100", 10);
 
     for (let i = 0; i < repositories.length; i += BATCH_SIZE) {
       const batch = repositories.slice(i, i + BATCH_SIZE);
@@ -351,11 +345,7 @@ export async function getRepositories(
       const results = await Promise.all(
         batch.map(async (repo): Promise<{ repo: string; success: boolean }> => {
           try {
-            const readme = await getReadmeContent(
-              octokit,
-              repo.owner.login,
-              repo.name,
-            );
+            const readme = await getReadmeContent(octokit, repo.owner.login, repo.name);
             const displayName = extractTitleFromReadme(readme);
 
             // Update the repository with the display name from README
@@ -364,10 +354,7 @@ export async function getRepositories(
             }
             return { repo: `${repo.owner.login}/${repo.name}`, success: true };
           } catch (error) {
-            console.warn(
-              `Failed to process README for ${repo.owner.login}/${repo.name}:`,
-              error,
-            );
+            console.warn(`Failed to process README for ${repo.owner.login}/${repo.name}:`, error);
             // Continue with other repositories, don't set displayName
             repo.displayName = null;
             return { repo: `${repo.owner.login}/${repo.name}`, success: false };
@@ -376,14 +363,14 @@ export async function getRepositories(
       );
 
       // Log batch results for monitoring
-      const failures = results.filter(r => !r.success);
+      const failures = results.filter((r) => !r.success);
       if (failures.length > 0) {
         console.warn(`Batch ${batchNumber}: ${failures.length}/${batch.length} failures`);
       }
 
       // Add delay between batches to avoid rate limiting (except for last batch)
       if (i + BATCH_SIZE < repositories.length) {
-        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+        await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
       }
     }
 
@@ -448,9 +435,8 @@ export async function getReadmeContent(
   owner: string,
   repo: string,
 ): Promise<string | null> {
-  const octokit = typeof clientOrToken === 'string'
-    ? new Octokit({ auth: clientOrToken })
-    : clientOrToken;
+  const octokit =
+    typeof clientOrToken === "string" ? new Octokit({ auth: clientOrToken }) : clientOrToken;
 
   try {
     const { data } = await octokit.repos.getReadme({
@@ -459,7 +445,7 @@ export async function getReadmeContent(
       mediaType: { format: "raw" },
     });
     return data.toString();
-  } catch (error) {
+  } catch (_error) {
     console.warn(`Failed to fetch README for ${owner}/${repo}:`);
     return null;
   }
@@ -557,9 +543,7 @@ export async function deployToGitHubPages(
     const { data: commit } = await octokit.git.createCommit({
       owner: username,
       repo: repoName,
-      message: wasCreated
-        ? "Initial portfolio commit"
-        : "Update portfolio page",
+      message: wasCreated ? "Initial portfolio commit" : "Update portfolio page",
       tree: tree.sha,
       parents: [ref.object.sha],
     });

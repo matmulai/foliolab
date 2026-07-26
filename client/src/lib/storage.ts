@@ -1,4 +1,4 @@
-import { Repository, PortfolioItem, SourceType, DataSourceConfig } from "@shared/schema";
+import type { DataSourceConfig, PortfolioItem, Repository, SourceType } from "@shared/schema";
 
 const STORAGE_KEYS = {
   REPOSITORIES: "foliolab_repositories",
@@ -6,7 +6,7 @@ const STORAGE_KEYS = {
   GITHUB_TOKEN: "foliolab_github_token",
   GITLAB_TOKEN: "foliolab_gitlab_token",
   BITBUCKET_CREDENTIALS: "foliolab_bitbucket_credentials",
-  DATA_SOURCES: "foliolab_data_sources"
+  DATA_SOURCES: "foliolab_data_sources",
 } as const;
 
 // GitHub Token Management
@@ -70,7 +70,7 @@ export function getBitbucketCredentials(): { username: string; appPassword: stri
     if (!data) return null;
     return JSON.parse(data);
   } catch (error) {
-    console.error('Error reading Bitbucket credentials from storage:', error);
+    console.error("Error reading Bitbucket credentials from storage:", error);
     return null;
   }
 }
@@ -101,7 +101,7 @@ export function hasStoredCredentials(): boolean {
 export function saveDataSourceConfig(config: DataSourceConfig) {
   try {
     const configs = getDataSourceConfigs();
-    const index = configs.findIndex(c => c.type === config.type);
+    const index = configs.findIndex((c) => c.type === config.type);
 
     if (index >= 0) {
       configs[index] = config;
@@ -111,7 +111,7 @@ export function saveDataSourceConfig(config: DataSourceConfig) {
 
     localStorage.setItem(STORAGE_KEYS.DATA_SOURCES, JSON.stringify(configs));
   } catch (error) {
-    console.error('Error saving data source config:', error);
+    console.error("Error saving data source config:", error);
     throw error;
   }
 }
@@ -122,14 +122,14 @@ export function getDataSourceConfigs(): DataSourceConfig[] {
     if (!data) return [];
     return JSON.parse(data);
   } catch (error) {
-    console.error('Error reading data source configs:', error);
+    console.error("Error reading data source configs:", error);
     return [];
   }
 }
 
 export function getDataSourceConfig(type: SourceType): DataSourceConfig | null {
   const configs = getDataSourceConfigs();
-  return configs.find(c => c.type === type) || null;
+  return configs.find((c) => c.type === type) || null;
 }
 
 // Legacy Repository Management (backward compatible)
@@ -137,7 +137,7 @@ export function saveRepositories(repositories: Repository[]) {
   try {
     localStorage.setItem(STORAGE_KEYS.REPOSITORIES, JSON.stringify(repositories));
   } catch (error) {
-    console.error('Error saving repositories to storage:', error);
+    console.error("Error saving repositories to storage:", error);
     throw error;
   }
 }
@@ -148,19 +148,19 @@ export function getRepositories(): Repository[] {
     if (!data) return [];
     return JSON.parse(data) as Repository[];
   } catch (error) {
-    console.error('Error reading repositories from storage:', error);
+    console.error("Error reading repositories from storage:", error);
     return [];
   }
 }
 
 export function toggleRepositorySelection(id: number): Repository | null {
   const repositories = getRepositories();
-  const index = repositories.findIndex(r => r.id === id);
+  const index = repositories.findIndex((r) => r.id === id);
   if (index === -1) return null;
 
   const updatedRepo = {
     ...repositories[index],
-    selected: !repositories[index].selected
+    selected: !repositories[index].selected,
   };
 
   repositories[index] = updatedRepo;
@@ -174,7 +174,7 @@ export function savePortfolioItems(items: PortfolioItem[]) {
   try {
     localStorage.setItem(STORAGE_KEYS.PORTFOLIO_ITEMS, JSON.stringify(items));
   } catch (error) {
-    console.error('Error saving portfolio items to storage:', error);
+    console.error("Error saving portfolio items to storage:", error);
     throw error;
   }
 }
@@ -186,9 +186,9 @@ export function getPortfolioItems(): PortfolioItem[] {
       // Migration: If no portfolio items but have repositories, migrate them
       const repos = getRepositories();
       if (repos.length > 0) {
-        const items = repos.map(repo => ({
+        const items = repos.map((repo) => ({
           ...repo,
-          source: 'github' as const
+          source: "github" as const,
         })) as PortfolioItem[];
         savePortfolioItems(items);
         return items;
@@ -197,7 +197,7 @@ export function getPortfolioItems(): PortfolioItem[] {
     }
     return JSON.parse(data) as PortfolioItem[];
   } catch (error) {
-    console.error('Error reading portfolio items from storage:', error);
+    console.error("Error reading portfolio items from storage:", error);
     return [];
   }
 }
@@ -216,8 +216,8 @@ export function addPortfolioItems(newItems: PortfolioItem[]) {
 
 export function updatePortfolioItem(id: string | number, updates: Partial<PortfolioItem>) {
   const items = getPortfolioItems();
-  const index = items.findIndex(item => {
-    if (item.source === 'github' || item.source === 'gitlab') {
+  const index = items.findIndex((item) => {
+    if (item.source === "github" || item.source === "gitlab") {
       return (item as any).id === id;
     }
     return item.id === id;
@@ -234,8 +234,8 @@ export function updatePortfolioItem(id: string | number, updates: Partial<Portfo
 
 export function deletePortfolioItem(id: string | number) {
   const items = getPortfolioItems();
-  const filtered = items.filter(item => {
-    if (item.source === 'github' || item.source === 'gitlab') {
+  const filtered = items.filter((item) => {
+    if (item.source === "github" || item.source === "gitlab") {
       return (item as any).id !== id;
     }
     return item.id !== id;
@@ -245,8 +245,8 @@ export function deletePortfolioItem(id: string | number) {
 
 export function togglePortfolioItemSelection(id: string | number): PortfolioItem | null {
   const items = getPortfolioItems();
-  const index = items.findIndex(item => {
-    if (item.source === 'github' || item.source === 'gitlab') {
+  const index = items.findIndex((item) => {
+    if (item.source === "github" || item.source === "gitlab") {
       return (item as any).id === id;
     }
     return item.id === id;
@@ -256,7 +256,7 @@ export function togglePortfolioItemSelection(id: string | number): PortfolioItem
 
   const updatedItem = {
     ...items[index],
-    selected: !items[index].selected
+    selected: !items[index].selected,
   };
 
   items[index] = updatedItem;
@@ -266,11 +266,11 @@ export function togglePortfolioItemSelection(id: string | number): PortfolioItem
 }
 
 export function getPortfolioItemsBySource(source: SourceType): PortfolioItem[] {
-  return getPortfolioItems().filter(item => item.source === source);
+  return getPortfolioItems().filter((item) => item.source === source);
 }
 
 export function clearStorage() {
-  Object.values(STORAGE_KEYS).forEach(key => {
+  Object.values(STORAGE_KEYS).forEach((key) => {
     localStorage.removeItem(key);
   });
 }

@@ -1,23 +1,28 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from 'wouter';
-import { SourceType, PortfolioItem, BlogPost, MediumPost, FreeformContent } from '@shared/schema';
+import type {
+  BlogPost,
+  FreeformContent,
+  MediumPost,
+  PortfolioItem,
+  SourceType,
+} from "@shared/schema";
+import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 import {
-  getWizardState,
-  updateWizardStep,
-  markSourceComplete,
-  getNextIncompleteSource,
-  isWizardComplete
-} from '../lib/wizard-state';
-import {
-  addPortfolioItems,
   addPortfolioItem,
-  saveGitLabToken,
-  getGitLabToken,
-  saveBitbucketCredentials,
+  addPortfolioItems,
   getBitbucketCredentials,
   getGitHubToken,
-  saveGitHubToken
-} from '../lib/storage';
+  getGitLabToken,
+  saveBitbucketCredentials,
+  saveGitHubToken,
+  saveGitLabToken,
+} from "../lib/storage";
+import {
+  getNextIncompleteSource,
+  getWizardState,
+  isWizardComplete,
+  markSourceComplete,
+} from "../lib/wizard-state";
 
 export default function DataWizardPage() {
   const [, setLocation] = useLocation();
@@ -28,24 +33,30 @@ export default function DataWizardPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   // Form states for each source
-  const [rssFeedUrl, setRssFeedUrl] = useState('');
-  const [rssAuthor, setRssAuthor] = useState('');
-  const [mediumUsername, setMediumUsername] = useState('');
-  const [gitlabToken, setGitlabToken] = useState(getGitLabToken() || '');
-  const [gitlabUsername, setGitlabUsername] = useState('');
-  const [bitbucketUsername, setBitbucketUsername] = useState(getBitbucketCredentials()?.username || '');
-  const [bitbucketAppPassword, setBitbucketAppPassword] = useState(getBitbucketCredentials()?.appPassword || '');
-  const [githubToken, setGithubToken] = useState(getGitHubToken() || '');
-  const [freeformTitle, setFreeformTitle] = useState('');
-  const [freeformContent, setFreeformContent] = useState('');
-  const [freeformDescription, setFreeformDescription] = useState('');
-  const [freeformUrl, setFreeformUrl] = useState('');
-  const [freeformType, setFreeformType] = useState<'project' | 'achievement' | 'skill' | 'experience' | 'other'>('other');
-  const [freeformTags, setFreeformTags] = useState('');
+  const [rssFeedUrl, setRssFeedUrl] = useState("");
+  const [rssAuthor, setRssAuthor] = useState("");
+  const [mediumUsername, setMediumUsername] = useState("");
+  const [gitlabToken, setGitlabToken] = useState(getGitLabToken() || "");
+  const [gitlabUsername, setGitlabUsername] = useState("");
+  const [bitbucketUsername, setBitbucketUsername] = useState(
+    getBitbucketCredentials()?.username || "",
+  );
+  const [bitbucketAppPassword, setBitbucketAppPassword] = useState(
+    getBitbucketCredentials()?.appPassword || "",
+  );
+  const [githubToken, setGithubToken] = useState(getGitHubToken() || "");
+  const [freeformTitle, setFreeformTitle] = useState("");
+  const [freeformContent, setFreeformContent] = useState("");
+  const [freeformDescription, setFreeformDescription] = useState("");
+  const [freeformUrl, setFreeformUrl] = useState("");
+  const [freeformType, setFreeformType] = useState<
+    "project" | "achievement" | "skill" | "experience" | "other"
+  >("other");
+  const [freeformTags, setFreeformTags] = useState("");
 
   useEffect(() => {
     if (!wizardState) {
-      setLocation('/select-sources');
+      setLocation("/select-sources");
       return;
     }
 
@@ -54,7 +65,7 @@ export default function DataWizardPage() {
       setCurrentSource(nextSource);
     } else if (isWizardComplete()) {
       // All sources complete, go to selection page
-      setLocation('/select-items');
+      setLocation("/select-items");
     }
   }, [wizardState]);
 
@@ -70,7 +81,7 @@ export default function DataWizardPage() {
     if (nextSource) {
       setCurrentSource(nextSource);
     } else {
-      setLocation('/select-items');
+      setLocation("/select-items");
     }
   };
 
@@ -89,14 +100,14 @@ export default function DataWizardPage() {
       if (nextSource) {
         setCurrentSource(nextSource);
       } else {
-        setLocation('/select-items');
+        setLocation("/select-items");
       }
     }, 1500);
   };
 
   const handleGitHubSubmit = async () => {
     if (!githubToken) {
-      setError('Please enter a GitHub personal access token');
+      setError("Please enter a GitHub personal access token");
       return;
     }
 
@@ -104,12 +115,12 @@ export default function DataWizardPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/github/repos', {
-        headers: { Authorization: `Bearer ${githubToken}` }
+      const response = await fetch("/api/github/repos", {
+        headers: { Authorization: `Bearer ${githubToken}` },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch GitHub repositories');
+        throw new Error("Failed to fetch GitHub repositories");
       }
 
       const data = await response.json();
@@ -119,7 +130,7 @@ export default function DataWizardPage() {
       addPortfolioItems(repos);
       handleSourceComplete(repos.length);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch repositories');
+      setError(err instanceof Error ? err.message : "Failed to fetch repositories");
     } finally {
       setLoading(false);
     }
@@ -127,7 +138,7 @@ export default function DataWizardPage() {
 
   const handleRSSSubmit = async () => {
     if (!rssFeedUrl) {
-      setError('Please enter an RSS feed URL');
+      setError("Please enter an RSS feed URL");
       return;
     }
 
@@ -135,25 +146,25 @@ export default function DataWizardPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/sources/rss', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ feedUrl: rssFeedUrl, author: rssAuthor })
+      const response = await fetch("/api/sources/rss", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedUrl: rssFeedUrl, author: rssAuthor }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch RSS feed');
+        throw new Error("Failed to fetch RSS feed");
       }
 
       const data = await response.json();
       const posts = data.posts as BlogPost[];
 
       addPortfolioItems(posts as PortfolioItem[]);
-      setRssFeedUrl('');
-      setRssAuthor('');
+      setRssFeedUrl("");
+      setRssAuthor("");
       handleSourceComplete(posts.length);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch RSS feed');
+      setError(err instanceof Error ? err.message : "Failed to fetch RSS feed");
     } finally {
       setLoading(false);
     }
@@ -161,7 +172,7 @@ export default function DataWizardPage() {
 
   const handleMediumSubmit = async () => {
     if (!mediumUsername) {
-      setError('Please enter a Medium username');
+      setError("Please enter a Medium username");
       return;
     }
 
@@ -169,24 +180,24 @@ export default function DataWizardPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/sources/medium', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: mediumUsername })
+      const response = await fetch("/api/sources/medium", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: mediumUsername }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch Medium posts');
+        throw new Error("Failed to fetch Medium posts");
       }
 
       const data = await response.json();
       const posts = data.posts as MediumPost[];
 
       addPortfolioItems(posts as PortfolioItem[]);
-      setMediumUsername('');
+      setMediumUsername("");
       handleSourceComplete(posts.length);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch Medium posts');
+      setError(err instanceof Error ? err.message : "Failed to fetch Medium posts");
     } finally {
       setLoading(false);
     }
@@ -194,7 +205,7 @@ export default function DataWizardPage() {
 
   const handleGitLabSubmit = async () => {
     if (!gitlabToken) {
-      setError('Please enter a GitLab access token');
+      setError("Please enter a GitLab access token");
       return;
     }
 
@@ -202,14 +213,14 @@ export default function DataWizardPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/sources/gitlab', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessToken: gitlabToken, username: gitlabUsername })
+      const response = await fetch("/api/sources/gitlab", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accessToken: gitlabToken, username: gitlabUsername }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch GitLab projects');
+        throw new Error("Failed to fetch GitLab projects");
       }
 
       const data = await response.json();
@@ -219,7 +230,7 @@ export default function DataWizardPage() {
       addPortfolioItems(projects);
       handleSourceComplete(projects.length);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch GitLab projects');
+      setError(err instanceof Error ? err.message : "Failed to fetch GitLab projects");
     } finally {
       setLoading(false);
     }
@@ -227,7 +238,7 @@ export default function DataWizardPage() {
 
   const handleBitbucketSubmit = async () => {
     if (!bitbucketUsername || !bitbucketAppPassword) {
-      setError('Please enter both username and app password');
+      setError("Please enter both username and app password");
       return;
     }
 
@@ -235,14 +246,14 @@ export default function DataWizardPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/sources/bitbucket', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: bitbucketUsername, appPassword: bitbucketAppPassword })
+      const response = await fetch("/api/sources/bitbucket", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: bitbucketUsername, appPassword: bitbucketAppPassword }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch Bitbucket repositories');
+        throw new Error("Failed to fetch Bitbucket repositories");
       }
 
       const data = await response.json();
@@ -252,7 +263,7 @@ export default function DataWizardPage() {
       addPortfolioItems(repositories);
       handleSourceComplete(repositories.length);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch Bitbucket repositories');
+      setError(err instanceof Error ? err.message : "Failed to fetch Bitbucket repositories");
     } finally {
       setLoading(false);
     }
@@ -260,7 +271,7 @@ export default function DataWizardPage() {
 
   const handleFreeformSubmit = async () => {
     if (!freeformTitle || !freeformContent) {
-      setError('Please enter both title and content');
+      setError("Please enter both title and content");
       return;
     }
 
@@ -268,35 +279,35 @@ export default function DataWizardPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/sources/freeform', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/sources/freeform", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: freeformTitle,
           content: freeformContent,
           description: freeformDescription || null,
           url: freeformUrl || undefined,
           contentType: freeformType,
-          tags: freeformTags ? freeformTags.split(',').map(t => t.trim()) : []
-        })
+          tags: freeformTags ? freeformTags.split(",").map((t) => t.trim()) : [],
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create free-form content');
+        throw new Error("Failed to create free-form content");
       }
 
       const data = await response.json();
       const content = data.content as FreeformContent;
 
       addPortfolioItem(content as PortfolioItem);
-      setFreeformTitle('');
-      setFreeformContent('');
-      setFreeformDescription('');
-      setFreeformUrl('');
-      setFreeformTags('');
+      setFreeformTitle("");
+      setFreeformContent("");
+      setFreeformDescription("");
+      setFreeformUrl("");
+      setFreeformTags("");
       handleSourceComplete(1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create content');
+      setError(err instanceof Error ? err.message : "Failed to create content");
     } finally {
       setLoading(false);
     }
@@ -325,7 +336,7 @@ export default function DataWizardPage() {
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
               className="bg-blue-600 h-2 rounded-full transition-all"
-              style={{ width: `${((currentStepIndex) / (totalSourceSteps + 2)) * 100}%` }}
+              style={{ width: `${(currentStepIndex / (totalSourceSteps + 2)) * 100}%` }}
             ></div>
           </div>
         </div>
@@ -343,7 +354,7 @@ export default function DataWizardPage() {
         )}
 
         {/* GitHub Form */}
-        {currentSource === 'github' && (
+        {currentSource === "github" && (
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-2xl font-bold mb-4">Connect GitHub</h2>
             <p className="text-gray-600 mb-6">
@@ -351,7 +362,10 @@ export default function DataWizardPage() {
             </p>
             <div className="space-y-4">
               <div>
-                <label htmlFor="github-token-wizard" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="github-token-wizard"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Personal Access Token *
                 </label>
                 <input
@@ -379,7 +393,7 @@ export default function DataWizardPage() {
                   disabled={loading}
                   className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
                 >
-                  {loading ? 'Fetching...' : 'Import Repositories'}
+                  {loading ? "Fetching..." : "Import Repositories"}
                 </button>
               </div>
             </div>
@@ -387,15 +401,16 @@ export default function DataWizardPage() {
         )}
 
         {/* RSS Form */}
-        {currentSource === 'blog_rss' && (
+        {currentSource === "blog_rss" && (
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-2xl font-bold mb-4">Add Blog RSS Feed</h2>
-            <p className="text-gray-600 mb-6">
-              Import blog posts from your RSS feed
-            </p>
+            <p className="text-gray-600 mb-6">Import blog posts from your RSS feed</p>
             <div className="space-y-4">
               <div>
-                <label htmlFor="rss-url-wizard" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="rss-url-wizard"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   RSS Feed URL *
                 </label>
                 <input
@@ -408,7 +423,10 @@ export default function DataWizardPage() {
                 />
               </div>
               <div>
-                <label htmlFor="rss-author-wizard" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="rss-author-wizard"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Author Name (optional)
                 </label>
                 <input
@@ -433,7 +451,7 @@ export default function DataWizardPage() {
                   disabled={loading}
                   className="flex-1 bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 disabled:bg-gray-400"
                 >
-                  {loading ? 'Fetching...' : 'Import Blog Posts'}
+                  {loading ? "Fetching..." : "Import Blog Posts"}
                 </button>
               </div>
             </div>
@@ -441,15 +459,16 @@ export default function DataWizardPage() {
         )}
 
         {/* Medium Form */}
-        {currentSource === 'medium' && (
+        {currentSource === "medium" && (
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-2xl font-bold mb-4">Add Medium Posts</h2>
-            <p className="text-gray-600 mb-6">
-              Import your Medium articles
-            </p>
+            <p className="text-gray-600 mb-6">Import your Medium articles</p>
             <div className="space-y-4">
               <div>
-                <label htmlFor="medium-username-wizard" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="medium-username-wizard"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Medium Username *
                 </label>
                 <input
@@ -477,7 +496,7 @@ export default function DataWizardPage() {
                   disabled={loading}
                   className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
                 >
-                  {loading ? 'Fetching...' : 'Import Medium Posts'}
+                  {loading ? "Fetching..." : "Import Medium Posts"}
                 </button>
               </div>
             </div>
@@ -485,15 +504,16 @@ export default function DataWizardPage() {
         )}
 
         {/* GitLab Form */}
-        {currentSource === 'gitlab' && (
+        {currentSource === "gitlab" && (
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-2xl font-bold mb-4">Add GitLab Projects</h2>
-            <p className="text-gray-600 mb-6">
-              Connect your GitLab account to import projects
-            </p>
+            <p className="text-gray-600 mb-6">Connect your GitLab account to import projects</p>
             <div className="space-y-4">
               <div>
-                <label htmlFor="gitlab-token-wizard" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="gitlab-token-wizard"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   GitLab Personal Access Token *
                 </label>
                 <input
@@ -509,7 +529,10 @@ export default function DataWizardPage() {
                 </p>
               </div>
               <div>
-                <label htmlFor="gitlab-username-wizard" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="gitlab-username-wizard"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Username (optional)
                 </label>
                 <input
@@ -534,7 +557,7 @@ export default function DataWizardPage() {
                   disabled={loading}
                   className="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
                 >
-                  {loading ? 'Fetching...' : 'Import GitLab Projects'}
+                  {loading ? "Fetching..." : "Import GitLab Projects"}
                 </button>
               </div>
             </div>
@@ -542,15 +565,16 @@ export default function DataWizardPage() {
         )}
 
         {/* Bitbucket Form */}
-        {currentSource === 'bitbucket' && (
+        {currentSource === "bitbucket" && (
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-2xl font-bold mb-4">Add Bitbucket Repositories</h2>
-            <p className="text-gray-600 mb-6">
-              Connect your Bitbucket account
-            </p>
+            <p className="text-gray-600 mb-6">Connect your Bitbucket account</p>
             <div className="space-y-4">
               <div>
-                <label htmlFor="bitbucket-username-wizard" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="bitbucket-username-wizard"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Bitbucket Username *
                 </label>
                 <input
@@ -563,7 +587,10 @@ export default function DataWizardPage() {
                 />
               </div>
               <div>
-                <label htmlFor="bitbucket-password-wizard" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="bitbucket-password-wizard"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   App Password *
                 </label>
                 <input
@@ -575,7 +602,8 @@ export default function DataWizardPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <p className="text-sm text-gray-500 mt-1">
-                  Create an app password at Bitbucket Settings → App passwords (needs repository:read)
+                  Create an app password at Bitbucket Settings → App passwords (needs
+                  repository:read)
                 </p>
               </div>
               <div className="flex gap-3">
@@ -591,7 +619,7 @@ export default function DataWizardPage() {
                   disabled={loading}
                   className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
                 >
-                  {loading ? 'Fetching...' : 'Import Bitbucket Repos'}
+                  {loading ? "Fetching..." : "Import Bitbucket Repos"}
                 </button>
               </div>
             </div>
@@ -599,15 +627,16 @@ export default function DataWizardPage() {
         )}
 
         {/* Freeform Form */}
-        {currentSource === 'freeform' && (
+        {currentSource === "freeform" && (
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-2xl font-bold mb-4">Add Custom Content</h2>
-            <p className="text-gray-600 mb-6">
-              Create custom portfolio content
-            </p>
+            <p className="text-gray-600 mb-6">Create custom portfolio content</p>
             <div className="space-y-4">
               <div>
-                <label htmlFor="freeform-title-wizard" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="freeform-title-wizard"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Title *
                 </label>
                 <input
@@ -620,7 +649,10 @@ export default function DataWizardPage() {
                 />
               </div>
               <div>
-                <label htmlFor="freeform-type-wizard" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="freeform-type-wizard"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Content Type
                 </label>
                 <select
@@ -637,7 +669,10 @@ export default function DataWizardPage() {
                 </select>
               </div>
               <div>
-                <label htmlFor="freeform-content-wizard" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="freeform-content-wizard"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Content *
                 </label>
                 <textarea
@@ -650,7 +685,10 @@ export default function DataWizardPage() {
                 />
               </div>
               <div>
-                <label htmlFor="freeform-description-wizard" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="freeform-description-wizard"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Short Description (optional)
                 </label>
                 <input
@@ -663,7 +701,10 @@ export default function DataWizardPage() {
                 />
               </div>
               <div>
-                <label htmlFor="freeform-url-wizard" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="freeform-url-wizard"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   URL (optional)
                 </label>
                 <input
@@ -676,7 +717,10 @@ export default function DataWizardPage() {
                 />
               </div>
               <div>
-                <label htmlFor="freeform-tags-wizard" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="freeform-tags-wizard"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Tags (optional, comma-separated)
                 </label>
                 <input
@@ -701,7 +745,7 @@ export default function DataWizardPage() {
                   disabled={loading}
                   className="flex-1 bg-pink-600 text-white py-2 px-4 rounded-lg hover:bg-pink-700 disabled:bg-gray-400"
                 >
-                  {loading ? 'Adding...' : 'Add Custom Content'}
+                  {loading ? "Adding..." : "Add Custom Content"}
                 </button>
               </div>
             </div>
@@ -711,7 +755,7 @@ export default function DataWizardPage() {
         {/* Back Button */}
         <div className="mt-6 text-center">
           <button
-            onClick={() => setLocation('/select-sources')}
+            onClick={() => setLocation("/select-sources")}
             className="text-gray-600 hover:text-gray-900"
           >
             ← Back to source selection

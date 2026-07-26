@@ -4,10 +4,10 @@
  */
 
 export enum LogLevel {
-  DEBUG = 'debug',
-  INFO = 'info',
-  WARN = 'warn',
-  ERROR = 'error'
+  DEBUG = "debug",
+  INFO = "info",
+  WARN = "warn",
+  ERROR = "error",
 }
 
 interface LogEntry {
@@ -24,7 +24,7 @@ class Logger {
 
   constructor() {
     this.level = this.parseLogLevel(process.env.LOG_LEVEL) || LogLevel.INFO;
-    this.isDevelopment = process.env.NODE_ENV !== 'production';
+    this.isDevelopment = process.env.NODE_ENV !== "production";
   }
 
   private parseLogLevel(level: string | undefined): LogLevel | null {
@@ -44,12 +44,12 @@ class Logger {
     if (this.isDevelopment) {
       // Development: Human-readable format with colors
       const levelColors: Record<LogLevel, string> = {
-        [LogLevel.DEBUG]: '\x1b[36m', // Cyan
-        [LogLevel.INFO]: '\x1b[32m',  // Green
-        [LogLevel.WARN]: '\x1b[33m',  // Yellow
-        [LogLevel.ERROR]: '\x1b[31m'  // Red
+        [LogLevel.DEBUG]: "\x1b[36m", // Cyan
+        [LogLevel.INFO]: "\x1b[32m", // Green
+        [LogLevel.WARN]: "\x1b[33m", // Yellow
+        [LogLevel.ERROR]: "\x1b[31m", // Red
       };
-      const reset = '\x1b[0m';
+      const reset = "\x1b[0m";
       const color = levelColors[entry.level];
 
       let output = `${color}[${entry.level.toUpperCase()}]${reset} ${entry.message}`;
@@ -79,7 +79,7 @@ class Logger {
       level,
       message,
       ...(meta && { meta }),
-      ...(error?.stack && { stack: error.stack })
+      ...(error?.stack && { stack: error.stack }),
     };
 
     const formatted = this.formatLog(entry);
@@ -92,8 +92,6 @@ class Logger {
       case LogLevel.WARN:
         console.warn(formatted);
         break;
-      case LogLevel.DEBUG:
-      case LogLevel.INFO:
       default:
         console.log(formatted);
         break;
@@ -147,7 +145,7 @@ class Logger {
 class ChildLogger {
   constructor(
     private parent: Logger,
-    private context: Record<string, any>
+    private context: Record<string, any>,
   ) {}
 
   private mergeContext(meta?: any): any {

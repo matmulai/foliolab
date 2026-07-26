@@ -1,24 +1,26 @@
-import Parser from 'rss-parser';
-import { BlogPost } from '../../shared/schema';
-import dns from 'dns';
-import net from 'net';
+import dns from "node:dns";
+import net from "node:net";
+import Parser from "rss-parser";
+import type { BlogPost } from "../../shared/schema";
 
 // Check for private / local IP addresses to prevent SSRF
 const isPrivateIP = (ip: string): boolean => {
-  const cleanIp = ip.replace(/^\[(.*)\]$/, '$1');
+  const cleanIp = ip.replace(/^\[(.*)\]$/, "$1");
   const ipVersion = net.isIP(cleanIp);
   if (!ipVersion) return false;
 
   // IPv4: loopback, private ranges, link-local, unspecified, cloud metadata
   if (ipVersion === 4) {
-    return /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|169\.254\.|0\.0\.0\.0)/.test(cleanIp);
+    return /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|169\.254\.|0\.0\.0\.0)/.test(
+      cleanIp,
+    );
   }
 
   // IPv6: loopback (::1), unspecified (::), unique-local (fc00::/7),
   // link-local (fe80::/10), and IPv4-mapped (::ffff:private)
   const lowerIp = cleanIp.toLowerCase();
-  if (lowerIp === '::1' || lowerIp === '::') return true;
-  if (/^f[cd]/i.test(lowerIp)) return true;  // fc00::/7 unique-local
+  if (lowerIp === "::1" || lowerIp === "::") return true;
+  if (/^f[cd]/i.test(lowerIp)) return true; // fc00::/7 unique-local
   if (/^fe[89ab]/i.test(lowerIp)) return true; // fe80::/10 link-local
   // IPv4-mapped IPv6 (::ffff:10.x.x.x, etc.)
   const v4Mapped = cleanIp.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
@@ -31,7 +33,11 @@ const isPrivateIP = (ip: string): boolean => {
 const customLookup = (
   hostname: string,
   options: dns.LookupOptions | number,
-  callback: (err: NodeJS.ErrnoException | null, address: string | dns.LookupAddress[], family: number) => void
+  callback: (
+    err: NodeJS.ErrnoException | null,
+    address: string | dns.LookupAddress[],
+    family: number,
+  ) => void,
 ) => {
   dns.lookup(hostname, options as dns.LookupOptions, (err, address, family) => {
     if (err) return callback(err, address, family);
@@ -39,7 +45,11 @@ const customLookup = (
     const addresses = Array.isArray(address) ? address : [{ address }];
     for (const addr of addresses) {
       if (isPrivateIP(addr.address)) {
-        return callback(new Error(`Access to private IP ${addr.address} is blocked`), address, family);
+        return callback(
+          new Error(`Access to private IP ${addr.address} is blocked`),
+          address,
+          family,
+        );
       }
     }
     callback(err, address, family);
@@ -49,14 +59,14 @@ const customLookup = (
 const parser = new Parser({
   maxRedirects: 0, // Prevent redirects to IP literals to bypass dns.lookup
   requestOptions: {
-    lookup: customLookup
+    lookup: customLookup,
   },
   customFields: {
     item: [
-      ['content:encoded', 'contentEncoded'],
-      ['media:content', 'mediaContent']
-    ]
-  }
+      ["content:encoded", "contentEncoded"],
+      ["media:content", "mediaContent"],
+    ],
+  },
 });
 
 export interface RSSFeedItem {
@@ -95,24 +105,26 @@ export async function fetchRSSFeed(feedUrl: string): Promise<RSSFeed> {
     const feed = await parser.parseURL(feedUrl);
 
     return {
-      title: feed.title || 'Untitled Feed',
+      title: feed.title || "Untitled Feed",
       description: feed.description || undefined,
       link: feed.link || feedUrl,
-      items: feed.items.map(item => ({
-        title: item.title || 'Untitled',
-        link: item.link || '',
+      items: feed.items.map((item) => ({
+        title: item.title || "Untitled",
+        link: item.link || "",
         pubDate: item.pubDate,
         creator: item.creator || (item as any).author,
         content: (item as any).contentEncoded || item.content,
         contentSnippet: item.contentSnippet,
         guid: item.guid || item.link,
         categories: item.categories || [],
-        isoDate: item.isoDate
-      }))
+        isoDate: item.isoDate,
+      })),
     };
   } catch (error) {
     // Don't log user data - only log sanitized error
-    throw new Error(`Failed to fetch RSS feed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to fetch RSS feed: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -127,12 +139,12 @@ export async function fetchRSSFeed(feedUrl: string): Promise<RSSFeed> {
 export function convertRSSItemsToBlogPosts(
   feedUrl: string,
   items: RSSFeedItem[],
-  author?: string
+  author?: string,
 ): BlogPost[] {
   return items.map((item, index) => {
     // Create a unique ID from the feed URL and item guid/link
     const uniqueId = item.guid || item.link || `${feedUrl}-${index}`;
-    const id = Buffer.from(uniqueId).toString('base64').substring(0, 32);
+    const id = Buffer.from(uniqueId).toString("base64").substring(0, 32);
 
     return {
       id,
@@ -141,11 +153,11 @@ export function convertRSSItemsToBlogPosts(
       url: item.link,
       summary: null, // Will be generated by AI if selected
       selected: false,
-      source: 'blog_rss' as const,
+      source: "blog_rss" as const,
       publishedAt: item.isoDate || item.pubDate || new Date().toISOString(),
       author: author || item.creator || null,
       tags: item.categories || [],
-      feedUrl
+      feedUrl,
     };
   });
 }
@@ -157,10 +169,7 @@ export function convertRSSItemsToBlogPosts(
  * @param author - Optional author name override
  * @returns Array of BlogPost objects ready for portfolio
  */
-export async function getBlogPostsFromRSS(
-  feedUrl: string,
-  author?: string
-): Promise<BlogPost[]> {
+export async function getBlogPostsFromRSS(feedUrl: string, author?: string): Promise<BlogPost[]> {
   const feed = await fetchRSSFeed(feedUrl);
   return convertRSSItemsToBlogPosts(feedUrl, feed.items, author);
 }

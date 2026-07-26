@@ -1,40 +1,46 @@
-import crypto from 'crypto';
-import express, { type Request, Response, NextFunction, Router, type Express } from "express";
-import { createServer } from "http";
-import githubRoutes from "./routes/github.js";
+import crypto from "node:crypto";
+import { createServer } from "node:http";
+import express, {
+  type Express,
+  type NextFunction,
+  type Request,
+  type Response,
+  Router,
+} from "express";
+import { redactSensitiveData } from "./lib/security.js";
 import deployRoutes from "./routes/deploy.js";
-import userRoutes from "./routes/user.js";
+import githubRoutes from "./routes/github.js";
 import healthRoutes from "./routes/health.js";
 import sourcesRoutes from "./routes/sources.js";
-import { redactSensitiveData } from "./lib/security.js";
+import userRoutes from "./routes/user.js";
 
 // Validate required environment variables at startup
 function validateEnvironment(): void {
-  const required = [
-    'GITHUB_CLIENT_ID',
-    'GITHUB_CLIENT_SECRET',
-    'OPENAI_API_KEY'
-  ];
+  const required = ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "OPENAI_API_KEY"];
 
-  const missing = required.filter(key => !process.env[key]);
+  const missing = required.filter((key) => !process.env[key]);
 
   if (missing.length > 0) {
-    console.warn('⚠️  Missing environment variables (some features will be unavailable):');
-    missing.forEach(key => console.warn(`   - ${key}`));
-    console.warn('   See .env.example for reference.\n');
+    console.warn("⚠️  Missing environment variables (some features will be unavailable):");
+    for (const key of missing) {
+      console.warn(`   - ${key}`);
+    }
+    console.warn("   See .env.example for reference.\n");
   }
 
   // Validate optional but recommended variables
-  const recommended = ['APP_URL', 'OPENAI_API_MODEL'];
-  const missingRecommended = recommended.filter(key => !process.env[key]);
+  const recommended = ["APP_URL", "OPENAI_API_MODEL"];
+  const missingRecommended = recommended.filter((key) => !process.env[key]);
 
   if (missingRecommended.length > 0) {
-    console.warn('⚠️  Optional environment variables not set:');
-    missingRecommended.forEach(key => console.warn(`   - ${key}`));
-    console.warn('   Using default values.\n');
+    console.warn("⚠️  Optional environment variables not set:");
+    for (const key of missingRecommended) {
+      console.warn(`   - ${key}`);
+    }
+    console.warn("   Using default values.\n");
   }
 
-  console.log('✅ Environment validation passed\n');
+  console.log("✅ Environment validation passed\n");
 }
 
 // Validate environment before starting server
@@ -47,12 +53,12 @@ app.use(express.urlencoded({ extended: false }));
 // Add request ID for tracing
 app.use((req, res, next) => {
   // Use existing request ID from header or generate new one
-  const requestId = req.headers['x-request-id'] as string ||
-                    `req_${Date.now()}_${crypto.randomUUID()}`;
+  const requestId =
+    (req.headers["x-request-id"] as string) || `req_${Date.now()}_${crypto.randomUUID()}`;
 
   // Store on request and response
   (req as any).id = requestId;
-  res.setHeader('X-Request-ID', requestId);
+  res.setHeader("X-Request-ID", requestId);
 
   next();
 });
@@ -60,28 +66,28 @@ app.use((req, res, next) => {
 // Add security headers
 app.use((_req, res, next) => {
   // Prevent clickjacking
-  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader("X-Frame-Options", "DENY");
 
   // Prevent MIME type sniffing
-  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader("X-Content-Type-Options", "nosniff");
 
   // Enable XSS protection
-  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader("X-XSS-Protection", "1; mode=block");
 
   // Referrer policy
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
 
   // Content Security Policy (basic)
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === "production") {
     res.setHeader(
-      'Content-Security-Policy',
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;",
     );
   }
 
   // HSTS (only in production)
-  if (process.env.NODE_ENV === 'production') {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  if (process.env.NODE_ENV === "production") {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   }
 
   next();
@@ -92,31 +98,32 @@ app.use((req, res, next) => {
   const requestOrigin = req.headers.origin;
 
   // Define allowed origins based on environment
-  const allowedOrigins = process.env.NODE_ENV === 'production'
-    ? [process.env.APP_URL].filter(Boolean)
-    : ['http://localhost:5000', 'http://localhost:5173']; // Vite dev server
+  const allowedOrigins =
+    process.env.NODE_ENV === "production"
+      ? [process.env.APP_URL].filter(Boolean)
+      : ["http://localhost:5000", "http://localhost:5173"]; // Vite dev server
 
   // Check if request origin is allowed
   if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
-    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  } else if (process.env.NODE_ENV === 'development') {
+    res.setHeader("Access-Control-Allow-Origin", requestOrigin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  } else if (process.env.NODE_ENV === "development") {
     // In development, echo back the request origin (or allow any)
     // Use the specific origin to remain compatible with credentials
     if (requestOrigin) {
-      res.setHeader('Access-Control-Allow-Origin', requestOrigin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader("Access-Control-Allow-Origin", requestOrigin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
     } else {
-      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader("Access-Control-Allow-Origin", "*");
     }
   }
   // In production, if origin not allowed, don't set the header (request will be rejected)
 
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Vary', 'Origin');
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Vary", "Origin");
 
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
@@ -129,7 +136,7 @@ async function registerRoutes(app: Express) {
   router.use(githubRoutes);
   router.use(deployRoutes);
   router.use(userRoutes);
-  router.use('/api/sources', sourcesRoutes);
+  router.use("/api/sources", sourcesRoutes);
   app.use(router);
   const httpServer = createServer(app);
   return httpServer;
@@ -140,10 +147,10 @@ app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
   const requestId = (req as any).id;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+  let capturedJsonResponse: Record<string, any> | undefined;
 
   const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
+  res.json = (bodyJson, ...args) => {
     capturedJsonResponse = bodyJson;
     return originalResJson.apply(res, [bodyJson, ...args]);
   };
@@ -158,7 +165,7 @@ app.use((req, res, next) => {
       }
 
       if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
+        logLine = `${logLine.slice(0, 79)}…`;
       }
 
       console.log(logLine);
@@ -172,14 +179,14 @@ app.use((req, res, next) => {
   const server = await registerRoutes(app);
 
   // Configure request timeout to prevent hanging connections
-  const REQUEST_TIMEOUT_MS = parseInt(process.env.REQUEST_TIMEOUT_MS || '30000');
+  const REQUEST_TIMEOUT_MS = parseInt(process.env.REQUEST_TIMEOUT_MS || "30000", 10);
   server.setTimeout(REQUEST_TIMEOUT_MS);
 
-  server.on('timeout', (socket) => {
-    console.warn('Request timeout', {
+  server.on("timeout", (socket) => {
+    console.warn("Request timeout", {
       remoteAddress: socket.remoteAddress,
       remotePort: socket.remotePort,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
     socket.destroy();
   });
@@ -187,17 +194,18 @@ app.use((req, res, next) => {
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-    const requestId = (req as any).id || res.getHeader('X-Request-ID') || req.headers['x-request-id'] || 'unknown';
+    const requestId =
+      (req as any).id || res.getHeader("X-Request-ID") || req.headers["x-request-id"] || "unknown";
 
     // Log error with full context for debugging and monitoring
     // In production, consider integrating with error tracking services (e.g., Sentry)
-    console.error('Unhandled error:', {
+    console.error("Unhandled error:", {
       requestId,
       status,
       message,
       method: req.method,
       url: req.originalUrl,
-      userAgent: req.headers['user-agent'],
+      userAgent: req.headers["user-agent"],
       stack: err.stack,
       timestamp: new Date().toISOString(),
       // Include error name and code if available
@@ -207,7 +215,7 @@ app.use((req, res, next) => {
 
     // Send sanitized error response to client (don't expose internal details)
     res.status(status).json({
-      message: status >= 500 ? 'Internal Server Error' : message,
+      message: status >= 500 ? "Internal Server Error" : message,
       requestId,
     });
   });

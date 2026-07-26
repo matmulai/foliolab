@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface DeploymentOverlayProps {
   open: boolean;
@@ -17,11 +16,10 @@ export function DeploymentOverlay({
   onClose,
   deploymentUrl,
   portfolioUrl,
-  username
+  username,
 }: DeploymentOverlayProps) {
   const [countdown, setCountdown] = useState(60);
   const [customDomain, setCustomDomain] = useState<string | null>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -41,13 +39,15 @@ export function DeploymentOverlay({
     const checkCustomDomain = async () => {
       try {
         // Check for CNAME in the repository
-        const res = await fetch(`https://api.github.com/repos/${username}/${username}.github.io/contents/CNAME`);
+        const res = await fetch(
+          `https://api.github.com/repos/${username}/${username}.github.io/contents/CNAME`,
+        );
         if (res.ok) {
           const data = await res.json();
           const domain = atob(data.content.trim());
           setCustomDomain(domain);
         }
-      } catch (error) {
+      } catch (_error) {
         // No custom domain configured
       }
     };
@@ -58,10 +58,8 @@ export function DeploymentOverlay({
   }, [username, open]);
 
   const handleViewPortfolio = () => {
-    const finalUrl = customDomain 
-      ? `https://${customDomain}/portfolio.html`
-      : portfolioUrl;
-    window.open(finalUrl, '_blank');
+    const finalUrl = customDomain ? `https://${customDomain}/portfolio.html` : portfolioUrl;
+    window.open(finalUrl, "_blank");
     onClose();
   };
 
@@ -76,10 +74,8 @@ export function DeploymentOverlay({
 
           <div className="text-sm text-muted-foreground space-y-2">
             <p>Your portfolio has been committed to:</p>
-            <p className="bg-muted p-2 rounded-md font-mono text-xs break-all">
-              {deploymentUrl}
-            </p>
-            
+            <p className="bg-muted p-2 rounded-md font-mono text-xs break-all">{deploymentUrl}</p>
+
             {customDomain ? (
               <>
                 <p>Your portfolio will be available at:</p>
@@ -90,9 +86,7 @@ export function DeploymentOverlay({
             ) : (
               <>
                 <p>Your portfolio will be available at:</p>
-                <p className="bg-muted p-2 rounded-md font-mono text-xs">
-                  {portfolioUrl}
-                </p>
+                <p className="bg-muted p-2 rounded-md font-mono text-xs">{portfolioUrl}</p>
               </>
             )}
 
@@ -102,16 +96,10 @@ export function DeploymentOverlay({
           </div>
 
           <div className="flex justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={onClose}
-            >
+            <Button variant="outline" onClick={onClose}>
               Close
             </Button>
-            <Button
-              onClick={handleViewPortfolio}
-              disabled={countdown > 0}
-            >
+            <Button onClick={handleViewPortfolio} disabled={countdown > 0}>
               View Portfolio {countdown > 0 && `(${countdown}s)`}
             </Button>
           </div>
